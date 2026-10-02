@@ -1,8 +1,8 @@
-# Espace Client — démonstration interactive
+# FOLLOW-UP INSURANCE — démonstration interactive
 
 Portail client autonome en React + Vite pour présenter le futur parcours digital d’un cabinet de courtage en assurance.
 
-L’interface utilise Tailwind CSS 4 et une bibliothèque de primitives shadcn/ui (Button, Card, Badge, Progress, Dialog, Tabs, Alert, Avatar, Separator et Skeleton). Le langage visuel suit une logique de « dossier concierge » : une action prioritaire, des informations structurées en lignes et le bleu réservé aux décisions importantes.
+L’interface utilise Tailwind CSS 4 et une bibliothèque de primitives shadcn/ui (Button, Card, Badge, Progress, Dialog, Tabs, Alert, Avatar, Separator et Skeleton). Le langage visuel reprend l’identité FOLLOW-UP INSURANCE : rouge de marque, accent orange et surfaces chaleureuses.
 
 Ce projet est complètement séparé du back-office. Il n’utilise aucun backend, aucune API réelle, aucun paiement réel et aucun nom de compagnie définitif. Toutes les données sont fictives et stockées dans le navigateur sous la clé isolée `portail-client-demo:v1:db`.
 
@@ -15,7 +15,7 @@ Mot de passe : demo1234
 
 ## Fonctions principales
 
-- landing page, inscription et connexion simulées ;
+- connexion affichée directement à la racine, inscription et récupération simulées ;
 - dashboard client et neuf scénarios de présentation ;
 - demande automobile guidée en cinq étapes ;
 - suivi des demandes et timelines ;
@@ -114,7 +114,7 @@ Le site statique est généré dans `dist/`.
 5. Dans le File Manager cPanel, téléverser puis extraire l’archive dans le document root.
 6. Vérifier que `index.html`, `assets/`, `documents-demo/` et `.htaccess` se trouvent directement dans ce dossier.
 7. Activer la redirection HTTPS lorsque le certificat du sous-domaine est prêt.
-8. Tester la page d’accueil et l’actualisation directe d’une route profonde telle que `/espace/contrats`.
+8. Tester la connexion affichée à la racine et l’actualisation directe d’une route profonde telle que `/espace/contrats`.
 
 Le fichier `.htaccess` est inclus automatiquement dans le build et renvoie les routes de la SPA vers `index.html`.
 

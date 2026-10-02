@@ -7,7 +7,7 @@ const alertVariants = cva("relative grid grid-cols-[auto_1fr] items-start gap-x-
   variants: {
     variant: {
       default: "border-border bg-card text-card-foreground",
-      info: "border-blue-200 bg-blue-50 text-blue-950",
+      info: "border-orange-200 bg-orange-50 text-orange-950",
       success: "border-emerald-200 bg-emerald-50 text-emerald-950",
       warning: "border-amber-200 bg-amber-50 text-amber-950",
       destructive: "border-rose-200 bg-rose-50 text-rose-950",

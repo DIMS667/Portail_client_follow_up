@@ -8,16 +8,16 @@ import {
   ProposalsPage, RequestDetailPage, RequestsPage,
 } from "./pages/client-pages";
 import { NewClaimPage, NewRequestPage, OfferDetailPage, RenewalPage } from "./pages/flow-pages";
-import { ForgotPasswordPage, LandingPage, LoginPage, RegisterPage } from "./pages/public-pages";
+import { ForgotPasswordPage, LoginPage, RegisterPage } from "./pages/public-pages";
 
 function RouteView() {
-  const { pathname, store, navigate } = usePortal();
+  const { pathname, store } = usePortal();
   useEffect(() => {
-    const title = pathname === "/" ? "Espace Client — Votre assurance à distance" : `${routeTitle(pathname)} — Espace Client`;
+    const title = pathname === "/" ? "Connexion — FOLLOW-UP INSURANCE" : `${routeTitle(pathname)} — FOLLOW-UP INSURANCE`;
     document.title = title;
   }, [pathname]);
 
-  if (pathname === "/") return <LandingPage />;
+  if (pathname === "/") return <LoginPage />;
   if (pathname === "/connexion") return <LoginPage />;
   if (pathname === "/inscription") return <RegisterPage />;
   if (pathname === "/mot-de-passe-oublie") return <ForgotPasswordPage />;
