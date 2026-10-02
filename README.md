@@ -2,6 +2,8 @@
 
 Portail client autonome en React + Vite pour présenter le futur parcours digital d’un cabinet de courtage en assurance.
 
+L’interface utilise Tailwind CSS 4 et une bibliothèque de primitives shadcn/ui (Button, Card, Badge, Progress, Dialog, Tabs, Alert, Avatar, Separator et Skeleton). Le langage visuel suit une logique de « dossier concierge » : une action prioritaire, des informations structurées en lignes et le bleu réservé aux décisions importantes.
+
 Ce projet est complètement séparé du back-office. Il n’utilise aucun backend, aucune API réelle, aucun paiement réel et aucun nom de compagnie définitif. Toutes les données sont fictives et stockées dans le navigateur sous la clé isolée `portail-client-demo:v1:db`.
 
 ## Identifiants de démonstration
@@ -41,6 +43,9 @@ src/
 ├── repositories/    accès au localStorage
 ├── services/        logique métier et mutations
 └── types/           modèles TypeScript
+
+components/ui/       primitives shadcn/ui réutilisables
+lib/                 utilitaires Tailwind et fusion de classes
 ```
 
 Les composants ne lisent pas directement le stockage. La couche `repositories` pourra être remplacée plus tard par un repository FastAPI.

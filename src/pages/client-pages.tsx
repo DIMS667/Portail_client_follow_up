@@ -3,16 +3,21 @@ import {
   ArrowLeft, Bell, Building2, CalendarDays, Car, Check, CheckCircle2, ChevronRight,
   CircleAlert, ClipboardList, Clock3, Download, FileCheck2, FileText, Filter, FolderOpen,
   HandCoins, HeartHandshake, Home, LifeBuoy, Mail, MapPin, MessageCircle, Paperclip,
-  Phone, Plus, RefreshCcw, Search, Send, ShieldCheck, Smartphone, Upload, UserRound,
+  LogOut, Phone, Plus, RefreshCcw, Search, Send, ShieldCheck, Smartphone, Upload, UserRound,
   WalletCards, XCircle,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { usePortal } from "../app/portal-context";
-import { InfoCard, LinkButton, PageHeader, StatusBadge, Timeline, documentLabels, requestLabels } from "../components/portal-ui";
+import { EmptyState, InfoCard, LinkButton, PageHeader, StatusBadge, Timeline, documentLabels, requestLabels } from "../components/portal-ui";
 import {
   addMessage, formatDate, formatFcfa, markNotificationRead, replaceDocument,
-  simulatePayment, updateProfile,
+  signOut, simulatePayment, updateProfile,
 } from "../services/portal-service";
 import type { ClientDocument, PaymentMethod, PortalStore } from "../types/domain";
 
@@ -25,53 +30,68 @@ export function DashboardPage() {
   const activeContracts = store.contracts.filter((contract) => contract.status === "active").length;
   const activeClaims = store.claims.filter((claim) => claim.scope === "core" && claim.status !== "closed").length;
   return (
-    <div className="page-stack dashboard-page">
-      <section className="welcome-strip">
-        <div><span className="page-eyebrow">Votre espace personnel</span><h1>Bonjour {store.client.firstName}</h1><p>Voici l’essentiel de vos assurances et les prochaines actions à réaliser.</p></div>
-        <LinkButton to="/espace/demandes/nouvelle">Demander une assurance <Plus size={18} /></LinkButton>
+    <div className="grid gap-6 lg:gap-8">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div><span className="text-[11px] font-bold uppercase tracking-[.16em] text-blue-600">Vendredi 2 octobre</span><h1 className="mt-1 text-[clamp(2rem,4vw,3.25rem)] font-semibold tracking-[-.045em] text-slate-950">Bonjour {store.client.firstName}</h1><p className="mt-2 text-[15px] text-slate-600">Votre protection est à jour. Une décision vous attend.</p></div>
+        <LinkButton to="/espace/demandes/nouvelle"><Plus size={18} /> Nouvelle demande</LinkButton>
+      </header>
+
+      <section className="relative overflow-hidden rounded-2xl bg-[#0a1d37] p-5 text-white shadow-[0_22px_60px_rgba(8,24,45,.18)] sm:p-7 lg:grid lg:grid-cols-[1.45fr_.75fr] lg:gap-10">
+        <div className="relative z-10"><Badge className="border-white/10 bg-white/10 text-blue-100">Prochaine étape</Badge><h2 className="mt-5 max-w-xl text-2xl font-semibold leading-tight tracking-[-.03em] text-white sm:text-3xl">Vos propositions automobile sont prêtes.</h2><p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">Votre courtier a retenu trois niveaux de protection. Comparez les garanties et choisissez celle qui correspond à votre situation.</p><Button type="button" size="lg" className="mt-6 h-11 rounded-xl bg-white px-5 font-semibold text-slate-950 hover:bg-blue-50" onClick={() => navigate("/espace/demandes/DEM-2026-00145/propositions")}>Comparer les 3 propositions <ChevronRight size={17} /></Button></div>
+        <div className="relative z-10 mt-7 border-t border-white/10 pt-6 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-1"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-slate-400">Dossier DEM-2026-00145</span><div className="mt-4 flex items-end justify-between"><div><strong className="text-3xl font-semibold tabular-nums">3/5</strong><p className="mt-1 text-xs text-slate-400">étapes finalisées</p></div><span className="text-xs font-semibold text-blue-300">60 %</span></div><Progress value={60} className="mt-4 bg-white/10 [&>div]:bg-blue-400" /><div className="mt-5 flex items-center gap-3"><span className="grid size-9 place-items-center rounded-full bg-white/10 text-xs font-bold">AM</span><div><strong className="block text-xs">Accompagné par Amina</strong><span className="text-[11px] text-slate-400">Votre conseillère</span></div></div></div>
+        <span className="pointer-events-none absolute -right-16 -top-24 size-64 rounded-full bg-blue-500/20 blur-3xl" />
       </section>
 
-      <section className="stats-grid" aria-label="Résumé de votre espace">
-        <InfoCard icon={ShieldCheck} label="Mes assurances" value={`${activeContracts} contrats actifs`} onClick={() => navigate("/espace/contrats")} />
-        <InfoCard icon={ClipboardList} label="Mes demandes" value={`${openRequests} dossiers en cours`} onClick={() => navigate("/espace/demandes")} />
-        <InfoCard icon={FolderOpen} label="Mes documents" value={`${store.documents.length} documents`} onClick={() => navigate("/espace/documents")} />
-        <InfoCard icon={WalletCards} label="Mes paiements" value={`${store.payments.length} paiements`} onClick={() => navigate("/espace/paiements")} />
-        <InfoCard icon={LifeBuoy} label="Mes sinistres" value={`${activeClaims} dossier en cours`} onClick={() => navigate("/espace/sinistres")} />
-      </section>
+      <Card className="overflow-hidden rounded-2xl bg-white shadow-[0_10px_35px_rgba(15,35,65,.05)]" aria-label="Résumé de votre espace">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 px-5 py-4"><div><CardTitle className="text-base">Mon portefeuille</CardTitle><CardDescription className="mt-1">L’essentiel en un coup d’œil</CardDescription></div><Badge variant="success">À jour</Badge></CardHeader>
+        <CardContent className="grid p-0 sm:grid-cols-2 xl:grid-cols-5">
+          <InfoCard icon={ShieldCheck} label="Assurances" value={`${activeContracts} contrats actifs`} onClick={() => navigate("/espace/contrats")} />
+          <InfoCard icon={ClipboardList} label="Demandes" value={`${openRequests} dossiers en cours`} onClick={() => navigate("/espace/demandes")} />
+          <InfoCard icon={FolderOpen} label="Documents" value={`${store.documents.length} documents`} onClick={() => navigate("/espace/documents")} />
+          <InfoCard icon={WalletCards} label="Paiements" value={`${store.payments.length} paiements`} onClick={() => navigate("/espace/paiements")} />
+          <InfoCard icon={LifeBuoy} label="Sinistres" value={`${activeClaims} dossier en cours`} onClick={() => navigate("/espace/sinistres")} />
+        </CardContent>
+      </Card>
 
-      <div className="dashboard-grid">
-        <section className="panel quick-panel"><div className="panel-heading"><div><span className="page-eyebrow">À portée de main</span><h2>Actions rapides</h2></div></div>
-          <div className="quick-grid">
-            {[
-              { label: "Demander une assurance", help: "Démarrer un nouveau dossier", icon: Plus, route: "/espace/demandes/nouvelle" },
-              { label: "Envoyer un document", help: "Compléter un dossier", icon: Upload, route: "/espace/documents" },
-              { label: "Déclarer un sinistre", help: "Être accompagné rapidement", icon: LifeBuoy, route: "/espace/sinistres/nouveau" },
-              { label: "Renouveler un contrat", help: "Anticiper une échéance", icon: RefreshCcw, route: "/espace/renouvellements/POL-2026-00325" },
-            ].map(({ label, help, icon: Icon, route }) => <button type="button" className="quick-action" key={label} onClick={() => navigate(route)}><span><Icon size={20} /></span><div><strong>{label}</strong><small>{help}</small></div><ChevronRight size={18} /></button>)}
-          </div>
-        </section>
-        <section className="panel activity-panel"><div className="panel-heading"><div><span className="page-eyebrow">Dernières nouvelles</span><h2>Activité récente</h2></div></div>
-          <div className="activity-list">{store.activities.map((activity) => { const Icon = iconForKind[activity.kind] || Bell; return <button type="button" key={activity.id} onClick={() => navigate(activity.route)}><span className={`activity-icon ${activity.kind}`}><Icon size={18} /></span><div><strong>{activity.label}</strong><small>{activity.date}</small></div></button>; })}</div>
-        </section>
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_.85fr]">
+        <Card className="rounded-2xl bg-white shadow-[0_10px_35px_rgba(15,35,65,.04)]"><CardHeader><CardTitle className="text-lg">Actions rapides</CardTitle><CardDescription>Les démarches les plus fréquentes</CardDescription></CardHeader><CardContent className="grid gap-1">
+          {[
+            { label: "Demander une assurance", help: "Ouvrir un nouveau dossier", icon: Plus, route: "/espace/demandes/nouvelle" },
+            { label: "Envoyer un document", help: "Compléter une demande en cours", icon: Upload, route: "/espace/documents" },
+            { label: "Déclarer un sinistre", help: "Être accompagné rapidement", icon: LifeBuoy, route: "/espace/sinistres/nouveau" },
+            { label: "Renouveler un contrat", help: "Anticiper votre prochaine échéance", icon: RefreshCcw, route: "/espace/renouvellements/POL-2026-00325" },
+          ].map(({ label, help, icon: Icon, route }, index) => <div key={label}>{index > 0 && <Separator />}<button type="button" className="group flex w-full items-center gap-4 py-4 text-left" onClick={() => navigate(route)}><Icon size={19} className="text-slate-400 group-hover:text-blue-600" /><div className="min-w-0 flex-1"><strong className="block text-sm text-slate-900">{label}</strong><small className="mt-1 block text-xs text-slate-500">{help}</small></div><ChevronRight size={17} className="text-slate-300 group-hover:text-blue-600" /></button></div>)}
+        </CardContent></Card>
+        <Card className="rounded-2xl bg-white shadow-[0_10px_35px_rgba(15,35,65,.04)]"><CardHeader><CardTitle className="text-lg">Activité récente</CardTitle><CardDescription>Les dernières évolutions de vos dossiers</CardDescription></CardHeader><CardContent className="grid gap-0">
+          {store.activities.map((activity, index) => { const Icon = iconForKind[activity.kind] || Bell; return <div className="relative grid grid-cols-[32px_1fr] gap-3 pb-5 last:pb-0" key={activity.id}>{index < store.activities.length - 1 && <span className="absolute left-[15px] top-8 h-[calc(100%-18px)] w-px bg-slate-200" />}<span className="relative z-10 grid size-8 place-items-center rounded-full border border-slate-200 bg-white text-slate-500"><Icon size={15} /></span><button type="button" className="pt-0.5 text-left" onClick={() => navigate(activity.route)}><strong className="block text-sm leading-5 text-slate-800 hover:text-blue-700">{activity.label}</strong><small className="mt-1 block text-xs text-slate-400">{activity.date}</small></button></div>; })}
+        </CardContent></Card>
       </div>
 
-      <section className="panel scenarios-panel"><div className="panel-heading"><div><span className="page-eyebrow">Mode démonstration</span><h2>Explorer les 9 scénarios</h2><p>Passez directement à une situation pour présenter le parcours au Directeur Général.</p></div><span className="demo-chip">Données fictives</span></div>
-        <div className="scenario-grid">{store.scenarios.map((scenario) => <button type="button" key={scenario.id} onClick={() => navigate(scenario.route)}><span>{scenario.number}</span><div><strong>{scenario.title}</strong><small>{scenario.description}</small></div><ChevronRight size={17} /></button>)}</div>
-      </section>
+      <details className="group overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <summary className="flex cursor-pointer list-none items-center gap-4 px-5 py-5 sm:px-6"><span className="grid size-10 place-items-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600">09</span><div className="min-w-0 flex-1"><strong className="block text-sm text-slate-900">Mode présentation</strong><span className="mt-1 block text-xs text-slate-500">Accéder directement aux neuf scénarios de démonstration</span></div><Badge variant="outline">Données fictives</Badge><ChevronRight size={18} className="text-slate-400 transition-transform group-open:rotate-90" /></summary>
+        <div className="grid border-t border-slate-200 sm:grid-cols-2 xl:grid-cols-3">{store.scenarios.map((scenario) => <button type="button" className="group flex min-h-[82px] items-center gap-3 border-b border-slate-100 px-5 py-4 text-left last:border-b-0 sm:border-r" key={scenario.id} onClick={() => navigate(scenario.route)}><span className="text-xs font-bold tabular-nums text-blue-600">{String(scenario.number).padStart(2, "0")}</span><div className="min-w-0 flex-1"><strong className="block text-sm text-slate-900 group-hover:text-blue-700">{scenario.title}</strong><small className="mt-1 block text-xs leading-5 text-slate-500">{scenario.description}</small></div></button>)}</div>
+      </details>
     </div>
   );
 }
 
 export function RequestsPage() {
   const { store, navigate } = usePortal();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const requests = store.requests.filter((request) => request.scope === "core");
+  const visibleRequests = requests.filter((request) => {
+    const needle = search.trim().toLocaleLowerCase("fr");
+    const matchesSearch = !needle || `${request.reference} ${request.productLabel}`.toLocaleLowerCase("fr").includes(needle);
+    return matchesSearch && (statusFilter === "all" || request.status === statusFilter);
+  });
   return (
     <div className="page-stack">
       <PageHeader eyebrow="Mes dossiers" title="Mes demandes" description="Suivez l’avancement de chaque demande transmise à votre courtier." action={<LinkButton to="/espace/demandes/nouvelle"><Plus size={18} /> Nouvelle demande</LinkButton>} />
-      <div className="list-toolbar"><div className="search-box"><Search size={18} /><input aria-label="Rechercher une demande" placeholder="Rechercher par référence ou produit" /></div><button type="button" className="filter-button"><Filter size={17} /> Tous les statuts</button></div>
-      <div className="request-list">
-        {requests.map((request) => <button type="button" className="request-card" key={request.id} onClick={() => navigate(`/espace/demandes/${request.reference}`)}><span className="product-icon">{request.product === "automobile" ? <Car size={22} /> : request.product === "habitation" ? <Home size={22} /> : <HeartHandshake size={22} />}</span><div className="request-main"><span className="reference">{request.reference}</span><strong>{request.productLabel}</strong><small>Créée le {formatDate(request.date)}</small></div><StatusBadge status={request.status} /><ChevronRight size={19} /></button>)}
-      </div>
+      <div className="list-toolbar"><div className="search-box"><Search size={18} /><input aria-label="Rechercher une demande" placeholder="Rechercher par référence ou produit" value={search} onChange={(event) => setSearch(event.target.value)} /></div><label className="filter-select"><Filter size={17} /><span className="sr-only">Filtrer les demandes par statut</span><select aria-label="Filtrer les demandes par statut" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Tous les statuts</option><option value="proposals_available">Propositions disponibles</option><option value="under_review">En cours d’analyse</option><option value="completed">Terminée</option></select></label></div>
+      {visibleRequests.length > 0 ? <div className="request-list">
+        {visibleRequests.map((request) => <button type="button" className="request-card" key={request.id} onClick={() => navigate(`/espace/demandes/${request.reference}`)}><span className="product-icon">{request.product === "automobile" ? <Car size={22} /> : request.product === "habitation" ? <Home size={22} /> : <HeartHandshake size={22} />}</span><div className="request-main"><span className="reference">{request.reference}</span><strong>{request.productLabel}</strong><small>Créée le {formatDate(request.date)}</small></div><StatusBadge status={request.status} /><ChevronRight size={19} /></button>)}
+      </div> : <EmptyState title="Aucune demande trouvée" description="Modifiez votre recherche ou choisissez un autre statut." />}
     </div>
   );
 }
@@ -102,13 +122,24 @@ export function ProposalsPage({ requestReference }: { requestReference: string }
   const proposal = store.proposals.find((item) => item.id === request?.proposalId);
   if (!request || !proposal) return <NotFoundPage />;
   const offers = store.offers.filter((offer) => proposal.offerIds.includes(offer.id));
+  const recommendedOffer = offers.find((offer) => offer.id === proposal.recommendedOfferId) ?? offers[0];
+  const alternatives = offers.filter((offer) => offer.id !== recommendedOffer.id);
   return (
-    <div className="page-stack">
-      <button className="back-link" type="button" onClick={() => navigate(`/espace/demandes/${requestReference}`)}><ArrowLeft size={17} /> Retour au dossier</button>
+    <div className="grid gap-6 lg:gap-8">
+      <Button variant="ghost" className="h-9 w-fit rounded-lg px-2 text-slate-600" type="button" onClick={() => navigate(`/espace/demandes/${requestReference}`)}><ArrowLeft size={17} /> Retour au dossier</Button>
       <PageHeader eyebrow={proposal.reference} title="Comparez vos propositions" description="Trois solutions sélectionnées par votre courtier selon votre besoin automobile." />
-      <section className="broker-advice"><span className="large-avatar">{store.advisor.initials}</span><div><span>Conseil de votre courtier</span><h2>Notre recommandation</h2><p>{proposal.advice}</p></div></section>
-      <div className="offers-grid">{offers.map((offer) => { const recommended = offer.id === proposal.recommendedOfferId; return <article className={`offer-card ${recommended ? "recommended" : ""}`} key={offer.id}>{recommended && <div className="recommended-ribbon"><CheckCircle2 size={16} /> Recommandée par votre courtier</div>}<div className="offer-provider"><span>{offer.provider.slice(-1)}</span><div><small>Proposition</small><strong>{offer.provider}</strong></div></div><div className="offer-price"><strong>{formatFcfa(offer.premium)}</strong><span>/ an</span></div><div className="offer-meta"><span>Franchise <strong>{formatFcfa(offer.deductible)}</strong></span><span>Durée <strong>{offer.duration}</strong></span></div><ul className="guarantee-list">{offer.guarantees.map((guarantee) => <li key={guarantee}><Check size={16} /> {guarantee}</li>)}</ul><div className="offer-actions"><button type="button" className="button button-secondary" onClick={() => navigate(`/espace/offres/${offer.id}`)}>Voir les détails</button><button type="button" className="button button-primary" onClick={() => navigate(`/espace/offres/${offer.id}?choisir=1`)}>Choisir cette offre</button></div></article>; })}</div>
-      <p className="simulation-note"><CircleAlert size={16} /> Ces propositions sont entièrement fictives et servent uniquement à la démonstration.</p>
+      <section className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50/80 p-4 sm:items-center sm:p-5"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-blue-600 text-xs font-bold text-white">{store.advisor.initials}</span><div className="min-w-0 flex-1"><span className="text-[10px] font-bold uppercase tracking-[.16em] text-blue-700">L’avis de votre courtier</span><p className="mt-1 text-sm leading-6 text-blue-950">{proposal.advice}</p></div></section>
+
+      <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
+        <Card className="relative overflow-hidden rounded-2xl border-blue-500 bg-white shadow-[0_20px_55px_rgba(36,107,253,.12)]">
+          <div className="h-1.5 bg-blue-600" />
+          <CardHeader className="gap-5 p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-xl bg-blue-600 font-bold text-white">{recommendedOffer.provider.slice(-1)}</span><div><Badge variant="info"><CheckCircle2 size={13} /> Recommandée</Badge><CardTitle className="mt-2 text-xl">{recommendedOffer.provider}</CardTitle><CardDescription>{recommendedOffer.product}</CardDescription></div></div><div className="text-left sm:text-right"><strong className="block whitespace-nowrap text-[clamp(1.8rem,4vw,2.55rem)] font-semibold tracking-[-.04em] tabular-nums text-slate-950">{formatFcfa(recommendedOffer.premium)}</strong><span className="text-xs text-slate-500">par an</span></div></div></CardHeader>
+          <CardContent className="grid gap-6 p-5 pt-0 sm:p-6 sm:pt-0"><div className="grid grid-cols-2 divide-x divide-slate-200 rounded-xl bg-slate-50 py-4"><div className="px-4"><span className="block text-[11px] text-slate-500">Franchise</span><strong className="mt-1 block text-sm tabular-nums text-slate-900">{formatFcfa(recommendedOffer.deductible)}</strong></div><div className="px-4"><span className="block text-[11px] text-slate-500">Durée</span><strong className="mt-1 block text-sm text-slate-900">{recommendedOffer.duration}</strong></div></div><div><span className="text-[11px] font-bold uppercase tracking-[.14em] text-slate-400">Garanties principales</span><ul className="mt-3 grid gap-2 sm:grid-cols-2">{recommendedOffer.guarantees.map((guarantee) => <li className="flex items-center gap-2 text-sm text-slate-700" key={guarantee}><span className="grid size-5 place-items-center rounded-full bg-emerald-50 text-emerald-700"><Check size={12} strokeWidth={3} /></span>{guarantee}</li>)}</ul></div><div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" size="lg" className="h-11 rounded-xl" type="button" onClick={() => navigate(`/espace/offres/${recommendedOffer.id}`)}>Voir les détails</Button><Button size="lg" className="h-11 rounded-xl" type="button" onClick={() => navigate(`/espace/offres/${recommendedOffer.id}?choisir=1`)}>Choisir cette offre</Button></div></CardContent>
+        </Card>
+
+        <div className="grid gap-4">{alternatives.map((offer) => <Card className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(15,35,65,.04)]" key={offer.id}><CardContent className="grid gap-5 p-5"><div className="flex items-start justify-between gap-4"><div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600">{offer.provider.slice(-1)}</span><div><strong className="block text-sm text-slate-900">{offer.provider}</strong><span className="text-xs text-slate-500">{offer.product}</span></div></div><div className="text-right"><strong className="block whitespace-nowrap text-xl font-semibold tracking-[-.03em] tabular-nums text-slate-950">{formatFcfa(offer.premium)}</strong><span className="text-[11px] text-slate-500">par an</span></div></div><Separator /><div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600"><span>Franchise <strong className="ml-1 text-slate-900">{formatFcfa(offer.deductible)}</strong></span><span>{offer.guarantees.length} garanties incluses</span></div><ul className="grid gap-1.5">{offer.guarantees.slice(0, 3).map((guarantee) => <li className="flex items-center gap-2 text-xs text-slate-600" key={guarantee}><Check size={13} className="text-emerald-600" />{guarantee}</li>)}</ul><div className="grid grid-cols-2 gap-2"><Button variant="outline" className="rounded-xl" type="button" onClick={() => navigate(`/espace/offres/${offer.id}`)}>Détails</Button><Button variant="secondary" className="rounded-xl" type="button" onClick={() => navigate(`/espace/offres/${offer.id}?choisir=1`)}>Choisir</Button></div></CardContent></Card>)}</div>
+      </div>
+      <p className="flex items-center gap-2 text-xs text-slate-500"><CircleAlert size={15} /> Ces propositions sont entièrement fictives et servent uniquement à la démonstration.</p>
     </div>
   );
 }
@@ -188,9 +219,18 @@ export function ClaimDetailPage({ reference }: { reference: string }) {
 export function MessagesPage() {
   const { store, updateStore } = usePortal();
   const [message, setMessage] = useState("");
+  const [attachment, setAttachment] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
-  const submit = (event: FormEvent) => { event.preventDefault(); if (!message.trim()) return; updateStore(addMessage(store, message.trim())); setMessage(""); setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 20); };
-  return <div className="page-stack"><PageHeader eyebrow="Conversation" title="Ma messagerie" description="Échangez directement avec votre courtier depuis votre espace." /><section className="message-layout"><div className="conversation"><div className="conversation-head"><span className="large-avatar">{store.advisor.initials}</span><div><strong>{store.advisor.name}</strong><small><span /> Disponible pour vous accompagner</small></div></div><div className="messages-scroll">{store.messages.map((item) => <div className={`message-bubble ${item.sender}`} key={item.id}><span>{item.body}</span><small>{new Date(item.sentAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</small></div>)}<div ref={endRef} /></div><form className="message-compose" onSubmit={submit}><button type="button" aria-label="Joindre un document"><Paperclip size={19} /></button><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Écrivez votre message…" aria-label="Nouveau message" /><button type="submit" aria-label="Envoyer le message"><Send size={19} /></button></form></div><aside className="panel advisor-compact"><span className="large-avatar">{store.advisor.initials}</span><h2>{store.advisor.name}</h2><p>Conseillère clientèle</p><a href={`tel:${store.advisor.phone}`}><Phone size={17} /> {store.advisor.phone}</a><a href={`mailto:${store.advisor.email}`}><Mail size={17} /> {store.advisor.email}</a></aside></section></div>;
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!message.trim() && !attachment) return;
+    const body = [message.trim(), attachment ? `Pièce jointe : ${attachment}` : ""].filter(Boolean).join("\n");
+    updateStore(addMessage(store, body));
+    setMessage("");
+    setAttachment("");
+    setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 20);
+  };
+  return <div className="page-stack"><PageHeader eyebrow="Conversation" title="Ma messagerie" description="Échangez directement avec votre courtier depuis votre espace." /><section className="message-layout"><div className="conversation"><div className="conversation-head"><span className="large-avatar">{store.advisor.initials}</span><div><strong>{store.advisor.name}</strong><small><span /> Disponible pour vous accompagner</small></div></div><div className="messages-scroll">{store.messages.map((item) => <div className={`message-bubble ${item.sender}`} key={item.id}><span>{item.body}</span><small>{new Date(item.sentAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</small></div>)}<div ref={endRef} /></div><form className="message-compose" onSubmit={submit}><label className="attach-button" title="Joindre un document"><Paperclip size={19} /><span className="sr-only">Joindre un document</span><input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => setAttachment(event.target.files?.[0]?.name || "")} /></label><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Écrivez votre message…" aria-label="Nouveau message" /><button type="submit" aria-label="Envoyer le message"><Send size={19} /></button>{attachment && <span className="message-attachment" aria-live="polite"><FileText size={14} /> {attachment}</span>}</form></div><aside className="panel advisor-compact"><span className="large-avatar">{store.advisor.initials}</span><h2>{store.advisor.name}</h2><p>Conseillère clientèle</p><a href={`tel:${store.advisor.phone}`}><Phone size={17} /> {store.advisor.phone}</a><a href={`mailto:${store.advisor.email}`}><Mail size={17} /> {store.advisor.email}</a></aside></section></div>;
 }
 
 export function NotificationsPage() {
@@ -200,11 +240,11 @@ export function NotificationsPage() {
 }
 
 export function ProfilePage() {
-  const { store, updateStore } = usePortal();
+  const { store, updateStore, navigate } = usePortal();
   const [draft, setDraft] = useState(store.client);
   const [saved, setSaved] = useState(false);
   const submit = (event: FormEvent) => { event.preventDefault(); updateStore(updateProfile(store, draft)); setSaved(true); setTimeout(() => setSaved(false), 2500); };
-  return <div className="page-stack"><PageHeader eyebrow="Informations personnelles" title="Mon profil" description="Tenez vos coordonnées et vos préférences de notification à jour." /><form className="profile-layout" onSubmit={submit}><section className="panel"><div className="profile-identity"><span className="profile-avatar">JD</span><div><h2>Jean Dupont</h2><p>Client depuis 2026 · {store.client.id}</p></div></div>{saved && <div className="form-alert success" role="status"><CheckCircle2 size={17} /> Vos modifications ont été enregistrées.</div>}<div className="form-grid"><label>Prénom<input value={draft.firstName} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} /></label><label>Nom<input value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></label><label>Téléphone<input value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} /></label><label>Email<input type="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} /></label><label>Adresse<input value={draft.address} onChange={(event) => setDraft({ ...draft, address: event.target.value })} /></label><label>Ville<input value={draft.city} onChange={(event) => setDraft({ ...draft, city: event.target.value })} /></label></div></section><aside className="panel preferences"><span className="page-eyebrow">Préférences</span><h2>Notifications</h2><p>Choisissez comment vous souhaitez être informé.</p>{([['email','Email'],['sms','SMS'],['whatsapp','WhatsApp'],['inApp','Notification application']] as const).map(([key, label]) => <label className="switch-row" key={key}><span>{label}</span><input type="checkbox" checked={draft.preferences[key]} onChange={(event) => setDraft({ ...draft, preferences: { ...draft.preferences, [key]: event.target.checked } })} /></label>)}<button className="button button-primary full" type="submit">Enregistrer les modifications</button></aside></form></div>;
+  return <div className="page-stack"><PageHeader eyebrow="Informations personnelles" title="Mon profil" description="Tenez vos coordonnées et vos préférences de notification à jour." /><form className="profile-layout" onSubmit={submit}><section className="panel"><div className="profile-identity"><span className="profile-avatar">JD</span><div><h2>Jean Dupont</h2><p>Client depuis 2026 · {store.client.id}</p></div></div>{saved && <div className="form-alert success" role="status"><CheckCircle2 size={17} /> Vos modifications ont été enregistrées.</div>}<div className="form-grid"><label>Prénom<input value={draft.firstName} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} /></label><label>Nom<input value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></label><label>Téléphone<input value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} /></label><label>Email<input type="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} /></label><label>Adresse<input value={draft.address} onChange={(event) => setDraft({ ...draft, address: event.target.value })} /></label><label>Ville<input value={draft.city} onChange={(event) => setDraft({ ...draft, city: event.target.value })} /></label></div></section><aside className="panel preferences"><span className="page-eyebrow">Préférences</span><h2>Notifications</h2><p>Choisissez comment vous souhaitez être informé.</p>{([['email','Email'],['sms','SMS'],['whatsapp','WhatsApp'],['inApp','Notification application']] as const).map(([key, label]) => <label className="switch-row" key={key}><span>{label}</span><input type="checkbox" checked={draft.preferences[key]} onChange={(event) => setDraft({ ...draft, preferences: { ...draft.preferences, [key]: event.target.checked } })} /></label>)}<button className="button button-primary full" type="submit">Enregistrer les modifications</button><Button className="mt-3 w-full rounded-xl" variant="outline" type="button" onClick={() => { updateStore(signOut(store)); navigate("/"); }}><LogOut size={16} /> Se déconnecter</Button></aside></form></div>;
 }
 
 export function HelpPage() {

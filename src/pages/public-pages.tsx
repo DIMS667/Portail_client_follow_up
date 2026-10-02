@@ -3,6 +3,9 @@ import {
   Bike, Building2, Car, CheckCircle2, ChevronRight, Eye, EyeOff, FileCheck2,
   HeartPulse, Home, LockKeyhole, MessageCircleMore, Plane, ShieldCheck, Smartphone,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { usePortal } from "../app/portal-context";
 import { DEMO_CREDENTIALS } from "../data/demo-seed";
 import { authenticate } from "../services/portal-service";
@@ -15,13 +18,13 @@ const categories = [
 function PublicHeader() {
   const { navigate } = usePortal();
   return (
-    <header className="site-header">
-      <button className="brand brand-button" onClick={() => navigate("/")} type="button" aria-label="Espace Client, accueil">
-        <span className="brand-mark"><ShieldCheck size={22} /></span><span>Espace Client</span>
+    <header className="mx-auto flex h-[76px] w-[min(1240px,calc(100%-32px))] items-center justify-between">
+      <button className="flex items-center gap-3" onClick={() => navigate("/")} type="button" aria-label="Espace Client, accueil">
+        <span className="grid size-10 place-items-center rounded-[12px_12px_12px_4px] bg-[#08182d] text-white"><ShieldCheck size={20} /></span><span className="text-[15px] font-bold tracking-tight text-slate-950">Espace Client</span>
       </button>
-      <nav className="header-actions" aria-label="Navigation principale">
-        <button className="text-link" onClick={() => navigate("/#solutions")} type="button">Nos solutions</button>
-        <button className="button button-ghost" onClick={() => navigate("/connexion")} type="button">Se connecter</button>
+      <nav className="flex items-center gap-2" aria-label="Navigation principale">
+        <Button variant="ghost" className="hidden rounded-xl text-slate-600 sm:inline-flex" onClick={() => document.getElementById("solutions")?.scrollIntoView({ behavior: "smooth", block: "start" })} type="button">Nos solutions</Button>
+        <Button variant="outline" className="rounded-xl border-slate-300 bg-white" onClick={() => navigate("/connexion")} type="button">Se connecter</Button>
       </nav>
     </header>
   );
@@ -31,40 +34,46 @@ export function LandingPage() {
   const { navigate } = usePortal();
   const benefits = ["Plus besoin de vous déplacer", "Plusieurs propositions adaptées", "Documents accessibles en ligne", "Paiement et suivi à distance"];
   return (
-    <div className="public-shell">
+    <div className="min-h-screen overflow-hidden bg-[#f7f8fa]">
       <PublicHeader />
-      <main>
-        <section className="hero">
-          <div className="hero-copy">
-            <span className="eyebrow"><span /> Votre courtier, toujours à vos côtés</span>
-            <h1>Votre assurance,<br /><em>simplement et à distance</em></h1>
-            <p className="hero-lede">Demandez une assurance, recevez les propositions de votre courtier, transmettez vos documents, payez et suivez vos contrats en ligne.</p>
-            <div className="hero-actions">
-              <button className="button button-primary" onClick={() => navigate("/inscription")} type="button">Demander une assurance <ChevronRight size={18} /></button>
-              <button className="button button-secondary" onClick={() => navigate("/connexion")} type="button">Se connecter</button>
+      <main className="pb-16">
+        <section className="relative mx-auto grid min-h-[610px] w-[min(1240px,calc(100%-32px))] overflow-hidden rounded-[28px_28px_28px_8px] bg-[#08182d] px-6 py-12 text-white shadow-[0_35px_90px_rgba(8,24,45,.20)] sm:px-10 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:gap-16 lg:px-16 lg:py-16">
+          <div className="relative z-10 max-w-2xl">
+            <Badge className="border-white/10 bg-white/10 text-blue-100">Votre courtier, toujours à vos côtés</Badge>
+            <h1 className="mt-7 text-[clamp(2.65rem,6vw,5.35rem)] font-semibold leading-[.98] tracking-[-.06em] text-white">L’assurance qui suit<br /><span className="text-blue-400">votre rythme.</span></h1>
+            <p className="mt-7 max-w-xl text-[clamp(1rem,1.7vw,1.18rem)] leading-8 text-slate-300">Un seul espace pour demander une couverture, comparer les conseils de votre courtier et garder chaque document à portée de main.</p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Button size="lg" className="h-12 rounded-xl bg-blue-500 px-6 font-semibold hover:bg-blue-400" onClick={() => navigate("/inscription")} type="button">Démarrer une demande</Button>
+              <Button size="lg" variant="outline" className="h-12 rounded-xl border-white/20 bg-white/[.06] px-6 text-white hover:bg-white/10 hover:text-white" onClick={() => navigate("/connexion")} type="button">Accéder à mon espace</Button>
             </div>
-            <div className="confidence-row"><span><CheckCircle2 size={17} /> Accompagnement humain</span><span><CheckCircle2 size={17} /> Démarches sécurisées</span></div>
+            <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 text-sm text-slate-400"><span className="flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-400" /> Conseiller dédié</span><span className="flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-400" /> Suivi transparent</span><span className="flex items-center gap-2"><CheckCircle2 size={16} className="text-emerald-400" /> Documents centralisés</span></div>
           </div>
-          <div className="journey-visual">
-            <div className="journey-topline"><div><span className="micro-label">Votre demande</span><strong>Assurance automobile</strong></div><span className="status-pill">En bonne voie</span></div>
-            <div className="journey-progress"><span style={{ width: "62%" }} /></div>
-            <div className="journey-steps">
-              <div className="journey-step done"><span><FileCheck2 size={18} /></span><div><strong>Demande reçue</strong><small>Votre besoin a été transmis</small></div><CheckCircle2 size={19} /></div>
-              <div className="journey-step current"><span><MessageCircleMore size={18} /></span><div><strong>Propositions disponibles</strong><small>3 offres comparées par votre courtier</small></div><span className="step-badge">À consulter</span></div>
-              <div className="journey-step"><span><Smartphone size={18} /></span><div><strong>Choix et paiement</strong><small>La prochaine étape de votre parcours</small></div></div>
+          <div className="relative z-10 mt-12 lg:mt-0">
+            <div className="overflow-hidden rounded-[22px_22px_22px_7px] border border-white/15 bg-white text-slate-950 shadow-[0_30px_70px_rgba(0,0,0,.24)]">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-6"><div><span className="text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">Dossier automobile</span><strong className="mt-1 block text-base">DEM-2026-00145</strong></div><Badge variant="success">En bonne voie</Badge></div>
+              <div className="px-5 py-5 sm:px-6"><div className="flex items-end justify-between"><div><span className="text-xs text-slate-500">Progression</span><strong className="mt-1 block text-2xl font-semibold tracking-tight">3 étapes sur 5</strong></div><span className="text-sm font-semibold text-blue-600">60 %</span></div><Progress value={60} className="mt-4" /></div>
+              <div className="px-5 pb-2 sm:px-6">
+                {[
+                  { title: "Demande analysée", help: "Votre besoin a été vérifié", icon: FileCheck2, done: true },
+                  { title: "3 propositions disponibles", help: "À comparer maintenant", icon: MessageCircleMore, current: true },
+                  { title: "Choix et paiement", help: "Étape suivante", icon: Smartphone },
+                ].map(({ title, help, icon: Icon, done, current }, index) => <div className={`grid grid-cols-[38px_1fr_auto] items-center gap-3 py-4 ${index > 0 ? "border-t border-slate-100" : ""}`} key={title}><span className={`grid size-9 place-items-center rounded-xl ${current ? "bg-blue-600 text-white" : done ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400"}`}><Icon size={17} /></span><div><strong className="block text-sm">{title}</strong><small className="mt-0.5 block text-xs text-slate-500">{help}</small></div>{done ? <CheckCircle2 size={17} className="text-emerald-600" /> : current ? <Badge variant="info">À consulter</Badge> : null}</div>)}
+              </div>
+              <div className="m-3 flex items-center gap-3 rounded-xl bg-slate-950 p-4 text-white"><span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/10 text-xs font-bold">AM</span><div><small className="font-semibold text-blue-300">Le mot de votre courtier</small><p className="mt-1 text-xs leading-5 text-slate-300">« J’ai sélectionné trois protections adaptées à votre usage. »</p></div></div>
             </div>
-            <div className="advisor-note"><span className="advisor-avatar">AM</span><div><small>Le conseil de votre courtier</small><p>« Je vous accompagne pour choisir la couverture la plus adaptée. »</p></div></div>
+          </div>
+          <span className="pointer-events-none absolute -right-28 -top-28 size-[420px] rounded-full bg-blue-500/15 blur-3xl" />
+          <span className="pointer-events-none absolute -bottom-36 left-[35%] size-[360px] rounded-full bg-emerald-400/10 blur-3xl" />
+        </section>
+        <section className="mx-auto w-[min(1120px,calc(100%-32px))] py-20" id="solutions">
+          <div className="grid gap-5 border-b border-slate-200 pb-8 lg:grid-cols-[1fr_.7fr] lg:items-end"><div><span className="text-[11px] font-bold uppercase tracking-[.16em] text-blue-600">Vos besoins</span><h2 className="mt-3 text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-tight tracking-[-.05em] text-slate-950">Une protection pour chaque étape de vie.</h2></div><p className="text-[15px] leading-7 text-slate-600">Choisissez un besoin. Votre courtier clarifie les garanties, compare les solutions et vous accompagne jusqu’au contrat.</p></div>
+          <div className="grid md:grid-cols-2">
+            {categories.map(({ label, icon: Icon }, index) => <button type="button" className={`group flex min-h-[96px] items-center gap-4 border-b border-slate-200 py-5 text-left ${index % 2 === 0 ? "md:border-r md:pr-8" : "md:pl-8"}`} onClick={() => navigate("/inscription")} key={label}><Icon size={22} className="text-slate-400 transition-colors group-hover:text-blue-600" /><strong className="min-w-0 flex-1 text-base font-medium text-slate-800 group-hover:text-blue-700">Assurance {label.toLowerCase()}</strong><ChevronRight size={17} className="text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-blue-600" /></button>)}
           </div>
         </section>
-        <section className="solutions" id="solutions">
-          <div className="section-heading"><div><span className="eyebrow"><span /> Vos besoins</span><h2>Une protection pour chaque projet</h2></div><p>Commencez votre demande en quelques minutes. Votre courtier étudie ensuite votre situation.</p></div>
-          <div className="category-grid">
-            {categories.map(({ label, icon: Icon }) => <button type="button" className="category-card" onClick={() => navigate("/inscription")} key={label}><span><Icon size={24} /></span><strong>Assurance {label.toLowerCase()}</strong><ChevronRight size={18} /></button>)}
-          </div>
-        </section>
-        <section className="benefit-band"><div><span className="benefit-number">6</span><span>types d’assurance<br />accessibles en ligne</span></div><div className="benefit-list">{benefits.map((benefit) => <span key={benefit}><CheckCircle2 size={17} /> {benefit}</span>)}</div></section>
+        <section className="mx-auto grid w-[min(1120px,calc(100%-32px))] gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">{benefits.map((benefit, index) => <div className="bg-white p-6" key={benefit}><span className="text-xs font-bold tabular-nums text-blue-600">0{index + 1}</span><p className="mt-5 text-sm font-semibold leading-6 text-slate-800">{benefit}</p></div>)}</section>
       </main>
-      <footer><button type="button" className="brand brand-button" onClick={() => navigate("/")}><span className="brand-mark"><ShieldCheck size={20} /></span><span>Espace Client</span></button><p>Démonstration interactive — aucune transaction réelle.</p></footer>
+      <footer className="mx-auto flex min-h-[110px] w-[min(1120px,calc(100%-32px))] flex-col items-start justify-center gap-3 border-t border-slate-200 py-6 sm:flex-row sm:items-center sm:justify-between"><button type="button" className="flex items-center gap-2 font-semibold text-slate-900" onClick={() => navigate("/")}><span className="grid size-8 place-items-center rounded-lg bg-[#08182d] text-white"><ShieldCheck size={16} /></span><span>Espace Client</span></button><p className="text-xs text-slate-500">Démonstration interactive — aucune transaction réelle.</p></footer>
     </div>
   );
 }
