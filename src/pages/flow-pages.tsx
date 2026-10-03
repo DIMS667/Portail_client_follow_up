@@ -16,15 +16,15 @@ import {
 } from "../services/portal-service";
 import type { InsuranceProduct, InsuranceRequest } from "../types/domain";
 
-interface ProductChoice { id: InsuranceProduct; label: string; help: string; icon: LucideIcon; }
+interface ProductChoice { id: InsuranceProduct; label: string; help: string; image: string; icon: LucideIcon; }
 
 const productChoices: ProductChoice[] = [
-  { id: "automobile", label: "Automobile", help: "Voiture personnelle ou professionnelle", icon: Car },
-  { id: "moto", label: "Moto", help: "Deux-roues et scooters", icon: Bike },
-  { id: "sante", label: "Santé", help: "Protection individuelle ou familiale", icon: HeartPulse },
-  { id: "voyage", label: "Voyage", help: "Déplacements et séjours", icon: Plane },
-  { id: "habitation", label: "Habitation", help: "Maison, appartement et biens", icon: Home },
-  { id: "entreprise", label: "Entreprise", help: "Activité et responsabilité", icon: Building2 },
+  { id: "automobile", label: "Automobile", help: "Voiture personnelle ou professionnelle", image: "/images/insurance-auto.webp", icon: Car },
+  { id: "moto", label: "Moto", help: "Deux-roues et scooters", image: "/images/insurance-moto.webp", icon: Bike },
+  { id: "sante", label: "Santé", help: "Protection individuelle ou familiale", image: "/images/insurance-health.webp", icon: HeartPulse },
+  { id: "voyage", label: "Voyage", help: "Déplacements et séjours", image: "/images/insurance-travel.webp", icon: Plane },
+  { id: "habitation", label: "Habitation", help: "Maison, appartement et biens", image: "/images/insurance-home.webp", icon: Home },
+  { id: "entreprise", label: "Entreprise", help: "Activité et responsabilité", image: "/images/insurance-business.webp", icon: Building2 },
 ];
 
 const stepNames = ["Vos informations", "Le véhicule", "La couverture", "Compléments", "Récapitulatif"];
@@ -52,7 +52,7 @@ export function NewRequestPage() {
   };
   if (createdReference) return <RequestConfirmation reference={createdReference} productLabel={createdProductLabel} onOpen={() => navigate(`/espace/demandes/${createdReference}`)} />;
   if (!product) return (
-    <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate("/espace")}><ArrowLeft size={17} /> Retour à l’accueil</button><PageHeader eyebrow="Nouvelle demande" title="Quelle assurance recherchez-vous ?" description="Chaque assurance ouvre un formulaire adapté aux informations nécessaires à l’étude de votre dossier." /><div className="product-choice-grid">{productChoices.map(({ id, label, help, icon: Icon }) => <button type="button" key={id} onClick={() => setProduct(id)}><span><Icon size={28} /></span><div><strong>Assurance {label.toLowerCase()}</strong><small>{help}</small></div><ChevronRight size={19} /></button>)}</div></div>
+    <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate("/espace")}><ArrowLeft size={17} /> Retour à l’accueil</button><PageHeader eyebrow="Nouvelle demande" title={"Quelle assurance recherchez\u2011vous\u00a0?"} description="Chaque assurance ouvre un formulaire adapté aux informations nécessaires à l’étude de votre dossier." /><div className="product-choice-grid">{productChoices.map(({ id, label, help, image, icon: Icon }) => <button type="button" key={id} onClick={() => setProduct(id)}><span className="product-choice-visual"><img src={image} alt="" loading="lazy" decoding="async" /><i><Icon size={22} /></i></span><span className="product-choice-copy"><span><strong>Assurance {label.toLowerCase()}</strong><small>{help}</small></span><ChevronRight size={19} /></span></button>)}</div></div>
   );
   if (product !== "automobile") return <ProductRequestForm product={productChoices.find((item) => item.id === product)!} onBack={() => setProduct(null)} onSubmit={(data) => { const result = createInsuranceRequest(store, data); updateStore(result.store); setCreatedProductLabel(result.request.productLabel); setCreatedReference(result.request.reference); }} />;
   return (
