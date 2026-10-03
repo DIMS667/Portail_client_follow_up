@@ -19,9 +19,9 @@ export function createInsuranceRequest(store: PortalStore, data: Partial<Insuran
   const sequence = store.requests.filter((item) => item.scope !== "scenario").length + 146;
   const reference = `DEM-2026-${String(sequence).padStart(5, "0")}`;
   const request: InsuranceRequest = {
-    id: `REQ-${Date.now()}`, reference, clientId: store.client.id, product: "automobile", productLabel: "Assurance automobile",
+    id: `REQ-${Date.now()}`, reference, clientId: store.client.id, product: data.product ?? "automobile", productLabel: data.productLabel ?? "Assurance automobile",
     date: new Date().toISOString().slice(0, 10), status: "new", advisorId: store.advisor.id, vehicle: data.vehicle,
-    coverage: data.coverage, desiredStartDate: data.desiredStartDate, comments: data.comments,
+    details: data.details, coverage: data.coverage, desiredStartDate: data.desiredStartDate, comments: data.comments,
     timeline: [{ label: "Demande envoyée", done: true, at: "Aujourd’hui" }, { label: "Analyse du besoin", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Police disponible", done: false }], scope: "core",
   };
   return {

@@ -12,6 +12,7 @@ export interface Advisor { id: string; name: string; phone: string; email: strin
 export interface InsuranceRequest {
   id: string; reference: string; clientId: string; product: InsuranceProduct; productLabel: string; date: string; status: RequestStatus; advisorId: string;
   vehicle?: { brand: string; model: string; year: string; registration: string; value: number; usage: string };
+  details?: Record<string, string>;
   coverage?: string; desiredStartDate?: string; comments?: string; proposalId?: string; selectedOfferId?: string; timeline: StatusEvent[]; scope?: "core" | "scenario";
 }
 export interface Proposal { id: string; reference: string; requestId: string; offerIds: string[]; recommendedOfferId: string; advice: string; }

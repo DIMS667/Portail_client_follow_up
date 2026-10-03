@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
-  ArrowLeft, Bell, Building2, CalendarDays, Car, Check, CheckCircle2, ChevronRight,
+  ArrowLeft, Bell, Bike, Building2, CalendarDays, Car, Check, CheckCircle2, ChevronRight,
   CircleAlert, ClipboardList, Clock3, Download, FileCheck2, FileText, Filter, FolderOpen,
-  HandCoins, HeartHandshake, Home, LifeBuoy, Mail, MapPin, MessageCircle, Paperclip,
-  LogOut, Phone, Plus, RefreshCcw, Search, Send, ShieldCheck, Smartphone, Upload, UserRound,
+  HandCoins, HeartHandshake, HeartPulse, Home, LifeBuoy, Mail, MapPin, MessageCircle, Paperclip,
+  LogOut, Phone, Plane, Plus, RefreshCcw, Search, Send, ShieldCheck, Smartphone, Upload, UserRound,
   WalletCards, XCircle,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -19,10 +19,11 @@ import {
   addMessage, formatDate, formatFcfa, markNotificationRead, replaceDocument,
   signOut, simulatePayment, updateProfile,
 } from "../services/portal-service";
-import type { ClientDocument, PaymentMethod, PortalStore } from "../types/domain";
+import type { ClientDocument, InsuranceProduct, PaymentMethod, PortalStore } from "../types/domain";
 
 const iconForKind: Record<string, typeof Bell> = { proposal: ClipboardList, document: FileCheck2, payment: WalletCards, contract: ShieldCheck, request: FileText, renewal: RefreshCcw, claim: LifeBuoy, message: MessageCircle };
 const paymentLabels: Record<PaymentMethod, string> = { mobile_money: "Mobile Money", orange_money: "Orange Money", bank_card: "Carte bancaire", bank_transfer: "Virement" };
+const iconForProduct: Record<InsuranceProduct, typeof Car> = { automobile: Car, moto: Bike, sante: HeartPulse, voyage: Plane, habitation: Home, entreprise: Building2 };
 
 export function DashboardPage() {
   const { store, navigate } = usePortal();
@@ -90,7 +91,7 @@ export function RequestsPage() {
       <PageHeader eyebrow="Mes dossiers" title="Mes demandes" description="Suivez l’avancement de chaque demande transmise à votre courtier." action={<LinkButton to="/espace/demandes/nouvelle"><Plus size={18} /> Nouvelle demande</LinkButton>} />
       <div className="list-toolbar"><div className="search-box"><Search size={18} /><input aria-label="Rechercher une demande" placeholder="Rechercher par référence ou produit" value={search} onChange={(event) => setSearch(event.target.value)} /></div><label className="filter-select"><Filter size={17} /><span className="sr-only">Filtrer les demandes par statut</span><select aria-label="Filtrer les demandes par statut" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Tous les statuts</option><option value="proposals_available">Propositions disponibles</option><option value="under_review">En cours d’analyse</option><option value="completed">Terminée</option></select></label></div>
       {visibleRequests.length > 0 ? <div className="request-list">
-        {visibleRequests.map((request) => <button type="button" className="request-card" key={request.id} onClick={() => navigate(`/espace/demandes/${request.reference}`)}><span className="product-icon">{request.product === "automobile" ? <Car size={22} /> : request.product === "habitation" ? <Home size={22} /> : <HeartHandshake size={22} />}</span><div className="request-main"><span className="reference">{request.reference}</span><strong>{request.productLabel}</strong><small>Créée le {formatDate(request.date)}</small></div><StatusBadge status={request.status} /><ChevronRight size={19} /></button>)}
+        {visibleRequests.map((request) => { const ProductIcon = iconForProduct[request.product]; return <button type="button" className="request-card" key={request.id} onClick={() => navigate(`/espace/demandes/${request.reference}`)}><span className="product-icon"><ProductIcon size={22} /></span><div className="request-main"><span className="reference">{request.reference}</span><strong>{request.productLabel}</strong><small>Créée le {formatDate(request.date)}</small></div><StatusBadge status={request.status} /><ChevronRight size={19} /></button>; })}
       </div> : <EmptyState title="Aucune demande trouvée" description="Modifiez votre recherche ou choisissez un autre statut." />}
     </div>
   );
@@ -112,6 +113,7 @@ export function RequestDetailPage({ reference }: { reference: string }) {
         <aside className="panel advisor-card"><span className="page-eyebrow">Votre conseiller</span><span className="large-avatar">{store.advisor.initials}</span><h2>{store.advisor.name}</h2><p>Votre interlocutrice pour ce dossier.</p><a href={`tel:${store.advisor.phone}`}><Phone size={17} /> {store.advisor.phone}</a><a href={`mailto:${store.advisor.email}`}><Mail size={17} /> {store.advisor.email}</a><LinkButton to="/espace/messagerie" variant="secondary"><MessageCircle size={17} /> Envoyer un message</LinkButton></aside>
       </div>
       {request.vehicle && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Véhicule et couverture</h2></div></div><div className="details-grid"><Detail label="Véhicule" value={`${request.vehicle.brand} ${request.vehicle.model}`} /><Detail label="Année" value={request.vehicle.year} /><Detail label="Immatriculation" value={request.vehicle.registration} /><Detail label="Usage" value={request.vehicle.usage} /><Detail label="Valeur estimée" value={formatFcfa(request.vehicle.value)} /><Detail label="Couverture" value={request.coverage || "Conseil demandé"} /></div></section>}
+      {request.details && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre besoin</h2></div></div><div className="details-grid">{Object.entries(request.details).map(([label, value]) => <Detail key={label} label={label} value={value} />)}</div>{request.comments && <div className="request-comments"><span>Précisions complémentaires</span><p>{request.comments}</p></div>}</section>}
     </div>
   );
 }

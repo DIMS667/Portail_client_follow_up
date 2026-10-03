@@ -3,13 +3,22 @@ import {
   ArrowLeft, Bike, Building2, Car, Check, CheckCircle2, ChevronLeft, ChevronRight,
   CircleAlert, FileText, HeartPulse, Home, LifeBuoy, Plane, ShieldCheck, Upload,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { usePortal } from "../app/portal-context";
 import { PageHeader, StatusBadge, Timeline } from "../components/portal-ui";
 import {
+  insuranceProductForms,
+  type InsuranceFormField,
+  type NonAutomobileInsuranceProduct,
+} from "../data/insurance-product-forms";
+import {
   createClaim, createInsuranceRequest, formatDate, formatFcfa, requestRenewal, selectOffer,
 } from "../services/portal-service";
+import type { InsuranceProduct, InsuranceRequest } from "../types/domain";
 
-const productChoices = [
+interface ProductChoice { id: InsuranceProduct; label: string; help: string; icon: LucideIcon; }
+
+const productChoices: ProductChoice[] = [
   { id: "automobile", label: "Automobile", help: "Voiture personnelle ou professionnelle", icon: Car },
   { id: "moto", label: "Moto", help: "Deux-roues et scooters", icon: Bike },
   { id: "sante", label: "Santé", help: "Protection individuelle ou familiale", icon: HeartPulse },
@@ -22,9 +31,10 @@ const stepNames = ["Vos informations", "Le véhicule", "La couverture", "Complé
 
 export function NewRequestPage() {
   const { store, updateStore, navigate } = usePortal();
-  const [product, setProduct] = useState<string | null>(null);
+  const [product, setProduct] = useState<InsuranceProduct | null>(null);
   const [step, setStep] = useState(0);
   const [createdReference, setCreatedReference] = useState("");
+  const [createdProductLabel, setCreatedProductLabel] = useState("Assurance automobile");
   const [form, setForm] = useState({
     firstName: store.client.firstName, lastName: store.client.lastName, phone: store.client.phone, email: store.client.email, city: store.client.city,
     brand: "Toyota", model: "RAV4", year: "2022", registration: "LT 458 AA", value: "18000000", usage: "Personnel",
@@ -38,13 +48,13 @@ export function NewRequestPage() {
       vehicle: { brand: form.brand, model: form.model, year: form.year, registration: form.registration, value: Number(form.value), usage: form.usage },
       coverage: form.coverage, desiredStartDate: form.desiredStartDate, comments: form.comments,
     });
-    updateStore(result.store); setCreatedReference(result.request.reference);
+    updateStore(result.store); setCreatedProductLabel(result.request.productLabel); setCreatedReference(result.request.reference);
   };
-  if (createdReference) return <RequestConfirmation reference={createdReference} onOpen={() => navigate(`/espace/demandes/${createdReference}`)} />;
+  if (createdReference) return <RequestConfirmation reference={createdReference} productLabel={createdProductLabel} onOpen={() => navigate(`/espace/demandes/${createdReference}`)} />;
   if (!product) return (
-    <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate("/espace")}><ArrowLeft size={17} /> Retour à l’accueil</button><PageHeader eyebrow="Nouvelle demande" title="Quelle assurance recherchez-vous ?" description="Choisissez un besoin. Le parcours automobile est entièrement détaillé dans cette démonstration." /><div className="product-choice-grid">{productChoices.map(({ id, label, help, icon: Icon }) => <button type="button" key={id} onClick={() => setProduct(id)}><span><Icon size={28} /></span><div><strong>Assurance {label.toLowerCase()}</strong><small>{help}</small></div><ChevronRight size={19} /></button>)}</div></div>
+    <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate("/espace")}><ArrowLeft size={17} /> Retour à l’accueil</button><PageHeader eyebrow="Nouvelle demande" title="Quelle assurance recherchez-vous ?" description="Chaque assurance ouvre un formulaire adapté aux informations nécessaires à l’étude de votre dossier." /><div className="product-choice-grid">{productChoices.map(({ id, label, help, icon: Icon }) => <button type="button" key={id} onClick={() => setProduct(id)}><span><Icon size={28} /></span><div><strong>Assurance {label.toLowerCase()}</strong><small>{help}</small></div><ChevronRight size={19} /></button>)}</div></div>
   );
-  if (product !== "automobile") return <GenericRequest product={productChoices.find((item) => item.id === product)!} onBack={() => setProduct(null)} onSubmit={() => { const result = createInsuranceRequest(store, { coverage: "Conseil demandé", comments: `Demande ${product}` }); updateStore(result.store); setCreatedReference(result.request.reference); }} />;
+  if (product !== "automobile") return <ProductRequestForm product={productChoices.find((item) => item.id === product)!} onBack={() => setProduct(null)} onSubmit={(data) => { const result = createInsuranceRequest(store, data); updateStore(result.store); setCreatedProductLabel(result.request.productLabel); setCreatedReference(result.request.reference); }} />;
   return (
     <div className="page-stack request-flow-page"><button className="back-link" type="button" onClick={() => step === 0 ? setProduct(null) : previous()}><ArrowLeft size={17} /> {step === 0 ? "Changer d’assurance" : "Étape précédente"}</button><PageHeader eyebrow="Assurance automobile" title="Votre demande en quelques étapes" description="Vos informations sont enregistrées uniquement dans cette démonstration." />
       <ol className="stepper">{stepNames.map((name, index) => <li className={index < step ? "done" : index === step ? "active" : ""} key={name}><span>{index < step ? <Check size={15} /> : index + 1}</span><small>{name}</small></li>)}</ol>
@@ -60,13 +70,62 @@ export function NewRequestPage() {
   );
 }
 
-function GenericRequest({ product, onBack, onSubmit }: { product: (typeof productChoices)[number]; onBack: () => void; onSubmit: () => void }) {
+function ProductRequestForm({ product, onBack, onSubmit }: { product: ProductChoice; onBack: () => void; onSubmit: (data: Partial<InsuranceRequest>) => void }) {
+  const config = insuranceProductForms[product.id as NonAutomobileInsuranceProduct];
+  const fields = config.sections.flatMap((section) => section.fields);
+  const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map((field) => [field.key, field.defaultValue])));
+  const [coverage, setCoverage] = useState(config.coverageOptions.at(-1) ?? config.coverageOptions[0]);
+  const [comments, setComments] = useState("");
   const Icon = product.icon;
-  return <div className="page-stack"><button className="back-link" type="button" onClick={onBack}><ArrowLeft size={17} /> Changer d’assurance</button><PageHeader eyebrow="Nouvelle demande" title={`Assurance ${product.label.toLowerCase()}`} description="Parcours simplifié de démonstration : votre courtier précisera ensuite votre besoin." /><section className="flow-card generic-request"><span className="generic-product-icon"><Icon size={32} /></span><h2>Parlez-nous de votre projet</h2><p>Indiquez une date souhaitée et un commentaire. Votre courtier vous recontactera pour compléter l’analyse.</p><div className="form-grid"><label>Date souhaitée<input type="date" defaultValue="2026-10-15" /></label><label className="full-span">Votre besoin<textarea rows={6} placeholder="Décrivez brièvement votre situation…" /></label></div><div className="flow-actions"><button className="button button-primary" type="button" onClick={onSubmit}>Envoyer ma demande</button></div></section></div>;
+  const updateValue = (key: string, value: string) => setValues((current) => ({ ...current, [key]: value }));
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const details = Object.fromEntries([
+      ...fields.map((field) => [field.label, formatProductField(field, values[field.key])] as const),
+      ["Couverture souhaitée", coverage] as const,
+    ]);
+    onSubmit({
+      product: product.id,
+      productLabel: `Assurance ${product.label.toLowerCase()}`,
+      coverage,
+      desiredStartDate: values[config.startDateKey],
+      comments: comments.trim() || undefined,
+      details,
+    });
+  };
+
+  return <div className="page-stack product-request-page">
+    <button className="back-link" type="button" onClick={onBack}><ArrowLeft size={17} /> Changer d’assurance</button>
+    <PageHeader eyebrow="Nouvelle demande" title={`Assurance ${product.label.toLowerCase()}`} description="Renseignez les informations essentielles pour permettre à votre courtier d’étudier votre dossier." />
+    <form className="flow-card product-request" onSubmit={submit}>
+      <header className="product-request-hero"><span className="generic-product-icon"><Icon size={30} /></span><div><span className="product-form-tag">Formulaire personnalisé</span><h2>{config.title}</h2><p>{config.intro}</p></div></header>
+      {config.sections.map((section, sectionIndex) => <section className="product-form-section" key={section.title}>
+        <div className="product-form-heading"><span>{sectionIndex + 1}</span><div><h3>{section.title}</h3>{section.description && <p>{section.description}</p>}</div></div>
+        <div className="form-grid">{section.fields.map((field) => <label className={field.full ? "full-span" : undefined} key={field.key}>{field.label}{!field.required && <small className="field-optional">Facultatif</small>}{field.type === "select" ? <select value={values[field.key]} onChange={(event) => updateValue(field.key, event.target.value)} required={field.required}>{field.options?.map((option) => <option key={option}>{option}</option>)}</select> : <input type={field.type} value={values[field.key]} onChange={(event) => updateValue(field.key, event.target.value)} placeholder={field.placeholder} min={field.min} required={field.required} inputMode={field.type === "number" ? "numeric" : undefined} />}</label>)}</div>
+      </section>)}
+      <section className="product-form-section">
+        <div className="product-form-heading"><span>{config.sections.length + 1}</span><div><h3>Protection recherchée</h3><p>Choisissez le niveau qui se rapproche le plus de votre besoin. Votre courtier pourra l’ajuster avec vous.</p></div></div>
+        <fieldset className="coverage-choice-grid"><legend className="sr-only">Protection recherchée</legend>{config.coverageOptions.map((option) => <label className={coverage === option ? "selected" : ""} key={option}><input type="radio" name={`${product.id}-coverage`} value={option} checked={coverage === option} onChange={() => setCoverage(option)} /><span><ShieldCheck size={19} /></span><strong>{option}</strong>{coverage === option && <CheckCircle2 size={18} />}</label>)}</fieldset>
+      </section>
+      <section className="product-form-section product-form-comments">
+        <div><h3>Précisions complémentaires <small>Facultatif</small></h3><p>Ajoutez uniquement une information qui n’apparaît pas déjà dans le formulaire.</p></div>
+        <label className="sr-only" htmlFor={`${product.id}-comments`}>Précisions complémentaires</label><textarea id={`${product.id}-comments`} rows={4} value={comments} onChange={(event) => setComments(event.target.value)} placeholder="Une contrainte, une échéance ou une information utile…" />
+      </section>
+      <div className="form-alert info"><CircleAlert size={18} /> Cette demande est fictive et ne sera transmise à aucune compagnie d’assurance.</div>
+      <div className="flow-actions"><button className="button button-secondary" type="button" onClick={onBack}>Changer d’assurance</button><button className="button button-primary" type="submit">Envoyer ma demande <ChevronRight size={18} /></button></div>
+    </form>
+  </div>;
 }
 
-function RequestConfirmation({ reference, onOpen }: { reference: string; onOpen: () => void }) {
-  return <div className="confirmation-page"><span className="confirmation-icon"><CheckCircle2 size={38} /></span><span className="page-eyebrow">Demande transmise</span><h1>Votre demande a bien été enregistrée.</h1><p>Votre courtier va analyser votre besoin et préparer les propositions adaptées.</p><div className="confirmation-reference"><small>Référence de votre dossier</small><strong>{reference}</strong><span>Assurance automobile · Nouvelle demande</span></div><Timeline items={[{ label: "Demande envoyée", done: true }, { label: "Analyse du besoin", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Police disponible", done: false }]} /><button className="button button-primary" type="button" onClick={onOpen}>Voir le suivi de ma demande</button></div>;
+function formatProductField(field: InsuranceFormField, value: string) {
+  if (!value) return "Non renseigné";
+  if (field.format === "fcfa") return formatFcfa(Number(value));
+  if (field.format === "date") return formatDate(value);
+  return value;
+}
+
+function RequestConfirmation({ reference, productLabel, onOpen }: { reference: string; productLabel: string; onOpen: () => void }) {
+  return <div className="confirmation-page"><span className="confirmation-icon"><CheckCircle2 size={38} /></span><span className="page-eyebrow">Demande transmise</span><h1>Votre demande a bien été enregistrée.</h1><p>Votre courtier va analyser votre besoin et préparer les propositions adaptées.</p><div className="confirmation-reference"><small>Référence de votre dossier</small><strong>{reference}</strong><span>{productLabel} · Nouvelle demande</span></div><Timeline items={[{ label: "Demande envoyée", done: true }, { label: "Analyse du besoin", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Police disponible", done: false }]} /><button className="button button-primary" type="button" onClick={onOpen}>Voir le suivi de ma demande</button></div>;
 }
 
 export function OfferDetailPage({ offerId }: { offerId: string }) {
