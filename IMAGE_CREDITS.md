@@ -14,3 +14,14 @@ Les photographies sont utilisées dans cette démonstration sous la [licence Pex
 | `advisor-amina.webp` | Khris Kunta kUkU | [Professionnelle dans son espace de travail](https://www.pexels.com/photo/femme-au-bureau-20209020/) |
 
 Les personnes photographiées sont des modèles d’illustration et ne représentent ni des employés ni des clients réels de FOLLOW-UP INSURANCE.
+
+## Visuels créés pour la démonstration
+
+Les fichiers suivants ont été générés spécifiquement pour cette démonstration à partir de la direction artistique validée. Ils ne représentent ni des employés ni des clients réels :
+
+- `public-hero-collage.png` ;
+- `public-role-advisor.png` ;
+- `public-entrepreneur.png` ;
+- `public-claims-advisor.png`.
+
+Le fichier `portal-dashboard-preview.png` est une capture du portail client de démonstration lui-même.

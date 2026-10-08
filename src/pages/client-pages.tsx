@@ -19,11 +19,14 @@ import {
   addMessage, formatDate, formatFcfa, markNotificationRead, replaceDocument,
   signOut, simulatePayment, updateProfile,
 } from "../services/portal-service";
-import type { ClientDocument, InsuranceProduct, PaymentMethod, PortalStore } from "../types/domain";
+import type { AutoClaimPerson, AutoClaimVehicle, AutoRequestType, AutoVehicleEnergy, AutoVehicleUsage, ClientDocument, InsuranceProduct, PaymentMethod, PortalStore } from "../types/domain";
 
 const iconForKind: Record<string, typeof Bell> = { proposal: ClipboardList, document: FileCheck2, payment: WalletCards, contract: ShieldCheck, request: FileText, renewal: RefreshCcw, claim: LifeBuoy, message: MessageCircle };
 const paymentLabels: Record<PaymentMethod, string> = { mobile_money: "Mobile Money", orange_money: "Orange Money", bank_card: "Carte bancaire", bank_transfer: "Virement" };
 const iconForProduct: Record<InsuranceProduct, typeof Car> = { automobile: Car, moto: Bike, sante: HeartPulse, voyage: Plane, habitation: Home, entreprise: Building2 };
+const autoRequestTypeLabels: Record<AutoRequestType, string> = { new_vehicle: "Assurer un nouveau véhicule", renewal: "Renouveler mon assurance", switch_insurer: "Changer d’assureur", advice: "Obtenir un conseil", other: "Autre besoin" };
+const autoEnergyLabels: Record<AutoVehicleEnergy, string> = { petrol: "Essence", diesel: "Diesel" };
+const autoUsageLabels: Record<AutoVehicleUsage, string> = { personal: "Usage personnel", professional: "Usage professionnel", transport: "Transport", other: "Autre" };
 
 export function DashboardPage() {
   const { store, navigate } = usePortal();
@@ -104,6 +107,7 @@ export function RequestDetailPage({ reference }: { reference: string }) {
   const request = store.requests.find((item) => item.reference === reference);
   if (!request) return <NotFoundPage />;
   const proposalAvailable = request.status === "proposals_available";
+  const automobileRequest = request.automobileRequest;
   return (
     <div className="page-stack">
       <button className="back-link" type="button" onClick={() => navigate("/espace/demandes")}><ArrowLeft size={17} /> Retour aux demandes</button>
@@ -114,7 +118,13 @@ export function RequestDetailPage({ reference }: { reference: string }) {
         <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Progression</span><h2>Suivi du dossier</h2></div></div><Timeline items={request.timeline} /></section>
         <aside className="panel advisor-card"><span className="page-eyebrow">Votre conseiller</span><span className="large-avatar">{store.advisor.initials}</span><h2>{store.advisor.name}</h2><p>Votre interlocutrice pour ce dossier.</p><a href={`tel:${store.advisor.phone}`}><Phone size={17} /> {store.advisor.phone}</a><a href={`mailto:${store.advisor.email}`}><Mail size={17} /> {store.advisor.email}</a><LinkButton to="/espace/messagerie" variant="secondary"><MessageCircle size={17} /> Envoyer un message</LinkButton></aside>
       </div>
-      {request.vehicle && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Véhicule et couverture</h2></div></div><div className="details-grid"><Detail label="Véhicule" value={`${request.vehicle.brand} ${request.vehicle.model}`} /><Detail label="Année" value={request.vehicle.year} /><Detail label="Immatriculation" value={request.vehicle.registration} /><Detail label="Usage" value={request.vehicle.usage} /><Detail label="Valeur estimée" value={formatFcfa(request.vehicle.value)} /><Detail label="Couverture" value={request.coverage || "Conseil demandé"} /></div></section>}
+      {automobileRequest && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre demande automobile</h2></div></div><div className="auto-request-detail-groups">
+        <section><h3>Votre besoin</h3><div className="details-grid"><Detail label="Demande" value={autoRequestTypeLabels[automobileRequest.requestType]} />{automobileRequest.otherNeed && <Detail label="Précision" value={automobileRequest.otherNeed} />}</div></section>
+        <section><h3>Votre véhicule</h3><div className="details-grid"><Detail label="Type" value="Véhicule de tourisme" /><Detail label="Véhicule" value={`${automobileRequest.vehicle.brand} ${automobileRequest.vehicle.model}`} /><Detail label="Année" value={String(automobileRequest.vehicle.year)} /><Detail label="Immatriculation" value={automobileRequest.vehicle.registration} /><Detail label="Énergie" value={autoEnergyLabels[automobileRequest.vehicle.energy]} /><Detail label="Puissance fiscale" value={`${automobileRequest.vehicle.fiscalPower} CV`} /><Detail label="Usage" value={autoUsageLabels[automobileRequest.vehicle.usage]} />{automobileRequest.vehicle.estimatedValue !== null && <Detail label="Valeur estimée du véhicule" value={formatFcfa(automobileRequest.vehicle.estimatedValue)} />}</div></section>
+        <section><h3>Durée et prise d’effet</h3><div className="details-grid"><Detail label="Durée" value={`${automobileRequest.coverage.durationMonths} mois`} /><Detail label="Prise d’effet" value={automobileRequest.coverage.desiredStartDate ? formatDate(automobileRequest.coverage.desiredStartDate) : "Date à confirmer"} /></div></section>
+        <section><h3>Informations complémentaires</h3><div className="details-grid"><Detail label="Véhicule déjà assuré" value={automobileRequest.previousInsurance.hasInsurance ? "Oui" : "Non"} />{automobileRequest.previousInsurance.hasInsurance && <><Detail label="Ancien assureur" value={automobileRequest.previousInsurance.insurerName || "Non renseigné"} /><Detail label="Expiration du contrat" value={automobileRequest.previousInsurance.expirationDate ? formatDate(automobileRequest.previousInsurance.expirationDate) : "Non renseignée"} /><Detail label="Numéro de police actuel" value={automobileRequest.previousInsurance.policyNumber || "Non renseigné"} /></>}<Detail label="Conseil souhaité" value={automobileRequest.wantsAdvice ? "Oui" : "Non"} /></div>{automobileRequest.comments && <div className="request-comments"><span>Précisions complémentaires</span><p>{automobileRequest.comments}</p></div>}</section>
+      </div></section>}
+      {!automobileRequest && request.vehicle && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Véhicule et couverture</h2></div></div><div className="details-grid"><Detail label="Véhicule" value={`${request.vehicle.brand} ${request.vehicle.model}`} /><Detail label="Année" value={request.vehicle.year} /><Detail label="Immatriculation" value={request.vehicle.registration} /><Detail label="Usage" value={request.vehicle.usage} />{request.vehicle.value !== null && <Detail label="Valeur estimée" value={formatFcfa(request.vehicle.value)} />}<Detail label="Couverture" value={request.coverage || "Conseil demandé"} /></div></section>}
       {request.details && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre besoin</h2></div></div><div className="details-grid">{Object.entries(request.details).map(([label, value]) => <Detail key={label} label={label} value={value} />)}</div>{request.comments && <div className="request-comments"><span>Précisions complémentaires</span><p>{request.comments}</p></div>}</section>}
     </div>
   );
@@ -217,7 +227,77 @@ export function ClaimDetailPage({ reference }: { reference: string }) {
   const { store, navigate } = usePortal();
   const claim = store.claims.find((item) => item.reference === reference);
   if (!claim) return <NotFoundPage />;
-  return <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate("/espace/sinistres")}><ArrowLeft size={17} /> Retour aux sinistres</button><PageHeader eyebrow={claim.reference} title={`${claim.type} — ${claim.productLabel}`} description={`Déclaré le ${formatDate(claim.date)}`} action={<StatusBadge status={claim.status}>{claim.status === "closed" ? "Clôturé" : "En traitement"}</StatusBadge>} /><div className="detail-grid"><section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Progression</span><h2>Suivi du sinistre</h2></div></div><Timeline items={claim.timeline} /></section><aside className="panel"><span className="page-eyebrow">Détails</span><div className="stack-details"><Detail label="Contrat" value={claim.contractId} /><Detail label="Lieu" value={claim.location} /><Detail label="Description" value={claim.description} /></div></aside></div></div>;
+  const declaration = claim.autoDeclaration;
+  const injuredPeople = declaration ? [...declaration.injuriesInVehicle, ...declaration.otherInjuries] : [];
+  const circumstancesA = declaration?.circumstances.filter((item) => item.vehicleA).map((item) => item.label).filter(Boolean) ?? [];
+  const circumstancesB = declaration?.circumstances.filter((item) => item.vehicleB).map((item) => item.label).filter(Boolean) ?? [];
+  const authority = declaration ? [declaration.policeReportBy, declaration.gendarmerie, declaration.brigade].filter(Boolean).join(" · ") : "";
+  const documents = Array.from(new Set([...(claim.attachments ?? []), ...(declaration?.sketchFileName ? [declaration.sketchFileName] : [])]));
+
+  return <div className="page-stack">
+    <button className="back-link" type="button" onClick={() => navigate("/espace/sinistres")}><ArrowLeft size={17} /> Retour aux sinistres</button>
+    <PageHeader eyebrow={claim.reference} title={`${claim.type} — ${claim.productLabel}`} description={`Déclaré le ${formatDate(claim.date)}`} action={<StatusBadge status={claim.status}>{claim.status === "closed" ? "Clôturé" : "En traitement"}</StatusBadge>} />
+    <div className="detail-grid">
+      <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Progression</span><h2>Suivi du sinistre</h2></div></div><Timeline items={claim.timeline} /></section>
+      <aside className="panel"><span className="page-eyebrow">Détails</span><div className="stack-details"><Detail label="Contrat" value={claim.contractId} /><Detail label="Lieu" value={claim.location} /><Detail label="Description" value={claim.description} /></div></aside>
+    </div>
+
+    {declaration && <>
+      <section className="panel">
+        <div className="panel-heading"><div><span className="page-eyebrow">Déclaration automobile</span><h2>Événement et contrat</h2></div></div>
+        <div className="details-grid">
+          <Detail label="Date de l’accident" value={formatDate(claim.date)} />
+          <Detail label="Heure" value={declaration.accidentTime || "Non renseignée"} />
+          <Detail label="Lieu" value={claim.location || "Non renseigné"} />
+          <Detail label="Numéro client" value={declaration.clientNumber || "Non renseigné"} />
+          <Detail label="Point de vente" value={declaration.pointOfSale || "Non renseigné"} />
+          <Detail label="Période du contrat" value={`${formatAutoClaimDate(declaration.policyEffectiveDate)} — ${formatAutoClaimDate(declaration.policyExpiryDate)}`} />
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading"><div><span className="page-eyebrow">Personnes concernées</span><h2>Assuré, conducteur et tiers</h2></div></div>
+        <div className="details-grid">
+          <Detail label="Assuré" value={formatAutoClaimPerson(declaration.insured)} />
+          <Detail label="Conducteur assuré" value={formatAutoClaimPerson(declaration.insuredDriver)} />
+          <Detail label="Permis du conducteur" value={[declaration.insuredDriver.licenceNumber, declaration.insuredDriver.licenceCategory].filter(Boolean).join(" · ") || "Non renseigné"} />
+          <Detail label="Tiers impliqué" value={declaration.adversePartyInvolved ? "Oui" : "Non"} />
+          <Detail label="Tiers" value={formatAutoClaimPerson(declaration.adversary)} />
+          <Detail label="Conducteur du tiers" value={formatAutoClaimPerson(declaration.adversaryDriver)} />
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading"><div><span className="page-eyebrow">Constat</span><h2>Véhicules et circonstances</h2></div></div>
+        <div className="details-grid">
+          <Detail label="Véhicule A" value={formatAutoClaimVehicle(declaration.insuredVehicle)} />
+          <Detail label="Véhicule B" value={formatAutoClaimVehicle(declaration.adverseVehicle)} />
+          <Detail label="Circonstances A" value={circumstancesA.join(", ") || "Aucune sélection"} />
+          <Detail label="Circonstances B" value={circumstancesB.join(", ") || "Aucune sélection"} />
+          <Detail label="Point de choc A" value={declaration.impactPointA || "Non renseigné"} />
+          <Detail label="Point de choc B" value={declaration.impactPointB || "Non renseigné"} />
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading"><div><span className="page-eyebrow">Conséquences</span><h2>Dommages, blessés et témoins</h2></div></div>
+        <div className="details-grid">
+          <Detail label="Dommages véhicule A" value={declaration.damageDescriptionA || "Non renseignés"} />
+          <Detail label="Dommages véhicule B" value={declaration.damageDescriptionB || "Non renseignés"} />
+          <Detail label="Blessés" value={injuredPeople.length ? `${injuredPeople.length} — ${injuredPeople.map((person) => person.name).filter(Boolean).join(", ")}` : "Aucun blessé déclaré"} />
+          <Detail label="Témoins" value={declaration.witnesses.length ? `${declaration.witnesses.length} — ${declaration.witnesses.map((witness) => witness.name).filter(Boolean).join(", ")}` : "Aucun témoin déclaré"} />
+          <Detail label="Autorités" value={authority || "Non renseignées"} />
+          <Detail label="Attestation" value={formatAutoClaimDate(declaration.attestedAt)} />
+        </div>
+        {declaration.narrative && <div className="request-comments"><span>Déroulement de l’accident</span><p>{declaration.narrative}</p></div>}
+      </section>
+    </>}
+
+    {documents.length > 0 && <section className="panel">
+      <div className="panel-heading"><div><span className="page-eyebrow">Pièces jointes</span><h2>Documents transmis</h2></div></div>
+      <ul className="plain-list">{documents.map((document) => <li key={document}><FileText size={16} /><span>{document}</span></li>)}</ul>
+    </section>}
+  </div>;
 }
 
 export function MessagesPage() {
@@ -258,6 +338,49 @@ export function HelpPage() {
 
 export function NotFoundPage() {
   return <div className="not-found"><span>404</span><h1>Cette page n’est pas disponible.</h1><p>Le contenu demandé n’existe pas dans cette démonstration.</p><LinkButton to="/espace">Retour à l’accueil</LinkButton></div>;
+}
+
+function formatAutoClaimDate(value?: string | null) {
+  const normalized = value?.trim();
+  if (!normalized) return "Non renseigné";
+
+  const parsed = new Date(/^\d{4}-\d{2}-\d{2}$/.test(normalized) ? `${normalized}T12:00:00` : normalized);
+  if (Number.isNaN(parsed.getTime())) return normalized;
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(parsed);
+}
+
+function formatAutoClaimPerson(person?: Partial<AutoClaimPerson> | null) {
+  if (!person) return "Non renseigné";
+
+  const identity = [person.firstNames, person.lastName]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join(" ");
+  const details = [person.profession, person.phone, person.email, person.address]
+    .map((value) => value?.trim())
+    .filter(Boolean);
+
+  return [identity, ...details].filter(Boolean).join(" · ") || "Non renseigné";
+}
+
+function formatAutoClaimVehicle(vehicle?: Partial<AutoClaimVehicle> | null) {
+  if (!vehicle) return "Non renseigné";
+
+  const identity = [vehicle.brand, vehicle.type]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join(" ");
+  const details = [
+    vehicle.registration?.trim() ? `Immatriculation ${vehicle.registration.trim()}` : "",
+    vehicle.usage?.trim() ? `Usage ${vehicle.usage.trim()}` : "",
+  ].filter(Boolean);
+
+  return [identity, ...details].filter(Boolean).join(" · ") || "Non renseigné";
 }
 
 function Detail({ label, value }: { label: string; value: string }) { return <div className="detail-item"><small>{label}</small><strong>{value}</strong></div>; }

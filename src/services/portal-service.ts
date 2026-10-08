@@ -1,5 +1,10 @@
 import type { Claim, InsuranceRequest, PaymentMethod, PortalStore } from "../types/domain";
 
+export type CreateClaimInput = Pick<Claim, "contractId" | "type" | "date" | "location" | "description"> & {
+  autoDeclaration?: Claim["autoDeclaration"];
+  attachments?: Claim["attachments"];
+};
+
 export const formatFcfa = (amount: number) => `${new Intl.NumberFormat("fr-FR").format(amount)} FCFA`;
 export const formatDate = (date: string) => new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" }).format(new Date(`${date}T12:00:00`));
 
@@ -16,20 +21,32 @@ export function signOut(store: PortalStore): PortalStore {
 }
 
 export function createInsuranceRequest(store: PortalStore, data: Partial<InsuranceRequest>): { store: PortalStore; request: InsuranceRequest } {
-  const sequence = store.requests.filter((item) => item.scope !== "scenario").length + 146;
-  const reference = `DEM-2026-${String(sequence).padStart(5, "0")}`;
+  const product = data.product ?? "automobile";
+  const isAutomobile = product === "automobile";
+  const year = new Date().getFullYear();
+  const referencePrefix = isAutomobile ? `DEM-AUTO-${year}-` : `DEM-${year}-`;
+  const highestExistingSequence = store.requests.reduce((highest, existingRequest) => {
+    if (!existingRequest.reference.startsWith(referencePrefix)) return highest;
+    const existingSequence = Number(existingRequest.reference.slice(referencePrefix.length));
+    return Number.isInteger(existingSequence) && existingSequence > highest ? existingSequence : highest;
+  }, 0);
+  const sequence = Math.max(store.requests.filter((item) => item.scope !== "scenario").length + 146, highestExistingSequence + 1);
+  const reference = `${referencePrefix}${String(sequence).padStart(5, "0")}`;
   const request: InsuranceRequest = {
-    id: `REQ-${Date.now()}`, reference, clientId: store.client.id, product: data.product ?? "automobile", productLabel: data.productLabel ?? "Assurance automobile",
+    id: `REQ-${Date.now()}`, reference, clientId: store.client.id, product, productLabel: data.productLabel ?? "Assurance automobile",
     date: new Date().toISOString().slice(0, 10), status: "new", advisorId: store.advisor.id, vehicle: data.vehicle,
-    details: data.details, coverage: data.coverage, desiredStartDate: data.desiredStartDate, comments: data.comments,
-    timeline: [{ label: "Demande envoyée", done: true, at: "Aujourd’hui" }, { label: "Analyse du besoin", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Police disponible", done: false }], scope: "core",
+    automobileRequest: data.automobileRequest, details: data.details, coverage: data.coverage, desiredStartDate: data.desiredStartDate, comments: data.comments,
+    timeline: isAutomobile
+      ? [{ label: "Demande envoyée", done: true, at: "Aujourd’hui" }, { label: "Analyse par le courtier", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Contrat disponible", done: false }]
+      : [{ label: "Demande envoyée", done: true, at: "Aujourd’hui" }, { label: "Analyse du besoin", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Police disponible", done: false }],
+    scope: "core",
   };
   return {
     request,
     store: {
       ...store,
       requests: [request, ...store.requests],
-      notifications: [{ id: `NOT-${Date.now()}`, title: "Demande enregistrée", body: `Votre demande ${reference} a bien été enregistrée.`, date: new Date().toISOString(), route: `/espace/demandes/${reference}`, read: false, kind: "request" }, ...store.notifications],
+      notifications: [{ id: `NOT-${Date.now()}`, title: isAutomobile ? "Demande transmise" : "Demande enregistrée", body: isAutomobile ? `Votre demande ${reference} a bien été transmise.` : `Votre demande ${reference} a bien été enregistrée.`, date: new Date().toISOString(), route: `/espace/demandes/${reference}`, read: false, kind: "request" }, ...store.notifications],
     },
   };
 }
@@ -74,7 +91,36 @@ export function requestRenewal(store: PortalStore, contractId: string, choice: "
   return { ...store, renewals: store.renewals.map((renewal) => renewal.contractId === contractId ? { ...renewal, choice, status: "requested" as const } : renewal) };
 }
 
-export function createClaim(store: PortalStore, input: Pick<Claim, "contractId" | "type" | "date" | "location" | "description">): { store: PortalStore; claim: Claim } {
-  const claim: Claim = { id: `CLAIM-${Date.now()}`, reference: `SIN-2026-${String(store.claims.length + 19).padStart(5, "0")}`, productLabel: store.contracts.find((contract) => contract.policyNumber === input.contractId)?.productLabel ?? "Assurance", status: "submitted", timeline: [{ label: "Déclaration reçue", done: true }, { label: "Analyse du dossier", done: false, active: true }, { label: "Documents vérifiés", done: false }, { label: "Transmis à la compagnie", done: false }, { label: "Expertise", done: false }, { label: "Décision", done: false }, { label: "Indemnisation", done: false }, { label: "Clôture", done: false }], scope: "core", ...input };
-  return { claim, store: { ...store, claims: [claim, ...store.claims], notifications: [{ id: `NOT-${Date.now()}`, title: "Déclaration enregistrée", body: `Votre déclaration ${claim.reference} a bien été enregistrée.`, date: new Date().toISOString(), route: `/espace/sinistres/${claim.reference}`, read: false, kind: "claim" }, ...store.notifications] } };
+export function createClaim(store: PortalStore, input: CreateClaimInput): { store: PortalStore; claim: Claim } {
+  const now = new Date();
+  const year = now.getFullYear();
+  const prefix = `SIN-${year}-`;
+  const highestExistingSequence = store.claims.reduce((highest, existingClaim) => {
+    if (!existingClaim.reference.startsWith(prefix)) return highest;
+    const sequence = Number(existingClaim.reference.slice(prefix.length));
+    return Number.isInteger(sequence) && sequence > highest ? sequence : highest;
+  }, 0);
+  const sequence = Math.max(store.claims.length + 19, highestExistingSequence + 1);
+  const claimId = `CLAIM-${now.getTime()}`;
+  const claim: Claim = {
+    id: claimId,
+    reference: `${prefix}${String(sequence).padStart(5, "0")}`,
+    productLabel: store.contracts.find((contract) => contract.policyNumber === input.contractId)?.productLabel ?? "Assurance",
+    status: "submitted",
+    timeline: [{ label: "Déclaration reçue", done: true }, { label: "Analyse du dossier", done: false, active: true }, { label: "Documents vérifiés", done: false }, { label: "Transmis à la compagnie", done: false }, { label: "Expertise", done: false }, { label: "Décision", done: false }, { label: "Indemnisation", done: false }, { label: "Clôture", done: false }],
+    scope: "core",
+    ...input,
+    attachments: input.attachments ? [...input.attachments] : undefined,
+  };
+  return {
+    claim,
+    store: {
+      ...store,
+      claims: [claim, ...store.claims],
+      contracts: store.contracts.map((contract) => contract.policyNumber === input.contractId && !contract.claimIds.includes(claimId)
+        ? { ...contract, claimIds: [...contract.claimIds, claimId] }
+        : contract),
+      notifications: [{ id: `NOT-${now.getTime()}`, title: "Déclaration enregistrée", body: `Votre déclaration ${claim.reference} a bien été enregistrée.`, date: now.toISOString(), route: `/espace/sinistres/${claim.reference}`, read: false, kind: "claim" }, ...store.notifications],
+    },
+  };
 }
