@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Bike, Building2, CalendarDays, Car, Check, CheckCircle2, ChevronRight,
-  CircleAlert, ClipboardList, Clock3, Download, FileCheck2, FileText, Filter, FolderOpen,
+  CircleAlert, CircleHelp, ClipboardList, Clock3, Download, FileCheck2, FileText, Filter, FolderOpen,
   HandCoins, HeartHandshake, HeartPulse, Home, LifeBuoy, Mail, MapPin, MessageCircle, Paperclip,
   LogOut, Phone, Plane, Plus, RefreshCcw, Search, Send, ShieldCheck, Smartphone, Upload, UserRound,
   WalletCards, XCircle,
@@ -19,14 +19,39 @@ import {
   addMessage, formatDate, formatFcfa, markNotificationRead, replaceDocument,
   signOut, simulatePayment, updateProfile,
 } from "../services/portal-service";
-import type { AutoClaimPerson, AutoClaimVehicle, AutoRequestType, AutoVehicleEnergy, AutoVehicleUsage, ClientDocument, InsuranceProduct, PaymentMethod, PortalStore } from "../types/domain";
+import type { AutoClaimPerson, AutoClaimVehicle, AutoGuarantee, AutoRequestType, AutoVehicleEnergy, AutoVehicleUsage, ClientDocument, InsuranceProduct, PaymentMethod, PortalStore, SelfServiceAutomobileInsuranceRequestData } from "../types/domain";
 
 const iconForKind: Record<string, typeof Bell> = { proposal: ClipboardList, document: FileCheck2, payment: WalletCards, contract: ShieldCheck, request: FileText, renewal: RefreshCcw, claim: LifeBuoy, message: MessageCircle };
 const paymentLabels: Record<PaymentMethod, string> = { mobile_money: "Mobile Money", orange_money: "Orange Money", bank_card: "Carte bancaire", bank_transfer: "Virement" };
 const iconForProduct: Record<InsuranceProduct, typeof Car> = { automobile: Car, moto: Bike, sante: HeartPulse, voyage: Plane, habitation: Home, entreprise: Building2 };
 const autoRequestTypeLabels: Record<AutoRequestType, string> = { new_vehicle: "Assurer un nouveau véhicule", renewal: "Renouveler mon assurance", switch_insurer: "Changer d’assureur", advice: "Obtenir un conseil", other: "Autre besoin" };
 const autoEnergyLabels: Record<AutoVehicleEnergy, string> = { petrol: "Essence", diesel: "Diesel" };
-const autoUsageLabels: Record<AutoVehicleUsage, string> = { personal: "Usage personnel", professional: "Usage professionnel", transport: "Transport", other: "Autre" };
+const autoUsageLabels: Record<AutoVehicleUsage, string> = {
+  cat1_professional: "CAT1 (Véhicule pour usage professionnel)",
+  cat2_product_transport: "CAT2 (Véhicule à usage de transport de produit)",
+  cat3_transport: "CAT3 (Véhicules de transport de marchandises appartenant à des tiers)",
+  personal: "Usage personnel",
+  professional: "Usage professionnel",
+  transport: "Transport",
+  other: "Autre",
+};
+const autoGuaranteeLabels: Record<AutoGuarantee, string> = {
+  civil_liability: "Responsabilité Civile",
+  defense_and_recours: "Défense et Recours",
+  glass_all_risk: "Bris de Glaces en cas de TOUT RISQUE",
+  glass_outside_all_risk: "Bris de Glaces hors TR",
+  glass_and_light_blocks: "Bris de Glaces et Blocs feux",
+  third_party_collision: "Tierce Collision",
+  all_accident_damage: "Dommages Tous Accidents",
+  fire: "Incendie",
+  fire_and_electrical_risks: "Incendie et Risques Électriques",
+  robbery: "Vol Braquage",
+  total_theft: "Vol Total",
+  total_partial_theft: "Vol Total / Vol Partiel",
+  repair_assistance: "Assistance à Réparation",
+  advance_on_recours: "Avance sur Recours",
+  ipt: "IPT",
+};
 
 export function DashboardPage() {
   const { store, navigate } = usePortal();
@@ -108,6 +133,11 @@ export function RequestDetailPage({ reference }: { reference: string }) {
   if (!request) return <NotFoundPage />;
   const proposalAvailable = request.status === "proposals_available";
   const automobileRequest = request.automobileRequest;
+  const delegatedAutomobileRequest = automobileRequest?.completionMode === "broker_delegation" ? automobileRequest : null;
+  const selfServiceAutomobileRequest = automobileRequest && automobileRequest.completionMode !== "broker_delegation"
+    ? automobileRequest as SelfServiceAutomobileInsuranceRequestData
+    : null;
+  const selectedGuarantees: AutoGuarantee[] = selfServiceAutomobileRequest?.coverage.guarantees?.length ? selfServiceAutomobileRequest.coverage.guarantees : ["civil_liability"];
   return (
     <div className="page-stack">
       <button className="back-link" type="button" onClick={() => navigate("/espace/demandes")}><ArrowLeft size={17} /> Retour aux demandes</button>
@@ -118,11 +148,13 @@ export function RequestDetailPage({ reference }: { reference: string }) {
         <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Progression</span><h2>Suivi du dossier</h2></div></div><Timeline items={request.timeline} /></section>
         <aside className="panel advisor-card"><span className="page-eyebrow">Votre conseiller</span><span className="large-avatar">{store.advisor.initials}</span><h2>{store.advisor.name}</h2><p>Votre interlocutrice pour ce dossier.</p><a href={`tel:${store.advisor.phone}`}><Phone size={17} /> {store.advisor.phone}</a><a href={`mailto:${store.advisor.email}`}><Mail size={17} /> {store.advisor.email}</a><LinkButton to="/espace/messagerie" variant="secondary"><MessageCircle size={17} /> Envoyer un message</LinkButton></aside>
       </div>
-      {automobileRequest && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre demande automobile</h2></div></div><div className="auto-request-detail-groups">
-        <section><h3>Votre besoin</h3><div className="details-grid"><Detail label="Demande" value={autoRequestTypeLabels[automobileRequest.requestType]} />{automobileRequest.otherNeed && <Detail label="Précision" value={automobileRequest.otherNeed} />}</div></section>
-        <section><h3>Votre véhicule</h3><div className="details-grid"><Detail label="Type" value="Véhicule de tourisme" /><Detail label="Véhicule" value={`${automobileRequest.vehicle.brand} ${automobileRequest.vehicle.model}`} /><Detail label="Année" value={String(automobileRequest.vehicle.year)} /><Detail label="Immatriculation" value={automobileRequest.vehicle.registration} /><Detail label="Énergie" value={autoEnergyLabels[automobileRequest.vehicle.energy]} /><Detail label="Puissance fiscale" value={`${automobileRequest.vehicle.fiscalPower} CV`} /><Detail label="Usage" value={autoUsageLabels[automobileRequest.vehicle.usage]} />{automobileRequest.vehicle.estimatedValue !== null && <Detail label="Valeur estimée du véhicule" value={formatFcfa(automobileRequest.vehicle.estimatedValue)} />}</div></section>
-        <section><h3>Durée et prise d’effet</h3><div className="details-grid"><Detail label="Durée" value={`${automobileRequest.coverage.durationMonths} mois`} /><Detail label="Prise d’effet" value={automobileRequest.coverage.desiredStartDate ? formatDate(automobileRequest.coverage.desiredStartDate) : "Date à confirmer"} /></div></section>
-        <section><h3>Informations complémentaires</h3><div className="details-grid"><Detail label="Véhicule déjà assuré" value={automobileRequest.previousInsurance.hasInsurance ? "Oui" : "Non"} />{automobileRequest.previousInsurance.hasInsurance && <><Detail label="Ancien assureur" value={automobileRequest.previousInsurance.insurerName || "Non renseigné"} /><Detail label="Expiration du contrat" value={automobileRequest.previousInsurance.expirationDate ? formatDate(automobileRequest.previousInsurance.expirationDate) : "Non renseignée"} /><Detail label="Numéro de police actuel" value={automobileRequest.previousInsurance.policyNumber || "Non renseigné"} /></>}<Detail label="Conseil souhaité" value={automobileRequest.wantsAdvice ? "Oui" : "Non"} /></div>{automobileRequest.comments && <div className="request-comments"><span>Précisions complémentaires</span><p>{automobileRequest.comments}</p></div>}</section>
+      {delegatedAutomobileRequest && <section className="panel auto-request-delegated-detail"><div className="panel-heading"><div><span className="page-eyebrow">Demande déléguée</span><h2>Votre message au courtier</h2></div></div><div className="request-comments"><span>Besoin exprimé librement</span><p>{delegatedAutomobileRequest.delegatedMessage}</p></div><p className="auto-request-detail-note"><CircleHelp size={17} /> Votre courtier vous recontactera pour compléter les informations nécessaires et préparer votre dossier.</p></section>}
+      {selfServiceAutomobileRequest && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre demande automobile</h2></div></div><div className="auto-request-detail-groups">
+        <section><h3>Votre besoin</h3><div className="details-grid"><Detail label="Demande" value={autoRequestTypeLabels[selfServiceAutomobileRequest.requestType]} />{selfServiceAutomobileRequest.otherNeed && <Detail label="Précision" value={selfServiceAutomobileRequest.otherNeed} />}</div></section>
+        <section><h3>Votre véhicule</h3><div className="details-grid"><Detail label="Véhicule" value={`${selfServiceAutomobileRequest.vehicle.brand} ${selfServiceAutomobileRequest.vehicle.model}`} /><Detail label="Année" value={String(selfServiceAutomobileRequest.vehicle.year)} /><Detail label="Immatriculation" value={selfServiceAutomobileRequest.vehicle.registration} /><Detail label="Énergie" value={autoEnergyLabels[selfServiceAutomobileRequest.vehicle.energy]} /><Detail label="Puissance fiscale" value={`${selfServiceAutomobileRequest.vehicle.fiscalPower} CV`} /><Detail label="Usage" value={autoUsageLabels[selfServiceAutomobileRequest.vehicle.usage]} />{selfServiceAutomobileRequest.vehicle.estimatedValue !== null && <Detail label="Valeur estimée du véhicule" value={formatFcfa(selfServiceAutomobileRequest.vehicle.estimatedValue)} />}</div></section>
+        <section><h3>Durée et prise d’effet</h3><div className="details-grid"><Detail label="Durée" value={`${selfServiceAutomobileRequest.coverage.durationMonths} mois`} /><Detail label="Prise d’effet" value={selfServiceAutomobileRequest.coverage.desiredStartDate ? formatDate(selfServiceAutomobileRequest.coverage.desiredStartDate) : "Date à confirmer"} /></div></section>
+        <section><h3>Garanties choisies</h3><div className="details-grid"><Detail label="Garantie obligatoire" value={autoGuaranteeLabels.civil_liability} /><Detail label="Garanties complémentaires" value={selectedGuarantees.filter((item) => item !== "civil_liability").map((item) => autoGuaranteeLabels[item]).join(" · ") || "Aucune garantie complémentaire"} /></div></section>
+        <section><h3>Informations complémentaires</h3><div className="details-grid"><Detail label="Véhicule déjà assuré" value={selfServiceAutomobileRequest.previousInsurance.hasInsurance ? "Oui" : "Non"} />{selfServiceAutomobileRequest.previousInsurance.hasInsurance && <><Detail label="Ancien assureur" value={selfServiceAutomobileRequest.previousInsurance.insurerName || "Non renseigné"} /><Detail label="Expiration du contrat" value={selfServiceAutomobileRequest.previousInsurance.expirationDate ? formatDate(selfServiceAutomobileRequest.previousInsurance.expirationDate) : "Non renseignée"} /><Detail label="Numéro de police actuel" value={selfServiceAutomobileRequest.previousInsurance.policyNumber || "Non renseigné"} /></>}<Detail label="Vignette" value={typeof selfServiceAutomobileRequest.hasVignette === "boolean" ? (selfServiceAutomobileRequest.hasVignette ? "Oui" : "Non") : "Non renseignée"} /></div>{selfServiceAutomobileRequest.comments && <div className="request-comments"><span>Précisions complémentaires</span><p>{selfServiceAutomobileRequest.comments}</p></div>}</section>
       </div></section>}
       {!automobileRequest && request.vehicle && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Véhicule et couverture</h2></div></div><div className="details-grid"><Detail label="Véhicule" value={`${request.vehicle.brand} ${request.vehicle.model}`} /><Detail label="Année" value={request.vehicle.year} /><Detail label="Immatriculation" value={request.vehicle.registration} /><Detail label="Usage" value={request.vehicle.usage} />{request.vehicle.value !== null && <Detail label="Valeur estimée" value={formatFcfa(request.vehicle.value)} />}<Detail label="Couverture" value={request.coverage || "Conseil demandé"} /></div></section>}
       {request.details && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre besoin</h2></div></div><div className="details-grid">{Object.entries(request.details).map(([label, value]) => <Detail key={label} label={label} value={value} />)}</div>{request.comments && <div className="request-comments"><span>Précisions complémentaires</span><p>{request.comments}</p></div>}</section>}

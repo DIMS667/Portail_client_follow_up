@@ -9,10 +9,34 @@ export type PaymentMethod = "mobile_money" | "orange_money" | "bank_card" | "ban
 export type AutoRequestType = "new_vehicle" | "renewal" | "switch_insurer" | "advice" | "other";
 export type AutoVehicleCategory = "tourism";
 export type AutoVehicleEnergy = "petrol" | "diesel";
-export type AutoVehicleUsage = "personal" | "professional" | "transport" | "other";
+export type AutoVehicleUsage =
+  | "cat1_professional"
+  | "cat2_product_transport"
+  | "cat3_transport"
+  | "personal"
+  | "professional"
+  | "transport"
+  | "other";
 export type AutoCoverageDurationMonths = 2 | 4 | 6 | 8 | 12;
+export type AutoGuarantee =
+  | "civil_liability"
+  | "defense_and_recours"
+  | "glass_all_risk"
+  | "glass_outside_all_risk"
+  | "glass_and_light_blocks"
+  | "third_party_collision"
+  | "all_accident_damage"
+  | "fire"
+  | "fire_and_electrical_risks"
+  | "robbery"
+  | "total_theft"
+  | "total_partial_theft"
+  | "repair_assistance"
+  | "advance_on_recours"
+  | "ipt";
 
-export interface AutomobileInsuranceRequestData {
+export interface SelfServiceAutomobileInsuranceRequestData {
+  completionMode: "self_service";
   requestType: AutoRequestType;
   otherNeed?: string;
   vehicle: {
@@ -30,6 +54,7 @@ export interface AutomobileInsuranceRequestData {
     durationMonths: AutoCoverageDurationMonths;
     desiredStartDate: string | null;
     startDateUnknown?: boolean;
+    guarantees: AutoGuarantee[];
   };
   previousInsurance: {
     hasInsurance: boolean;
@@ -37,9 +62,18 @@ export interface AutomobileInsuranceRequestData {
     expirationDate: string | null;
     policyNumber: string | null;
   };
-  wantsAdvice: boolean;
+  hasVignette: boolean;
   comments: string;
 }
+
+export interface BrokerDelegatedAutomobileInsuranceRequestData {
+  completionMode: "broker_delegation";
+  delegatedMessage: string;
+}
+
+export type AutomobileInsuranceRequestData =
+  | SelfServiceAutomobileInsuranceRequestData
+  | BrokerDelegatedAutomobileInsuranceRequestData;
 
 export interface StatusEvent { label: string; at?: string; done: boolean; active?: boolean; }
 export interface Client { id: string; firstName: string; lastName: string; phone: string; email: string; address: string; city: string; preferences: { email: boolean; sms: boolean; whatsapp: boolean; inApp: boolean }; }
