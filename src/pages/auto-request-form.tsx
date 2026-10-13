@@ -186,6 +186,7 @@ function validateStep(step: number, form: AutoRequestFormState) {
   if (step === 2) {
     if (!form.coverage.durationMonths || !DURATION_OPTIONS.includes(form.coverage.durationMonths)) errors.duration = "Choisissez une durée d’assurance.";
     if (!form.coverage.startDateUnknown && !form.coverage.desiredStartDate) errors["desired-start-date"] = "Choisissez une date de prise d’effet ou indiquez que vous ne la connaissez pas encore.";
+    if (form.hasVignette === null) errors["has-vignette"] = "Indiquez si vous avez une vignette.";
   }
   if (step === 4) {
     if (form.previousInsurance.hasInsurance === null) errors["previous-insurance"] = "Indiquez si ce véhicule est déjà assuré.";
@@ -193,7 +194,6 @@ function validateStep(step: number, form: AutoRequestFormState) {
       if (!form.previousInsurance.insurerName.trim()) errors["insurer-name"] = "Renseignez le nom de l’assureur actuel.";
       if (!form.previousInsurance.expirationDate) errors["expiration-date"] = "Renseignez la date d’expiration du contrat actuel.";
     }
-    if (form.hasVignette === null) errors["has-vignette"] = "Indiquez si vous avez une vignette.";
   }
   return errors;
 }
@@ -459,23 +459,23 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
             <div className="auto-request-form-grid">
               <VoiceTextField id="vehicle-brand" label="Marque" value={form.vehicle.brand} onChange={(value) => updateVehicle("brand", value)} error={errors["vehicle-brand"]} required inputProps={{ autoComplete: "organization" }} />
               <VoiceTextField id="vehicle-model" label="Modèle" value={form.vehicle.model} onChange={(value) => updateVehicle("model", value)} error={errors["vehicle-model"]} required />
-              <label htmlFor="vehicle-year">Année de mise en circulation <RequiredMark />
+              <label htmlFor="vehicle-year"><span className="auto-request-label-text">Année de mise en circulation <RequiredMark /></span>
                 <input id="vehicle-year" type="number" inputMode="numeric" min="1950" max={new Date().getFullYear() + 1} value={form.vehicle.year} onChange={(event) => updateVehicle("year", event.target.value)} aria-invalid={Boolean(errors["vehicle-year"])} aria-describedby={errors["vehicle-year"] ? "vehicle-year-error" : undefined} />
                 <FieldError id="vehicle-year-error" message={errors["vehicle-year"]} />
               </label>
               <VoiceTextField id="vehicle-registration" label="Immatriculation" value={form.vehicle.registration} onChange={(value) => updateVehicle("registration", value.toUpperCase())} error={errors["vehicle-registration"]} required inputProps={{ autoCapitalize: "characters" }} />
-              <label htmlFor="vehicle-energy">Énergie <RequiredMark />
+              <label htmlFor="vehicle-energy"><span className="auto-request-label-text">Énergie <RequiredMark /></span>
                 <select id="vehicle-energy" value={form.vehicle.energy} onChange={(event) => updateVehicle("energy", event.target.value as AutoVehicleEnergy | "")} aria-invalid={Boolean(errors["vehicle-energy"])} aria-describedby={errors["vehicle-energy"] ? "vehicle-energy-error" : undefined}>
                   <option value="">Sélectionner</option><option value="petrol">Essence</option><option value="diesel">Diesel</option>
                 </select>
                 <FieldError id="vehicle-energy-error" message={errors["vehicle-energy"]} />
               </label>
-              <label htmlFor="vehicle-fiscal-power">Puissance fiscale (CV) <RequiredMark />
+              <label htmlFor="vehicle-fiscal-power"><span className="auto-request-label-text">Puissance fiscale (CV) <RequiredMark /></span>
                 <input id="vehicle-fiscal-power" type="number" inputMode="numeric" min="1" step="1" value={form.vehicle.fiscalPower} onChange={(event) => updateVehicle("fiscalPower", event.target.value)} aria-invalid={Boolean(errors["vehicle-fiscal-power"])} aria-describedby={errors["vehicle-fiscal-power"] ? "vehicle-fiscal-power-error" : "vehicle-fiscal-power-help"} />
                 <small className="auto-request-field-help" id="vehicle-fiscal-power-help">Cette information figure généralement sur la carte grise.</small>
                 <FieldError id="vehicle-fiscal-power-error" message={errors["vehicle-fiscal-power"]} />
               </label>
-              <label htmlFor="vehicle-usage">Usage du véhicule <RequiredMark />
+              <label htmlFor="vehicle-usage"><span className="auto-request-label-text">Usage du véhicule <RequiredMark /></span>
                 <select id="vehicle-usage" value={form.vehicle.usage} onChange={(event) => updateVehicle("usage", event.target.value as AutoVehicleUsage | "")} aria-invalid={Boolean(errors["vehicle-usage"])} aria-describedby={errors["vehicle-usage"] ? "vehicle-usage-error" : undefined}>
                   <option value="">Sélectionner</option><option value="cat1_professional">CAT1 (VÉHICULE POUR USAGE PROFESSIONNEL)</option><option value="cat2_product_transport">CAT2 (VÉHICULE À USAGE DE TRANSPORT DE PRODUIT)</option><option value="cat3_transport">CAT3 (VÉHICULES DE TRANSPORT DE MARCHANDISES APPARTENANT À DES TIERS)</option>
                 </select>
@@ -493,7 +493,7 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
           <section aria-labelledby="auto-request-step-title">
             <AutoStepHeading number="3" title="Pour quelle période souhaitez-vous être assuré ?" description="Choisissez une durée, puis indiquez la date de prise d’effet souhaitée." />
             <fieldset className="auto-request-duration-grid" aria-describedby={errors.duration ? "duration-error" : undefined}>
-              <legend>Durée souhaitée</legend>
+              <legend>Durée souhaitée <RequiredMark /></legend>
               {DURATION_OPTIONS.map((duration) => <label className={form.coverage.durationMonths === duration ? "selected" : ""} key={duration}>
                 <input id={`duration-${duration}`} type="radio" name="duration" value={duration} checked={form.coverage.durationMonths === duration} onChange={() => {
                   updateCoverage("durationMonths", duration);
@@ -504,7 +504,7 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
             </fieldset>
             <FieldError id="duration-error" message={errors.duration} />
             <div className="auto-request-date-block">
-              <label htmlFor="desired-start-date">Date souhaitée de prise d’effet <RequiredMark />
+              <label htmlFor="desired-start-date"><span className="auto-request-label-text">Date souhaitée de prise d’effet <RequiredMark /></span>
                 <input id="desired-start-date" type="date" value={form.coverage.desiredStartDate} disabled={form.coverage.startDateUnknown} onChange={(event) => {
                   updateCoverage("desiredStartDate", event.target.value);
                   clearError("desired-start-date");
@@ -515,6 +515,12 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
                 updateCoverage("startDateUnknown", event.target.checked);
                 clearError("desired-start-date");
               }} /> Je ne connais pas encore la date exacte</label>
+            </div>
+            <div className="auto-request-duration-vignette">
+              <BinaryChoice id="has-vignette" legend="Avez-vous une vignette ?" value={form.hasVignette} error={errors["has-vignette"]} onChange={(value) => {
+                updateForm((current) => ({ ...current, hasVignette: value }));
+                clearError("has-vignette");
+              }} required />
             </div>
           </section>
         )}
@@ -543,13 +549,13 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
             <BinaryChoice id="previous-insurance" legend="Avez-vous déjà une assurance pour ce véhicule ?" value={form.previousInsurance.hasInsurance} error={errors["previous-insurance"]} onChange={(value) => {
               updatePreviousInsurance("hasInsurance", value);
               clearError("previous-insurance");
-            }} />
+            }} required />
             {form.previousInsurance.hasInsurance && <div className="auto-request-form-grid auto-request-conditional">
               <VoiceTextField id="insurer-name" label="Nom de l’ancien assureur" value={form.previousInsurance.insurerName} onChange={(value) => {
                   updatePreviousInsurance("insurerName", value);
                   clearError("insurer-name");
                 }} error={errors["insurer-name"]} required />
-              <label htmlFor="expiration-date">Date d’expiration du contrat actuel <RequiredMark />
+              <label htmlFor="expiration-date"><span className="auto-request-label-text">Date d’expiration du contrat actuel <RequiredMark /></span>
                 <input id="expiration-date" type="date" value={form.previousInsurance.expirationDate} onChange={(event) => {
                   updatePreviousInsurance("expirationDate", event.target.value);
                   clearError("expiration-date");
@@ -558,10 +564,6 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
               </label>
               <VoiceTextField id="policy-number" label="Numéro de police actuel" value={form.previousInsurance.policyNumber} onChange={(value) => updatePreviousInsurance("policyNumber", value)} optional />
             </div>}
-            <BinaryChoice id="has-vignette" legend="Avez-vous une vignette ?" value={form.hasVignette} error={errors["has-vignette"]} onChange={(value) => {
-              updateForm((current) => ({ ...current, hasVignette: value }));
-              clearError("has-vignette");
-            }} />
             <VoiceTextarea id="auto-request-comments" label="Informations ou précisions complémentaires" value={form.comments} onChange={(value) => updateForm((current) => ({ ...current, comments: value }))} placeholder="Vous pouvez préciser ici toute information utile concernant votre véhicule ou votre besoin." optional />
           </section>
         )}
@@ -712,7 +714,7 @@ interface VoiceTextFieldProps {
 
 function VoiceTextField({ id, label, value, onChange, error, required, optional, className = "", inputProps }: VoiceTextFieldProps) {
   return <div className={`auto-request-field ${className}`.trim()}>
-    <label htmlFor={id}>{label}{required && <RequiredMark />}{optional && <span className="field-optional">Facultatif</span>}</label>
+    <label htmlFor={id}><span className="auto-request-label-text">{label}{required && <RequiredMark />}</span>{optional && <span className="field-optional">Facultatif</span>}</label>
     <div className="auto-request-voice-shell">
       <input {...inputProps} id={id} value={value} onChange={(event) => onChange(event.target.value)} required={required} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} />
       <VoiceDictationButton fieldLabel={label} onTranscript={(transcript) => onChange(appendDictation(value, transcript))} />
@@ -723,7 +725,7 @@ function VoiceTextField({ id, label, value, onChange, error, required, optional,
 
 function VoiceTextarea({ id, label, value, onChange, error, required, optional, placeholder, rows = 5 }: { id: string; label: string; value: string; onChange: (value: string) => void; error?: string; required?: boolean; optional?: boolean; placeholder?: string; rows?: number }) {
   return <div className="auto-request-field auto-request-voice-textarea">
-    <label htmlFor={id}>{label}{required && <RequiredMark />}{optional && <span className="field-optional">Facultatif</span>}</label>
+    <label htmlFor={id}><span className="auto-request-label-text">{label}{required && <RequiredMark />}</span>{optional && <span className="field-optional">Facultatif</span>}</label>
     <div className="auto-request-voice-shell">
       <textarea id={id} rows={rows} value={value} onChange={(event) => onChange(event.target.value)} required={required} placeholder={placeholder} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} />
       <VoiceDictationButton fieldLabel={label} onTranscript={(transcript) => onChange(appendDictation(value, transcript))} />
@@ -733,16 +735,16 @@ function VoiceTextarea({ id, label, value, onChange, error, required, optional, 
 }
 
 function RequiredMark() {
-  return <span className="auto-request-required" aria-hidden="true">Obligatoire</span>;
+  return <><span className="auto-request-required" aria-hidden="true">*</span><span className="sr-only"> obligatoire</span></>;
 }
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   return message ? <small className="auto-request-field-error" id={id}><CircleAlert size={13} /> {message}</small> : null;
 }
 
-function BinaryChoice({ id, legend, value, error, onChange }: { id: string; legend: string; value: boolean | null; error?: string; onChange: (value: boolean) => void }) {
+function BinaryChoice({ id, legend, value, error, onChange, required = false }: { id: string; legend: string; value: boolean | null; error?: string; onChange: (value: boolean) => void; required?: boolean }) {
   return <fieldset className="auto-request-binary" aria-describedby={error ? `${id}-error` : undefined}>
-    <legend>{legend}</legend>
+    <legend>{legend}{required && <RequiredMark />}</legend>
     <div>
       <label className={value === true ? "selected" : ""}><input id={`${id}-yes`} type="radio" name={id} checked={value === true} onChange={() => onChange(true)} /><span>Oui</span>{value === true && <Check size={16} />}</label>
       <label className={value === false ? "selected" : ""}><input id={`${id}-no`} type="radio" name={id} checked={value === false} onChange={() => onChange(false)} /><span>Non</span>{value === false && <Check size={16} />}</label>

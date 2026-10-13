@@ -16,6 +16,7 @@ import {
 } from "../services/portal-service";
 import type { InsuranceProduct, InsuranceRequest } from "../types/domain";
 import { AutoRequestForm } from "./auto-request-form";
+import { MotoRequestForm } from "./moto-request-form";
 
 interface ProductChoice { id: InsuranceProduct; label: string; help: string; image: string; icon: LucideIcon; }
 
@@ -43,8 +44,9 @@ export function NewRequestPage() {
   if (!product) return (
     <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate("/espace")}><ArrowLeft size={17} /> Retour à l’accueil</button><PageHeader eyebrow="Nouvelle demande" title={"Quelle assurance recherchez\u2011vous\u00a0?"} description="Chaque assurance ouvre un formulaire adapté aux informations nécessaires à l’étude de votre dossier." /><div className="product-choice-grid">{productChoices.map(({ id, label, help, image, icon: Icon }) => <button type="button" key={id} onClick={() => setProduct(id)}><span className="product-choice-visual"><img src={image} alt="" loading="lazy" decoding="async" /><i><Icon size={22} /></i></span><span className="product-choice-copy"><span><strong>Assurance {label.toLowerCase()}</strong><small>{help}</small></span><ChevronRight size={19} /></span></button>)}</div></div>
   );
-  if (product !== "automobile") return <ProductRequestForm product={productChoices.find((item) => item.id === product)!} onBack={() => setProduct(null)} onSubmit={submitRequest} />;
-  return <AutoRequestForm onBack={() => setProduct(null)} onSubmit={submitRequest} />;
+  if (product === "automobile") return <AutoRequestForm onBack={() => setProduct(null)} onSubmit={submitRequest} />;
+  if (product === "moto") return <MotoRequestForm onBack={() => setProduct(null)} onSubmit={submitRequest} />;
+  return <ProductRequestForm product={productChoices.find((item) => item.id === product)!} onBack={() => setProduct(null)} onSubmit={submitRequest} />;
 }
 
 function ProductRequestForm({ product, onBack, onSubmit }: { product: ProductChoice; onBack: () => void; onSubmit: (data: Partial<InsuranceRequest>) => void }) {
@@ -102,11 +104,11 @@ function formatProductField(field: InsuranceFormField, value: string) {
 }
 
 function RequestConfirmation({ reference, productLabel, onOpen }: { reference: string; productLabel: string; onOpen: () => void }) {
-  const isAutomobile = reference.startsWith("DEM-AUTO-");
-  const timeline = isAutomobile
+  const isVehicleRequest = reference.startsWith("DEM-AUTO-") || reference.startsWith("DEM-MOTO-");
+  const timeline = isVehicleRequest
     ? [{ label: "Demande envoyée", done: true }, { label: "Analyse par le courtier", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Contrat disponible", done: false }]
     : [{ label: "Demande envoyée", done: true }, { label: "Analyse du besoin", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Police disponible", done: false }];
-  return <div className="confirmation-page"><span className="confirmation-icon"><CheckCircle2 size={38} /></span><span className="page-eyebrow">Demande transmise</span><h1>{isAutomobile ? "Votre demande a bien été transmise." : "Votre demande a bien été enregistrée."}</h1><p>{isAutomobile ? "Votre courtier va analyser les informations transmises et préparer les propositions adaptées à votre besoin." : "Votre courtier va analyser votre besoin et préparer les propositions adaptées."}</p><div className="confirmation-reference"><small>Référence de votre dossier</small><strong>{reference}</strong><span>{productLabel} · Nouvelle demande</span></div>{isAutomobile && <p className="confirmation-follow-up">Vous pourrez suivre l’évolution de votre demande depuis votre espace client.</p>}<Timeline items={timeline} /><button className="button button-primary" type="button" onClick={onOpen}>{isAutomobile ? "Suivre ma demande" : "Voir le suivi de ma demande"}</button></div>;
+  return <div className="confirmation-page"><span className="confirmation-icon"><CheckCircle2 size={38} /></span><span className="page-eyebrow">Demande transmise</span><h1>{isVehicleRequest ? "Votre demande a bien été transmise." : "Votre demande a bien été enregistrée."}</h1><p>{isVehicleRequest ? "Votre courtier va analyser les informations transmises et préparer les propositions adaptées à votre besoin." : "Votre courtier va analyser votre besoin et préparer les propositions adaptées."}</p><div className="confirmation-reference"><small>Référence de votre dossier</small><strong>{reference}</strong><span>{productLabel} · Nouvelle demande</span></div>{isVehicleRequest && <p className="confirmation-follow-up">Vous pourrez suivre l’évolution de votre demande depuis votre espace client.</p>}<Timeline items={timeline} /><button className="button button-primary" type="button" onClick={onOpen}>{isVehicleRequest ? "Suivre ma demande" : "Voir le suivi de ma demande"}</button></div>;
 }
 
 export function OfferDetailPage({ offerId }: { offerId: string }) {

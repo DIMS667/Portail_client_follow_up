@@ -23,8 +23,10 @@ export function signOut(store: PortalStore): PortalStore {
 export function createInsuranceRequest(store: PortalStore, data: Partial<InsuranceRequest>): { store: PortalStore; request: InsuranceRequest } {
   const product = data.product ?? "automobile";
   const isAutomobile = product === "automobile";
+  const isMoto = product === "moto";
+  const isVehicleRequest = isAutomobile || isMoto;
   const year = new Date().getFullYear();
-  const referencePrefix = isAutomobile ? `DEM-AUTO-${year}-` : `DEM-${year}-`;
+  const referencePrefix = isAutomobile ? `DEM-AUTO-${year}-` : isMoto ? `DEM-MOTO-${year}-` : `DEM-${year}-`;
   const highestExistingSequence = store.requests.reduce((highest, existingRequest) => {
     if (!existingRequest.reference.startsWith(referencePrefix)) return highest;
     const existingSequence = Number(existingRequest.reference.slice(referencePrefix.length));
@@ -35,8 +37,8 @@ export function createInsuranceRequest(store: PortalStore, data: Partial<Insuran
   const request: InsuranceRequest = {
     id: `REQ-${Date.now()}`, reference, clientId: store.client.id, product, productLabel: data.productLabel ?? "Assurance automobile",
     date: new Date().toISOString().slice(0, 10), status: "new", advisorId: store.advisor.id, vehicle: data.vehicle,
-    automobileRequest: data.automobileRequest, details: data.details, coverage: data.coverage, desiredStartDate: data.desiredStartDate, comments: data.comments,
-    timeline: isAutomobile
+    automobileRequest: data.automobileRequest, motoRequest: data.motoRequest, details: data.details, coverage: data.coverage, desiredStartDate: data.desiredStartDate, comments: data.comments,
+    timeline: isVehicleRequest
       ? [{ label: "Demande envoyée", done: true, at: "Aujourd’hui" }, { label: "Analyse par le courtier", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Contrat disponible", done: false }]
       : [{ label: "Demande envoyée", done: true, at: "Aujourd’hui" }, { label: "Analyse du besoin", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Police disponible", done: false }],
     scope: "core",
@@ -46,7 +48,7 @@ export function createInsuranceRequest(store: PortalStore, data: Partial<Insuran
     store: {
       ...store,
       requests: [request, ...store.requests],
-      notifications: [{ id: `NOT-${Date.now()}`, title: isAutomobile ? "Demande transmise" : "Demande enregistrée", body: isAutomobile ? `Votre demande ${reference} a bien été transmise.` : `Votre demande ${reference} a bien été enregistrée.`, date: new Date().toISOString(), route: `/espace/demandes/${reference}`, read: false, kind: "request" }, ...store.notifications],
+      notifications: [{ id: `NOT-${Date.now()}`, title: isVehicleRequest ? "Demande transmise" : "Demande enregistrée", body: isVehicleRequest ? `Votre demande ${reference} a bien été transmise.` : `Votre demande ${reference} a bien été enregistrée.`, date: new Date().toISOString(), route: `/espace/demandes/${reference}`, read: false, kind: "request" }, ...store.notifications],
     },
   };
 }

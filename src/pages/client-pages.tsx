@@ -19,7 +19,11 @@ import {
   addMessage, formatDate, formatFcfa, markNotificationRead, replaceDocument,
   signOut, simulatePayment, updateProfile,
 } from "../services/portal-service";
-import type { AutoClaimPerson, AutoClaimVehicle, AutoGuarantee, AutoRequestType, AutoVehicleEnergy, AutoVehicleUsage, ClientDocument, InsuranceProduct, PaymentMethod, PortalStore, SelfServiceAutomobileInsuranceRequestData } from "../types/domain";
+import type {
+  AutoClaimPerson, AutoClaimVehicle, AutoGuarantee, AutoRequestType, AutoVehicleEnergy, AutoVehicleUsage,
+  ClientDocument, InsuranceProduct, MotoGuarantee, MotoVehicleEnergy, MotoVehicleUsage, PaymentMethod,
+  PortalStore, SelfServiceAutomobileInsuranceRequestData, SelfServiceMotoInsuranceRequestData,
+} from "../types/domain";
 
 const iconForKind: Record<string, typeof Bell> = { proposal: ClipboardList, document: FileCheck2, payment: WalletCards, contract: ShieldCheck, request: FileText, renewal: RefreshCcw, claim: LifeBuoy, message: MessageCircle };
 const paymentLabels: Record<PaymentMethod, string> = { mobile_money: "Mobile Money", orange_money: "Orange Money", bank_card: "Carte bancaire", bank_transfer: "Virement" };
@@ -45,6 +49,24 @@ const autoGuaranteeLabels: Record<AutoGuarantee, string> = {
   all_accident_damage: "Dommages Tous Accidents",
   fire: "Incendie",
   fire_and_electrical_risks: "Incendie et Risques Électriques",
+  robbery: "Vol Braquage",
+  total_theft: "Vol Total",
+  total_partial_theft: "Vol Total / Vol Partiel",
+  repair_assistance: "Assistance à Réparation",
+  advance_on_recours: "Avance sur Recours",
+  ipt: "IPT",
+};
+const motoEnergyLabels: Record<MotoVehicleEnergy, string> = { petrol: "Essence", electric: "Électrique" };
+const motoUsageLabels: Record<MotoVehicleUsage, string> = {
+  cat5: "CAT5 (Véhicules motorisés à deux ou trois roues)",
+  cat5_bis: "CAT5 BIS (Véhicules motorisés à deux ou trois roues pour le transport de passagers à titre payant)",
+};
+const motoGuaranteeLabels: Record<MotoGuarantee, string> = {
+  civil_liability: "Responsabilité Civile",
+  defense_and_recours: "Défense et Recours",
+  third_party_collision: "Tierce Collision",
+  all_accident_damage: "Dommages Tous Accidents",
+  fire: "Incendie",
   robbery: "Vol Braquage",
   total_theft: "Vol Total",
   total_partial_theft: "Vol Total / Vol Partiel",
@@ -138,6 +160,12 @@ export function RequestDetailPage({ reference }: { reference: string }) {
     ? automobileRequest as SelfServiceAutomobileInsuranceRequestData
     : null;
   const selectedGuarantees: AutoGuarantee[] = selfServiceAutomobileRequest?.coverage.guarantees?.length ? selfServiceAutomobileRequest.coverage.guarantees : ["civil_liability"];
+  const motoRequest = request.motoRequest;
+  const delegatedMotoRequest = motoRequest?.completionMode === "broker_delegation" ? motoRequest : null;
+  const selfServiceMotoRequest = motoRequest && motoRequest.completionMode !== "broker_delegation"
+    ? motoRequest as SelfServiceMotoInsuranceRequestData
+    : null;
+  const selectedMotoGuarantees: MotoGuarantee[] = selfServiceMotoRequest?.coverage.guarantees?.length ? selfServiceMotoRequest.coverage.guarantees : ["civil_liability"];
   return (
     <div className="page-stack">
       <button className="back-link" type="button" onClick={() => navigate("/espace/demandes")}><ArrowLeft size={17} /> Retour aux demandes</button>
@@ -156,7 +184,15 @@ export function RequestDetailPage({ reference }: { reference: string }) {
         <section><h3>Garanties choisies</h3><div className="details-grid"><Detail label="Garantie obligatoire" value={autoGuaranteeLabels.civil_liability} /><Detail label="Garanties complémentaires" value={selectedGuarantees.filter((item) => item !== "civil_liability").map((item) => autoGuaranteeLabels[item]).join(" · ") || "Aucune garantie complémentaire"} /></div></section>
         <section><h3>Informations complémentaires</h3><div className="details-grid"><Detail label="Véhicule déjà assuré" value={selfServiceAutomobileRequest.previousInsurance.hasInsurance ? "Oui" : "Non"} />{selfServiceAutomobileRequest.previousInsurance.hasInsurance && <><Detail label="Ancien assureur" value={selfServiceAutomobileRequest.previousInsurance.insurerName || "Non renseigné"} /><Detail label="Expiration du contrat" value={selfServiceAutomobileRequest.previousInsurance.expirationDate ? formatDate(selfServiceAutomobileRequest.previousInsurance.expirationDate) : "Non renseignée"} /><Detail label="Numéro de police actuel" value={selfServiceAutomobileRequest.previousInsurance.policyNumber || "Non renseigné"} /></>}<Detail label="Vignette" value={typeof selfServiceAutomobileRequest.hasVignette === "boolean" ? (selfServiceAutomobileRequest.hasVignette ? "Oui" : "Non") : "Non renseignée"} /></div>{selfServiceAutomobileRequest.comments && <div className="request-comments"><span>Précisions complémentaires</span><p>{selfServiceAutomobileRequest.comments}</p></div>}</section>
       </div></section>}
-      {!automobileRequest && request.vehicle && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Véhicule et couverture</h2></div></div><div className="details-grid"><Detail label="Véhicule" value={`${request.vehicle.brand} ${request.vehicle.model}`} /><Detail label="Année" value={request.vehicle.year} /><Detail label="Immatriculation" value={request.vehicle.registration} /><Detail label="Usage" value={request.vehicle.usage} />{request.vehicle.value !== null && <Detail label="Valeur estimée" value={formatFcfa(request.vehicle.value)} />}<Detail label="Couverture" value={request.coverage || "Conseil demandé"} /></div></section>}
+      {delegatedMotoRequest && <section className="panel auto-request-delegated-detail"><div className="panel-heading"><div><span className="page-eyebrow">Demande déléguée</span><h2>Votre message au courtier</h2></div></div><div className="request-comments"><span>Besoin moto exprimé librement</span><p>{delegatedMotoRequest.delegatedMessage}</p></div><p className="auto-request-detail-note"><CircleHelp size={17} /> Votre courtier vous recontactera pour compléter les informations nécessaires et préparer votre dossier.</p></section>}
+      {selfServiceMotoRequest && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre demande moto</h2></div></div><div className="auto-request-detail-groups">
+        <section><h3>Votre besoin</h3><div className="details-grid"><Detail label="Demande" value={autoRequestTypeLabels[selfServiceMotoRequest.requestType]} />{selfServiceMotoRequest.otherNeed && <Detail label="Précision" value={selfServiceMotoRequest.otherNeed} />}</div></section>
+        <section><h3>Votre moto</h3><div className="details-grid"><Detail label="Moto" value={`${selfServiceMotoRequest.vehicle.brand} ${selfServiceMotoRequest.vehicle.model}`} /><Detail label="Année" value={String(selfServiceMotoRequest.vehicle.year)} /><Detail label="Immatriculation" value={selfServiceMotoRequest.vehicle.registration} /><Detail label="Énergie" value={motoEnergyLabels[selfServiceMotoRequest.vehicle.energy]} /><Detail label="Cylindrée" value={`${selfServiceMotoRequest.vehicle.cylinderCapacity} cm³`} /><Detail label="Usage" value={motoUsageLabels[selfServiceMotoRequest.vehicle.usage]} />{selfServiceMotoRequest.vehicle.estimatedValue !== null && <Detail label="Valeur estimée de la moto" value={formatFcfa(selfServiceMotoRequest.vehicle.estimatedValue)} />}</div></section>
+        <section><h3>Durée et prise d’effet</h3><div className="details-grid"><Detail label="Durée" value={`${selfServiceMotoRequest.coverage.durationMonths} mois`} /><Detail label="Prise d’effet" value={selfServiceMotoRequest.coverage.desiredStartDate ? formatDate(selfServiceMotoRequest.coverage.desiredStartDate) : "Date à confirmer"} /></div></section>
+        <section><h3>Garanties choisies</h3><div className="details-grid"><Detail label="Garantie obligatoire" value={motoGuaranteeLabels.civil_liability} /><Detail label="Garanties complémentaires" value={selectedMotoGuarantees.filter((item) => item !== "civil_liability").map((item) => motoGuaranteeLabels[item]).join(" · ") || "Aucune garantie complémentaire"} /></div></section>
+        <section><h3>Informations complémentaires</h3><div className="details-grid"><Detail label="Moto déjà assurée" value={selfServiceMotoRequest.previousInsurance.hasInsurance ? "Oui" : "Non"} />{selfServiceMotoRequest.previousInsurance.hasInsurance && <><Detail label="Ancien assureur" value={selfServiceMotoRequest.previousInsurance.insurerName || "Non renseigné"} /><Detail label="Expiration du contrat" value={selfServiceMotoRequest.previousInsurance.expirationDate ? formatDate(selfServiceMotoRequest.previousInsurance.expirationDate) : "Non renseignée"} /><Detail label="Numéro de police actuel" value={selfServiceMotoRequest.previousInsurance.policyNumber || "Non renseigné"} /></>}<Detail label="Vignette" value={typeof selfServiceMotoRequest.hasVignette === "boolean" ? (selfServiceMotoRequest.hasVignette ? "Oui" : "Non") : "Non renseignée"} /></div>{selfServiceMotoRequest.comments && <div className="request-comments"><span>Précisions complémentaires</span><p>{selfServiceMotoRequest.comments}</p></div>}</section>
+      </div></section>}
+      {!automobileRequest && !motoRequest && request.vehicle && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Véhicule et couverture</h2></div></div><div className="details-grid"><Detail label="Véhicule" value={`${request.vehicle.brand} ${request.vehicle.model}`} /><Detail label="Année" value={request.vehicle.year} /><Detail label="Immatriculation" value={request.vehicle.registration} /><Detail label="Usage" value={request.vehicle.usage} />{request.vehicle.value !== null && <Detail label="Valeur estimée" value={formatFcfa(request.vehicle.value)} />}<Detail label="Couverture" value={request.coverage || "Conseil demandé"} /></div></section>}
       {request.details && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre besoin</h2></div></div><div className="details-grid">{Object.entries(request.details).map(([label, value]) => <Detail key={label} label={label} value={value} />)}</div>{request.comments && <div className="request-comments"><span>Précisions complémentaires</span><p>{request.comments}</p></div>}</section>}
     </div>
   );

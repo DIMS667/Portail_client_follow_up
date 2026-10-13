@@ -75,6 +75,60 @@ export type AutomobileInsuranceRequestData =
   | SelfServiceAutomobileInsuranceRequestData
   | BrokerDelegatedAutomobileInsuranceRequestData;
 
+export type MotoVehicleEnergy = "petrol" | "electric";
+export type MotoVehicleUsage = "cat5" | "cat5_bis";
+export type MotoGuarantee =
+  | "civil_liability"
+  | "defense_and_recours"
+  | "third_party_collision"
+  | "all_accident_damage"
+  | "fire"
+  | "robbery"
+  | "total_theft"
+  | "total_partial_theft"
+  | "repair_assistance"
+  | "advance_on_recours"
+  | "ipt";
+
+export interface SelfServiceMotoInsuranceRequestData {
+  completionMode: "self_service";
+  requestType: AutoRequestType;
+  otherNeed?: string;
+  vehicle: {
+    brand: string;
+    model: string;
+    year: number;
+    registration: string;
+    energy: MotoVehicleEnergy;
+    cylinderCapacity: number;
+    usage: MotoVehicleUsage;
+    estimatedValue: number | null;
+  };
+  coverage: {
+    durationMonths: AutoCoverageDurationMonths;
+    desiredStartDate: string | null;
+    startDateUnknown?: boolean;
+    guarantees: MotoGuarantee[];
+  };
+  previousInsurance: {
+    hasInsurance: boolean;
+    insurerName: string | null;
+    expirationDate: string | null;
+    policyNumber: string | null;
+  };
+  hasVignette: boolean;
+  comments: string;
+}
+
+export interface BrokerDelegatedMotoInsuranceRequestData {
+  completionMode: "broker_delegation";
+  delegatedMessage: string;
+}
+
+export type MotoInsuranceRequestData =
+  | SelfServiceMotoInsuranceRequestData
+  | BrokerDelegatedMotoInsuranceRequestData;
+
 export interface StatusEvent { label: string; at?: string; done: boolean; active?: boolean; }
 export interface Client { id: string; firstName: string; lastName: string; phone: string; email: string; address: string; city: string; preferences: { email: boolean; sms: boolean; whatsapp: boolean; inApp: boolean }; }
 export interface Advisor { id: string; name: string; phone: string; email: string; initials: string; }
@@ -82,6 +136,7 @@ export interface InsuranceRequest {
   id: string; reference: string; clientId: string; product: InsuranceProduct; productLabel: string; date: string; status: RequestStatus; advisorId: string;
   vehicle?: { brand: string; model: string; year: string; registration: string; value: number | null; usage: string };
   automobileRequest?: AutomobileInsuranceRequestData;
+  motoRequest?: MotoInsuranceRequestData;
   details?: Record<string, string>;
   coverage?: string; desiredStartDate?: string; comments?: string; proposalId?: string; selectedOfferId?: string; timeline: StatusEvent[]; scope?: "core" | "scenario";
 }
