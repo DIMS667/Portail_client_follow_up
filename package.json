@@ -8,9 +8,11 @@
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build",
-    "build:portal": "vite build --mode portal",
+    "build": "vite build && npm run generate:seo",
+    "generate:seo": "node --no-warnings --experimental-strip-types scripts/generate-seo-pages.mjs",
+    "build:portal": "vite build --mode portal && node scripts/configure-portal-build.mjs",
     "build:production": "npm run build && npm run build:portal",
+    "seo:check": "node --no-warnings --experimental-strip-types scripts/check-seo-output.mjs",
     "start": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit"
   },

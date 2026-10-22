@@ -6,6 +6,8 @@ import { BrandLogo } from "../../components/brand-logo";
 import { publicPageLinks } from "../data/public-pages";
 import { PublicLink } from "./public-link";
 
+const desktopPageLinks = publicPageLinks.filter((item) => item.href !== "/faq");
+
 function isActiveRoute(pathname: string, href: string) {
   return href === "/" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -44,7 +46,7 @@ export function PublicHeader({ onClientSpace }: PublicHeaderProps) {
 
         <nav className="public-header__nav" aria-label="Navigation principale">
           <span hidden aria-hidden="true" />
-          {publicPageLinks.map((item) => {
+          {desktopPageLinks.map((item) => {
             const active = isActiveRoute(pathname, item.href);
             return (
               <PublicLink

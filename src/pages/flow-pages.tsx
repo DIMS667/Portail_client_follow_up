@@ -21,16 +21,16 @@ import { CautionRequestForm } from "./caution-request-form";
 import { HealthRequestForm } from "./health-request-form";
 import { MotoRequestForm } from "./moto-request-form";
 
-interface ProductChoice { id: InsuranceProduct; label: string; help: string; image: string; icon: LucideIcon; }
+interface ProductChoice { id: InsuranceProduct; label: string; help: string; image: string; imageWidth: number; imageHeight: number; icon: LucideIcon; }
 
 const productChoices: ProductChoice[] = [
-  { id: "automobile", label: "Automobile", help: "Voiture, moto et véhicules à 2 ou 3 roues", image: assetUrl("/images/insurance-auto.webp"), icon: Car },
-  { id: "sante", label: "Santé", help: "Protection individuelle ou familiale", image: assetUrl("/images/insurance-health.webp"), icon: HeartPulse },
-  { id: "vie_capitalisation", label: "Vie & capitalisation", help: "Protection, épargne et préparation de l’avenir", image: assetUrl("/images/advisor-amina.webp"), icon: PiggyBank },
-  { id: "voyage", label: "Voyage", help: "Déplacements et séjours", image: assetUrl("/images/insurance-travel.webp"), icon: Plane },
-  { id: "habitation", label: "Habitation", help: "Maison, appartement et biens", image: assetUrl("/images/insurance-home.webp"), icon: Home },
-  { id: "entreprise", label: "Entreprise", help: "Activité et responsabilité", image: assetUrl("/images/insurance-business.webp"), icon: Building2 },
-  { id: "caution", label: "Caution", help: "Soumission, avance, retenue de garantie et bonne fin", image: assetUrl("/images/public-entrepreneur.png"), icon: Landmark },
+  { id: "automobile", label: "Automobile", help: "Voiture, moto et véhicules à 2 ou 3 roues", image: assetUrl("/images/insurance-auto.webp"), imageWidth: 1200, imageHeight: 1800, icon: Car },
+  { id: "sante", label: "Santé", help: "Protection individuelle ou familiale", image: assetUrl("/images/insurance-health.webp"), imageWidth: 1200, imageHeight: 800, icon: HeartPulse },
+  { id: "vie_capitalisation", label: "Vie & capitalisation", help: "Protection, épargne et préparation de l’avenir", image: assetUrl("/images/advisor-amina.webp"), imageWidth: 900, imageHeight: 601, icon: PiggyBank },
+  { id: "voyage", label: "Voyage", help: "Déplacements et séjours", image: assetUrl("/images/insurance-travel.webp"), imageWidth: 1200, imageHeight: 1800, icon: Plane },
+  { id: "habitation", label: "Habitation", help: "Maison, appartement et biens", image: assetUrl("/images/insurance-home.webp"), imageWidth: 1200, imageHeight: 675, icon: Home },
+  { id: "entreprise", label: "Entreprise", help: "Activité et responsabilité", image: assetUrl("/images/insurance-business.webp"), imageWidth: 1200, imageHeight: 800, icon: Building2 },
+  { id: "caution", label: "Caution", help: "Soumission, avance, retenue de garantie et bonne fin", image: assetUrl("/images/public-entrepreneur-640.webp"), imageWidth: 640, imageHeight: 427, icon: Landmark },
 ];
 
 export function NewRequestPage() {
@@ -50,7 +50,7 @@ export function NewRequestPage() {
   };
   if (createdReference) return <RequestConfirmation reference={createdReference} productLabel={createdProductLabel} vehicleKind={createdVehicleKind} onOpen={() => navigate(`/espace/demandes/${createdReference}`)} />;
   if (!product) return (
-    <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate("/espace")}><ArrowLeft size={17} /> Retour à l’accueil</button><PageHeader eyebrow="Nouvelle demande" title={"Quelle assurance recherchez\u2011vous\u00a0?"} description="Chaque assurance ouvre un formulaire adapté aux informations nécessaires à l’étude de votre dossier." /><div className="product-choice-grid">{productChoices.map(({ id, label, help, image, icon: Icon }) => <button type="button" key={id} onClick={() => { setProduct(id); setPreparationMode(null); setVehicleKind(null); }}><span className="product-choice-visual"><img src={image} alt="" loading="lazy" decoding="async" /><i><Icon size={22} /></i></span><span className="product-choice-copy"><span><strong>Assurance {label.toLowerCase()}</strong><small>{help}</small></span><ChevronRight size={19} /></span></button>)}</div></div>
+    <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate("/espace")}><ArrowLeft size={17} /> Retour à l’accueil</button><PageHeader eyebrow="Nouvelle demande" title={"Quelle assurance recherchez\u2011vous\u00a0?"} description="Chaque assurance ouvre un formulaire adapté aux informations nécessaires à l’étude de votre dossier." /><div className="product-choice-grid">{productChoices.map(({ id, label, help, image, imageWidth, imageHeight, icon: Icon }) => <button type="button" key={id} onClick={() => { setProduct(id); setPreparationMode(null); setVehicleKind(null); }}><span className="product-choice-visual"><img src={image} alt="" width={imageWidth} height={imageHeight} loading="lazy" decoding="async" /><i><Icon size={22} /></i></span><span className="product-choice-copy"><span><strong>Assurance {label.toLowerCase()}</strong><small>{help}</small></span><ChevronRight size={19} /></span></button>)}</div></div>
   );
   if (product === "automobile" && !vehicleKind) return <VehicleKindChoice onBack={() => setProduct(null)} onSelect={setVehicleKind} />;
   if (product === "automobile" && vehicleKind === "car") return <AutoRequestForm backLabel="Changer de véhicule" onBack={() => setVehicleKind(null)} onSubmit={submitRequest} />;

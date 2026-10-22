@@ -1,16 +1,50 @@
+Options -MultiViews
+DirectoryIndex index.html
+ErrorDocument 404 /404.html
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
+
+  # Le portail possède sa propre configuration SPA dans /portail-client/.
   RewriteRule ^portail-client(?:/|$) - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule ^ index.html [L]
+
+  # Anciennes URL conservées uniquement comme redirections permanentes.
+  RewriteRule ^connexion/?$ /login/ [R=301,L,NE]
+  RewriteRule ^solutions/moto/?$ /solutions/automobile/#deux-trois-roues [R=301,L,NE]
+
+  # Les pages publiques sont pré-rendues dans de vrais dossiers.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Une URL publique inconnue doit renvoyer un vrai statut HTTP 404.
+  RewriteRule ^ - [R=404,L]
+</IfModule>
+
+<IfModule mod_setenvif.c>
+  SetEnvIf Request_URI "^/(login|connexion|inscription|mot-de-passe-oublie)(/|$)" noindex_route
+  SetEnvIf Request_URI "^/portail-client(?:/|$)" noindex_route
 </IfModule>
 
 <IfModule mod_headers.c>
+  Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=noindex_route
+
   <FilesMatch "\.html?$">
     Header always set Cache-Control "no-cache, no-store, must-revalidate"
     Header always set Cdn-Cache-Control "no-store"
   </FilesMatch>
+
+  <FilesMatch "\.(?:avif|gif|ico|jpe?g|png|svg|webp)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+
+  <FilesMatch "\.(?:css|js)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json application/xml image/svg+xml
 </IfModule>
 
 <FilesMatch "^\..*deploy-sync-state.*\.json$">

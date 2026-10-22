@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   ArrowRight,
   Check,
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { usePortal } from "../../app/portal-context";
 import { PublicLink } from "../components/public-link";
 import { PublicPageShell } from "../components/public-page-shell";
+import { ResponsivePublicImage } from "../components/responsive-public-image";
 import {
   aboutPage,
   adviceArticleBySlug,
@@ -37,19 +38,6 @@ import {
   type SolutionPageContent,
   type SolutionSlug,
 } from "../data/public-pages";
-
-function usePublicMeta(title: string, description: string) {
-  useEffect(() => {
-    document.title = title;
-    let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.name = "description";
-      document.head.appendChild(meta);
-    }
-    meta.content = description;
-  }, [description, title]);
-}
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return <span className="public-kicker"><span aria-hidden="true" />{children}</span>;
@@ -112,7 +100,7 @@ function PublicHeroBlock({ hero, breadcrumbs }: {
           )}
         </div>
         <figure className="public-subhero__visual">
-          <img src={hero.image.src} alt={hero.image.alt} width={1200} height={900} loading="eager" />
+          <ResponsivePublicImage src={hero.image.src} alt={hero.image.alt} fallbackWidth={1200} fallbackHeight={900} sizes="(max-width: 760px) 100vw, 50vw" loading="eager" />
         </figure>
       </div>
     </section>
@@ -148,7 +136,7 @@ function EditorialSection({ section, index }: { section: PublicEditorialSection;
     return (
       <section className={sectionClass} aria-labelledby={`${section.id}-title`}>
         <div className="public-container public-editorial-grid">
-          <figure><img src={section.image.src} alt={section.image.alt} width={1100} height={900} loading="lazy" /></figure>
+          <figure><ResponsivePublicImage src={section.image.src} alt={section.image.alt} fallbackWidth={1100} fallbackHeight={900} sizes="(max-width: 900px) 100vw, 42vw" loading="lazy" /></figure>
           <div className="public-editorial-copy">
             {section.eyebrow && <SectionLabel>{section.eyebrow}</SectionLabel>}
             <h2 id={`${section.id}-title`}>{section.title}</h2>
@@ -203,7 +191,6 @@ function FinalCta({ content }: { content: NonNullable<PublicLandingPage["finalCt
 }
 
 function GenericLandingPage({ page }: { page: PublicLandingPage }) {
-  usePublicMeta(page.metaTitle, page.metaDescription);
   return (
     <PublicPageShell>
       <PublicHeroBlock hero={page.hero} breadcrumbs={[{ label: "Accueil", href: "/" }, { label: page.hero.eyebrow }]} />
@@ -226,7 +213,6 @@ export function BusinessesPublicPage() {
 }
 
 export function SolutionsPublicPage() {
-  usePublicMeta(solutionsPage.metaTitle, solutionsPage.metaDescription);
   const method = solutionsPage.sections.find((section) => section.id === "methode");
   return (
     <PublicPageShell>
@@ -240,7 +226,7 @@ export function SolutionsPublicPage() {
           <div className="public-solutions-grid">
             {solutionSummaries.map((solution) => (
               <article className="public-solution-card" key={solution.slug}>
-                <div className="public-solution-card__image"><img src={solution.image.src} alt={solution.image.alt} width={900} height={600} loading="lazy" /></div>
+                <div className="public-solution-card__image"><ResponsivePublicImage src={solution.image.src} alt={solution.image.alt} fallbackWidth={900} fallbackHeight={600} sizes="(max-width: 760px) 100vw, 33vw" loading="lazy" /></div>
                 <div className="public-solution-card__body">
                   {solution.tags && <div className="public-solution-tags" aria-label="Catégories incluses">{solution.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
                   <span className="public-solution-card__tagline">{solution.tagline}</span><h2>{solution.shortTitle}</h2><p>{solution.description}</p>
@@ -270,9 +256,43 @@ function FaqList({ items }: { items: readonly PublicFaqItem[] }) {
   );
 }
 
+const solutionAdviceLinks: Partial<Record<SolutionSlug, { href: string; label: string }>> = {
+  automobile: {
+    href: "/conseils/choisir-assurance-automobile",
+    label: "Lire le guide pour choisir son assurance automobile",
+  },
+  voyage: {
+    href: "/conseils/preparer-assurance-voyage",
+    label: "Lire le guide pour préparer son assurance voyage",
+  },
+  entreprise: {
+    href: "/conseils/proteger-activite-professionnelle",
+    label: "Lire le guide pour protéger son activité",
+  },
+  caution: {
+    href: "/conseils/proteger-activite-professionnelle",
+    label: "Lire le guide sur les risques de l’entreprise",
+  },
+};
+
+const articleSolutionLinks: Record<AdviceArticleSlug, { href: string; label: string }> = {
+  "choisir-assurance-automobile": {
+    href: "/solutions/automobile",
+    label: "Découvrir l’assurance automobile",
+  },
+  "preparer-assurance-voyage": {
+    href: "/solutions/voyage",
+    label: "Découvrir l’assurance voyage",
+  },
+  "proteger-activite-professionnelle": {
+    href: "/solutions/entreprise",
+    label: "Découvrir l’assurance entreprise",
+  },
+};
+
 export function SolutionDetailPublicPage({ slug }: { slug: SolutionSlug }) {
   const page: SolutionPageContent = solutionPages[slug];
-  usePublicMeta(page.metaTitle, page.metaDescription);
+  const relatedAdvice = solutionAdviceLinks[slug];
   return (
     <PublicPageShell>
       <PublicHeroBlock
@@ -314,6 +334,12 @@ export function SolutionDetailPublicPage({ slug }: { slug: SolutionSlug }) {
             <section className="public-detail-section">
               <h2>{page.brokerSupport.title}</h2><p>{page.brokerSupport.description}</p><ProcessList steps={page.brokerSupport.steps} />
             </section>
+            {relatedAdvice && (
+              <section className="public-detail-section">
+                <h2>Pour aller plus loin</h2>
+                <PublicLink className="public-text-link" href={relatedAdvice.href}>{relatedAdvice.label}<ArrowRight size={16} aria-hidden="true" /></PublicLink>
+              </section>
+            )}
           </div>
         </div>
       </section>
@@ -327,7 +353,6 @@ export function SolutionDetailPublicPage({ slug }: { slug: SolutionSlug }) {
 
 export function ClaimsPublicPage() {
   const { navigate, store } = usePortal();
-  usePublicMeta(claimsPage.metaTitle, claimsPage.metaDescription);
   const startClaim = () => {
     if (import.meta.env.DEV) {
       navigate(store.session.authenticated ? "/espace/sinistres/nouveau" : "/login");
@@ -343,7 +368,11 @@ export function ClaimsPublicPage() {
       <PublicHeroBlock hero={claimsPage.hero} breadcrumbs={[{ label: "Accueil", href: "/" }, { label: "Sinistres" }]} />
       {claimsPage.sections.map((section, index) => <EditorialSection key={section.id} section={section} index={index} />)}
       <section className="public-page-section public-page-section--soft" aria-labelledby="claims-faq-title">
-        <div className="public-container"><div className="public-page-heading"><SectionLabel>Questions fréquentes</SectionLabel><h2 id="claims-faq-title">Après un événement</h2></div><FaqList items={claimsPage.faq} /></div>
+        <div className="public-container">
+          <div className="public-page-heading"><SectionLabel>Questions fréquentes</SectionLabel><h2 id="claims-faq-title">Après un événement</h2></div>
+          <FaqList items={claimsPage.faq} />
+          <PublicLink className="public-text-link" href="/faq#sinistre">Voir toutes les questions sur les sinistres<ArrowRight size={16} aria-hidden="true" /></PublicLink>
+        </div>
       </section>
       <section className="public-quote-band">
         <div className="public-container public-quote-band__inner">
@@ -356,7 +385,6 @@ export function ClaimsPublicPage() {
 }
 
 export function AdvicePublicPage() {
-  usePublicMeta(advicePage.metaTitle, advicePage.metaDescription);
   return (
     <PublicPageShell>
       <PublicHeroBlock hero={advicePage.hero} breadcrumbs={[{ label: "Accueil", href: "/" }, { label: "Conseils" }]} />
@@ -382,7 +410,7 @@ export function AdvicePublicPage() {
 
 export function AdviceArticlePublicPage({ slug }: { slug: AdviceArticleSlug }) {
   const article = adviceArticleBySlug[slug] as AdviceArticle;
-  usePublicMeta(`${article.title} | Follow-Up Insurance`, article.excerpt);
+  const relatedSolution = articleSolutionLinks[slug];
   return (
     <PublicPageShell>
       <PublicHeroBlock
@@ -402,6 +430,7 @@ export function AdviceArticlePublicPage({ slug }: { slug: AdviceArticleSlug }) {
           </div>
           <aside className="public-article-aside">
             <SectionLabel>À retenir</SectionLabel><h2>{article.takeaway.title}</h2><Checklist items={article.takeaway.points} /><CtaLink cta={article.cta} />
+            <PublicLink className="public-text-link" href={relatedSolution.href}>{relatedSolution.label}<ArrowRight size={16} aria-hidden="true" /></PublicLink>
           </aside>
         </div>
       </article>
@@ -419,7 +448,6 @@ function initialSubject() {
 }
 
 export function ContactPublicPage() {
-  usePublicMeta(contactPage.metaTitle, contactPage.metaDescription);
   const [sent, setSent] = useState(false);
   const subject = useMemo(initialSubject, []);
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -454,7 +482,7 @@ export function ContactPublicPage() {
               <label className="full public-contact-consent"><input name="consent" type="checkbox" required /><span>J’accepte que mes informations soient utilisées pour répondre à cette demande. *</span></label>
               <div className="full"><Button type="submit" className="public-button public-button--primary">Envoyer ma demande<ArrowRight size={16} /></Button></div>
             </div>
-            {sent && <div className="public-contact-form__success" role="status"><CheckCircle2 size={21} /><div><strong>Votre demande a bien été enregistrée.</strong><p>Cette démonstration n’envoie pas encore d’e-mail. Le raccordement au canal réel sera fait lors de la mise en production.</p></div></div>}
+            {sent && <div className="public-contact-form__success" role="status"><CheckCircle2 size={21} /><div><strong>Message non envoyé — mode démonstration.</strong><p>Le formulaire est prêt, mais il n’est pas encore relié à un canal de contact. Aucune donnée n’a été transmise.</p></div></div>}
           </form>
         </div>
       </section>
@@ -463,7 +491,6 @@ export function ContactPublicPage() {
 }
 
 export function FaqPublicPage() {
-  usePublicMeta(faqPage.metaTitle, faqPage.metaDescription);
   return (
     <PublicPageShell>
       <PublicHeroBlock hero={faqPage.hero} breadcrumbs={[{ label: "Accueil", href: "/" }, { label: "FAQ" }]} />
@@ -488,14 +515,13 @@ export type LegalPageKind = keyof typeof legalContent;
 
 export function LegalPublicPage({ kind }: { kind: LegalPageKind }) {
   const content = legalContent[kind];
-  usePublicMeta(`${content.title} | Follow-Up Insurance`, content.intro);
   return (
     <PublicPageShell>
       <section className="public-page-section">
         <div className="public-container public-legal-copy">
           <Breadcrumbs items={[{ label: "Accueil", href: "/" }, { label: content.title }]} />
           <SectionLabel>Informations</SectionLabel><h1>{content.title}</h1><p>{content.intro}</p>
-          <h2>Contenu provisoire</h2><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ce texte secondaire doit être remplacé par les informations juridiques validées avant la mise en production définitive.</p>
+          <h2>Informations en cours de validation</h2><p>Cette page est en cours de validation. Les informations définitives seront publiées après confirmation des éléments relatifs à l’éditeur, à l’hébergement et, selon la page, au traitement des données.</p>
           <h2>Contact</h2><p>Pour toute question relative à cette page, utilisez le formulaire de contact afin d’être orienté vers l’interlocuteur compétent.</p>
           <PublicLink className="public-text-link" href="/contact">Nous contacter<ArrowRight size={16} /></PublicLink>
         </div>
@@ -505,7 +531,6 @@ export function LegalPublicPage({ kind }: { kind: LegalPageKind }) {
 }
 
 export function PublicNotFoundPage() {
-  usePublicMeta("Page introuvable | Follow-Up Insurance", "La page demandée n’existe pas ou a été déplacée.");
   return (
     <PublicPageShell>
       <section className="public-page-section public-empty-state">

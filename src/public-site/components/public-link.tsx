@@ -7,6 +7,16 @@ export interface PublicLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement>
   href: string;
 }
 
+function canonicalPublicHref(href: string) {
+  if (!href.startsWith("/") || href === "/") return href;
+  const match = href.match(/^([^?#]*)([?#].*)?$/);
+  if (!match) return href;
+  const pathname = match[1];
+  const suffix = match[2] ?? "";
+  if (pathname.endsWith("/") || /\.[^/]+$/.test(pathname)) return href;
+  return `${pathname}/${suffix}`;
+}
+
 /**
  * Lien interne accessible qui conserve le comportement natif d’une ancre
  * (nouvel onglet, copie de l’URL, clic modifié) tout en utilisant le routeur SPA
@@ -33,7 +43,8 @@ export const PublicLink = forwardRef<HTMLAnchorElement, PublicLinkProps>(functio
       || href.startsWith("#")
     ) return;
 
-    const browserHref = href.startsWith("/") ? toBrowserPath(href) : href;
+    const canonicalHref = canonicalPublicHref(href);
+    const browserHref = canonicalHref.startsWith("/") ? toBrowserPath(canonicalHref) : canonicalHref;
     const destination = new URL(browserHref, window.location.href);
     if (destination.origin !== window.location.origin) return;
 
@@ -41,6 +52,7 @@ export const PublicLink = forwardRef<HTMLAnchorElement, PublicLinkProps>(functio
     navigate(`${fromBrowserPath(destination.pathname)}${destination.search}${destination.hash}`);
   };
 
-  const browserHref = href.startsWith("/") ? toBrowserPath(href) : href;
+  const canonicalHref = canonicalPublicHref(href);
+  const browserHref = canonicalHref.startsWith("/") ? toBrowserPath(canonicalHref) : canonicalHref;
   return <a ref={ref} href={browserHref} target={target} download={download} onClick={handleClick} {...props} />;
 });

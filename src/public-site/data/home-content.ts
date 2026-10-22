@@ -45,7 +45,8 @@ export const adviceArticles = [
     slug: "choisir-assurance-automobile",
     category: "Auto",
     title: "Comment choisir son assurance automobile ?",
-    excerpt: "Les points essentiels à examiner avant de souscrire.",
+    excerpt:
+      "Usage, responsabilité civile, dommages, franchises et exclusions : découvrez les critères à comparer avant de choisir votre assurance automobile.",
     body: "Commencez par votre usage réel du véhicule, les conducteurs concernés et votre capacité à faire face à un imprévu. Votre courtier vous aide ensuite à lire les différences entre les solutions proposées.",
     image: "/images/insurance-auto.webp",
     imageAlt: "Voiture rouge moderne vue depuis le dessus",
@@ -54,7 +55,8 @@ export const adviceArticles = [
     slug: "preparer-assurance-voyage",
     category: "Voyage",
     title: "Pourquoi préparer son assurance avant le départ ?",
-    excerpt: "Anticipez les situations qui pourraient perturber votre voyage.",
+    excerpt:
+      "Destination, frais médicaux, rapatriement, annulation et activités : les points à vérifier avant de souscrire une assurance voyage.",
     body: "Destination, durée, activités et situation de chaque voyageur influencent le besoin. Une étude en amont permet de poser les bonnes questions avant de partir.",
     image: "/images/insurance-travel.webp",
     imageAlt: "Voyageuse préparant une valise",
@@ -63,7 +65,8 @@ export const adviceArticles = [
     slug: "proteger-activite-professionnelle",
     category: "Entreprise",
     title: "Quels risques anticiper pour protéger son activité ?",
-    excerpt: "Une lecture simple des expositions de votre entreprise.",
+    excerpt:
+      "Responsabilité, locaux, équipements et continuité : une méthode simple pour identifier et hiérarchiser les risques de votre entreprise.",
     body: "Locaux, responsabilité, personnes, véhicules, matériel et continuité d’activité méritent une analyse globale. Le rôle du courtier est de vous aider à hiérarchiser ces risques.",
     image: "/images/insurance-business.webp",
     imageAlt: "Équipe de professionnelles africaines en réunion",

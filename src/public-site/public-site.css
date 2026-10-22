@@ -85,12 +85,14 @@
 .public-hero__copy h1 span { display: block; margin-top: 8px; font-weight: 400; }
 .public-hero__copy > p { max-width: 540px; margin-top: 24px; color: #565653; font-size: 18px; line-height: 1.55; }
 .public-hero__actions { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 12px; }
+.public-responsive-picture { display: block; width: 100%; height: 100%; }
 .public-hero__visual { min-width: 0; align-self: stretch; display: grid; align-items: center; }
+.public-hero__visual .public-responsive-picture { height: auto; }
 .public-hero__visual img { width: 100%; aspect-ratio: 1.6; object-fit: cover; object-position: center; }
 
 .public-needs { background: #fafafa; border-bottom: 1px solid var(--public-line); }
 .public-needs__grid { min-height: 154px; display: grid; grid-template-columns: repeat(7, 1fr); }
-.public-need { position: relative; min-width: 0; padding: 20px 16px; display: grid; place-items: center; align-content: center; gap: 5px; border: 0; border-right: 1px solid var(--public-line); color: var(--public-ink); background: transparent; cursor: pointer; transition: color .18s ease, background .18s ease; }
+.public-need { position: relative; min-width: 0; padding: 20px 16px; display: grid; place-items: center; align-content: center; gap: 5px; border: 0; border-right: 1px solid var(--public-line); color: var(--public-ink); background: transparent; text-decoration: none; cursor: pointer; transition: color .18s ease, background .18s ease; }
 .public-need:first-child { border-left: 1px solid var(--public-line); }
 .public-need:hover, .public-need:focus-visible { color: var(--public-red); background: #fff; }
 .public-need svg { color: var(--public-orange); transition: transform .18s ease; }
@@ -125,9 +127,9 @@
 .public-audience > div { padding: 32px 30px; display: flex; align-items: flex-start; justify-content: center; flex-direction: column; }
 .public-audience h3 { margin-top: 13px; font-size: 28px; font-weight: 700; line-height: 1.06; letter-spacing: -.03em; }
 .public-audience p { margin-top: 15px; color: var(--public-muted); font-size: 15px; line-height: 1.5; }
-.public-audience button { margin-top: 20px; padding: 0; display: inline-flex; align-items: center; gap: 8px; border: 0; color: var(--public-red); background: transparent; font-weight: 700; cursor: pointer; }
-.public-audience button:hover svg { transform: translateX(3px); }
-.public-audience button svg { transition: transform .18s ease; }
+.public-audience > div > a { margin-top: 20px; padding: 0; display: inline-flex; align-items: center; gap: 8px; border: 0; color: var(--public-red); background: transparent; font-weight: 700; text-decoration: none; cursor: pointer; }
+.public-audience > div > a:hover svg { transform: translateX(3px); }
+.public-audience > div > a svg { transition: transform .18s ease; }
 
 .public-journey { padding-block: 40px 44px; background: #fff; }
 .public-journey h2 { margin-top: 10px; font-size: clamp(38px, 3.7vw, 54px); font-weight: 700; line-height: 1; letter-spacing: -.04em; }

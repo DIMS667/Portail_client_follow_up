@@ -22,9 +22,9 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { usePortal } from "../../app/portal-context";
 import { PublicLink } from "../components/public-link";
 import { PublicPageShell } from "../components/public-page-shell";
+import { ResponsivePublicImage } from "../components/responsive-public-image";
 import {
   adviceArticles,
   brokerBenefits,
@@ -63,8 +63,6 @@ function SectionLabel({ children }: { children: ReactNode }) {
 }
 
 export function HomePage() {
-  const { navigate } = usePortal();
-  const goToQuote = () => navigate("/contact?objet=devis");
   const solutionRoutes = {
     auto: "/solutions/automobile",
     health: "/solutions/sante",
@@ -84,8 +82,8 @@ export function HomePage() {
               <h1 id="public-hero-title">Choisir avec confiance.<span>Allez en toute quiétude.</span></h1>
               <p>Follow-Up Insurance comprend vos besoins, recherche des solutions adaptées et vous accompagne dans vos choix comme dans leur suivi.</p>
               <div className="public-hero__actions">
-                <Button type="button" className="public-button public-button--primary public-button--large" onClick={goToQuote}>
-                  Étudier mon besoin <ArrowRight size={17} />
+                <Button asChild className="public-button public-button--primary public-button--large">
+                  <PublicLink href="/contact?objet=devis">Étudier mon besoin <ArrowRight size={17} /></PublicLink>
                 </Button>
                 <Button asChild type="button" variant="outline" className="public-button public-button--outline public-button--large">
                   <PublicLink href="/a-propos">Découvrir Follow-Up</PublicLink>
@@ -93,11 +91,10 @@ export function HomePage() {
               </div>
             </div>
             <div className="public-hero__visual">
-              <img
+              <ResponsivePublicImage
                 src="/images/public-hero-collage.png"
                 alt="Une conseillère échange avec un client tandis qu’un professionnel consulte ses informations sur le terrain"
-                width={1600}
-                height={1100}
+                sizes="(max-width: 760px) 100vw, 50vw"
                 fetchPriority="high"
               />
             </div>
@@ -109,12 +106,12 @@ export function HomePage() {
             {protectionNeeds.map((need) => {
               const Icon = needIcons[need.id];
               return (
-                <button key={need.id} type="button" onClick={() => navigate(solutionRoutes[need.id])} className="public-need">
+                <PublicLink key={need.id} href={solutionRoutes[need.id]} className="public-need">
                   <span className="public-need__number">{need.number}</span>
                   <Icon size={28} strokeWidth={1.7} aria-hidden="true" />
                   <strong>{need.label}</strong>
                   <span>{need.description}</span>
-                </button>
+                </PublicLink>
               );
             })}
           </div>
@@ -132,7 +129,7 @@ export function HomePage() {
                 </Button>
               </div>
               <figure className="public-role__image">
-                <img src="/images/public-role-advisor.png" alt="Une courtière écoute un client et analyse sa situation" width={1484} height={1060} loading="lazy" />
+                <ResponsivePublicImage src="/images/public-role-advisor.png" alt="Une courtière écoute un client et analyse sa situation" sizes="(max-width: 760px) 100vw, 42vw" loading="lazy" />
               </figure>
               <div className="public-role__statement">
                 <span aria-hidden="true" />
@@ -165,16 +162,16 @@ export function HomePage() {
                     <SectionLabel>Particuliers</SectionLabel>
                     <h3>Protéger aujourd’hui pour demain.</h3>
                     <p>Des solutions étudiées pour vous, votre famille et les projets qui comptent.</p>
-                    <button type="button" onClick={() => navigate("/particuliers")}>Solutions particuliers <ArrowRight size={16} /></button>
+                    <PublicLink href="/particuliers">Solutions particuliers <ArrowRight size={16} /></PublicLink>
                   </div>
                 </article>
                 <article className="public-audience" id="entreprises">
-                  <img src="/images/public-entrepreneur.png" alt="Un entrepreneur travaille sur son ordinateur dans un bureau lumineux" width={1536} height={1024} loading="lazy" />
+                  <ResponsivePublicImage src="/images/public-entrepreneur.png" alt="Un entrepreneur travaille sur son ordinateur dans un bureau lumineux" sizes="(max-width: 760px) 100vw, 25vw" loading="lazy" />
                   <div>
                     <SectionLabel>Entreprises</SectionLabel>
                     <h3>Assurer vos projets de croissance.</h3>
                     <p>Une lecture structurée des risques pour accompagner durablement votre activité.</p>
-                    <button type="button" onClick={() => navigate("/entreprises")}>Solutions entreprises <ArrowRight size={16} /></button>
+                    <PublicLink href="/entreprises">Solutions entreprises <ArrowRight size={16} /></PublicLink>
                   </div>
                 </article>
               </div>
@@ -199,8 +196,8 @@ export function HomePage() {
                   </li>
                 ))}
               </ol>
-              <Button type="button" className="public-button public-button--primary public-journey__cta" onClick={goToQuote}>
-                Commencer ma demande <ArrowRight size={17} />
+              <Button asChild className="public-button public-button--primary public-journey__cta">
+                <PublicLink href="/contact?objet=devis">Commencer ma demande <ArrowRight size={17} /></PublicLink>
               </Button>
             </div>
           </section>
@@ -230,13 +227,13 @@ export function HomePage() {
           <section className="public-support public-section" aria-label="Sinistres et engagements">
             <div className="public-container public-support__grid">
               <article className="public-claims" id="sinistres">
-                <img src="/images/public-claims-advisor.png" alt="Une conseillère accompagne un client par téléphone" width={1536} height={1024} loading="lazy" />
+                <ResponsivePublicImage src="/images/public-claims-advisor.png" alt="Une conseillère accompagne un client par téléphone" sizes="(max-width: 760px) 100vw, 25vw" loading="lazy" />
                 <div>
                   <SectionLabel>En cas de sinistre</SectionLabel>
                   <h2>À vos côtés quand cela compte.</h2>
                   <p>Déclarez votre sinistre, transmettez les éléments utiles et suivez les échanges avec l’appui de votre courtier.</p>
-                  <Button type="button" variant="outline" className="public-button public-button--outline" onClick={() => navigate("/sinistres")}>
-                    Que faire en cas de sinistre ? <ArrowRight size={16} />
+                  <Button asChild variant="outline" className="public-button public-button--outline">
+                    <PublicLink href="/sinistres">Que faire en cas de sinistre ? <ArrowRight size={16} /></PublicLink>
                   </Button>
                 </div>
               </article>
@@ -286,8 +283,8 @@ export function HomePage() {
               <p>Un conseiller Follow-Up Insurance peut vous accompagner dans la recherche d’une solution adaptée.</p>
             </div>
             <div>
-              <Button type="button" className="public-button public-button--light public-button--large" onClick={goToQuote}>
-                Demander un devis <ArrowRight size={17} />
+              <Button asChild className="public-button public-button--light public-button--large">
+                <PublicLink href="/contact?objet=devis">Demander un devis <ArrowRight size={17} /></PublicLink>
               </Button>
               <PublicLink href="/a-propos">Découvrir notre approche</PublicLink>
             </div>

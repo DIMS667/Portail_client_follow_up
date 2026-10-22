@@ -38,10 +38,8 @@ jobs:
       - name: Build website and client portal
         run: npm run build:production
 
-      - name: Verify production package
-        run: |
-          test -f dist/index.html || { echo "Missing website index"; exit 1; }
-          test -f dist/portail-client/index.html || { echo "Missing client portal index"; exit 1; }
+      - name: Verify production and SEO package
+        run: npm run seo:check
 
       - name: Verify cPanel configuration
         env:
@@ -81,6 +79,23 @@ jobs:
           root_html="$(curl --fail --silent --show-error --retry 5 --retry-delay 3 "https://followupassurance.com/?deployment=${{ github.sha }}")"
           login_html="$(curl --fail --silent --show-error --retry 5 --retry-delay 3 "https://followupassurance.com/login/?deployment=${{ github.sha }}")"
           portal_html="$(curl --fail --silent --show-error --retry 5 --retry-delay 3 "https://followupassurance.com/portail-client/?deployment=${{ github.sha }}")"
+          caution_html="$(curl --fail --silent --show-error --retry 5 --retry-delay 3 "https://followupassurance.com/solutions/caution/?deployment=${{ github.sha }}")"
+          robots_txt="$(curl --fail --silent --show-error --retry 5 --retry-delay 3 "https://followupassurance.com/robots.txt?deployment=${{ github.sha }}")"
+          sitemap_xml="$(curl --fail --silent --show-error --retry 5 --retry-delay 3 "https://followupassurance.com/sitemap.xml?deployment=${{ github.sha }}")"
           echo "$root_html" | grep -q 'src="/assets/' || { echo "The public website is not served at /"; exit 1; }
           echo "$login_html" | grep -q 'src="/assets/' || { echo "The login page is not served at /login/"; exit 1; }
           echo "$portal_html" | grep -q 'src="/portail-client/assets/' || { echo "The client portal is not served at /portail-client/"; exit 1; }
+          echo "$root_html" | grep -q 'rel="canonical" href="https://followupassurance.com/"' || { echo "The public canonical tag is missing"; exit 1; }
+          echo "$caution_html" | grep -q 'rel="canonical" href="https://followupassurance.com/solutions/caution/"' || { echo "The caution page was not pre-rendered"; exit 1; }
+          echo "$login_html" | grep -q 'name="robots" content="noindex, nofollow, noarchive"' || { echo "The login noindex tag is missing"; exit 1; }
+          echo "$robots_txt" | grep -q 'Sitemap: https://followupassurance.com/sitemap.xml' || { echo "robots.txt is invalid"; exit 1; }
+          echo "$sitemap_xml" | grep -q '<loc>https://followupassurance.com/solutions/caution/</loc>' || { echo "sitemap.xml is incomplete"; exit 1; }
+
+          not_found_status="$(curl --silent --output /dev/null --write-out '%{http_code}' "https://followupassurance.com/verification-page-absente-${{ github.sha }}")"
+          moto_status="$(curl --silent --output /dev/null --write-out '%{http_code}' "https://followupassurance.com/solutions/moto")"
+          login_headers="$(curl --silent --show-error --head "https://followupassurance.com/login/")"
+          portal_headers="$(curl --silent --show-error --head "https://followupassurance.com/portail-client/")"
+          test "$not_found_status" = "404" || { echo "Unknown public URLs do not return HTTP 404"; exit 1; }
+          test "$moto_status" = "301" || { echo "The legacy motorcycle URL is not permanently redirected"; exit 1; }
+          echo "$login_headers" | grep -qi 'x-robots-tag: noindex, nofollow, noarchive' || { echo "The login X-Robots-Tag is missing"; exit 1; }
+          echo "$portal_headers" | grep -qi 'x-robots-tag: noindex, nofollow, noarchive' || { echo "The portal X-Robots-Tag is missing"; exit 1; }

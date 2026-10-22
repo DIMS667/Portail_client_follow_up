@@ -150,6 +150,7 @@ export const publicPageLinks = [
   { label: "Entreprises", href: "/entreprises" },
   { label: "Sinistres", href: "/sinistres" },
   { label: "Conseils", href: "/conseils" },
+  { label: "FAQ", href: "/faq" },
   { label: "Contact", href: "/contact" },
 ] as const;
 
@@ -808,7 +809,7 @@ export const solutionPages: Record<SolutionSlug, SolutionPageContent> = {
   },
   caution: {
     ...solutionBySlug.caution,
-    metaTitle: "Assurance caution des marchés | Follow-Up Insurance",
+    metaTitle: "Cautions de marché : soumission, avance, retenue et bonne fin | Follow-Up Insurance",
     metaDescription:
       "Préparez une caution de soumission, d’avance de démarrage, de retenue de garantie ou de bonne fin pour vos marchés.",
     hero: {
@@ -942,13 +943,12 @@ export const aboutPage: PublicLandingPage = {
     },
     {
       id: "notre-histoire",
-      eyebrow: "Notre histoire",
-      title: "Un accompagnement construit dans la durée.",
+      eyebrow: "Notre manière de travailler",
+      title: "Une méthode centrée sur votre besoin.",
       paragraphs: [
-        "[Contenu éditorial à remplacer] Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere, justo non facilisis consequat, sem neque viverra augue, vitae posuere lectus sapien vitae erat.",
-        "[Contenu éditorial à remplacer] Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ce texte provisoire pourra accueillir l’origine du cabinet, ses étapes clés et son ancrage local.",
+        "Chaque accompagnement commence par une lecture structurée de la situation, des priorités et des contraintes du client. Cette étape permet de distinguer les garanties essentielles des options à examiner.",
+        "Les propositions sont ensuite rapprochées sur des critères concrets : garanties, plafonds, franchises, exclusions et services. Le client conserve la décision finale, avec des éléments présentés de façon compréhensible.",
       ],
-      isPlaceholder: true,
     },
   ],
   finalCta: {
@@ -1052,12 +1052,11 @@ export const individualsPage: PublicLandingPage = {
     },
     {
       id: "temoignage-a-remplacer",
-      eyebrow: "Parole d’assuré",
-      title: "Une relation qui simplifie les décisions.",
+      eyebrow: "Ce que vous pouvez attendre",
+      title: "Des décisions expliquées, étape par étape.",
       paragraphs: [
-        "[Témoignage à remplacer] Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ce texte est volontairement provisoire et devra être remplacé par un témoignage réel, validé et attribué avec accord.",
+        "Votre besoin est reformulé, les différences entre les propositions sont mises en évidence et les points à vérifier avant toute souscription sont clairement signalés.",
       ],
-      isPlaceholder: true,
     },
   ],
   finalCta: {
@@ -1110,12 +1109,11 @@ export const businessesPage: PublicLandingPage = {
     },
     {
       id: "cas-client-a-remplacer",
-      eyebrow: "Cas client",
-      title: "Illustrer un accompagnement concret.",
+      eyebrow: "Exemple de démarche",
+      title: "Passer d’une liste de risques à des priorités concrètes.",
       paragraphs: [
-        "[Cas client à remplacer] Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ce contenu secondaire accueillera plus tard un cas anonymisé décrivant le contexte, l’analyse et la solution retenue.",
+        "Exemple illustratif : l’étude commence par les activités, les personnes, les biens et les engagements contractuels de l’entreprise. Les risques susceptibles d’interrompre l’activité ou d’engager sa responsabilité sont ensuite classés par priorité avant la comparaison des garanties.",
       ],
-      isPlaceholder: true,
     },
   ],
   finalCta: {
@@ -1214,7 +1212,8 @@ export const adviceArticles: readonly AdviceArticle[] = [
     path: "/conseils/choisir-assurance-automobile",
     category: "Automobile",
     title: "Comment choisir son assurance automobile ?",
-    excerpt: "Quatre critères concrets pour comparer les formules au-delà du prix.",
+    excerpt:
+      "Usage, responsabilité civile, dommages, franchises et exclusions : découvrez les critères à comparer avant de choisir votre assurance automobile.",
     readingTime: "5 min de lecture",
     image: {
       src: "/images/insurance-auto.webp",
@@ -1269,7 +1268,8 @@ export const adviceArticles: readonly AdviceArticle[] = [
     path: "/conseils/preparer-assurance-voyage",
     category: "Voyage",
     title: "Pourquoi préparer son assurance avant le départ ?",
-    excerpt: "Les vérifications utiles pour voyager avec une couverture adaptée.",
+    excerpt:
+      "Destination, frais médicaux, rapatriement, annulation et activités : les points à vérifier avant de souscrire une assurance voyage.",
     readingTime: "6 min de lecture",
     image: {
       src: "/images/insurance-travel.webp",
@@ -1323,7 +1323,8 @@ export const adviceArticles: readonly AdviceArticle[] = [
     path: "/conseils/proteger-activite-professionnelle",
     category: "Entreprise",
     title: "Quels risques anticiper pour protéger son activité ?",
-    excerpt: "Une méthode simple pour hiérarchiser les vulnérabilités de l’entreprise.",
+    excerpt:
+      "Responsabilité, locaux, équipements et continuité : une méthode simple pour identifier et hiérarchiser les risques de votre entreprise.",
     readingTime: "7 min de lecture",
     image: {
       src: "/images/insurance-business.webp",
@@ -1408,12 +1409,11 @@ export const advicePage: PublicLandingPage & { articles: readonly AdviceArticle[
     },
     {
       id: "ligne-editoriale",
-      eyebrow: "Prochainement",
-      title: "De nouveaux décryptages au fil de vos questions.",
+      eyebrow: "Notre ligne éditoriale",
+      title: "Des explications pratiques, sans jargon inutile.",
       paragraphs: [
-        "[Contenu éditorial à remplacer] Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cet emplacement pourra présenter les thèmes à venir ou une courte note de la rédaction.",
+        "Nos guides partent de situations concrètes : comprendre une garantie, préparer les bonnes informations et repérer les limites d’une proposition. Ils donnent des repères généraux ; les conditions du contrat restent la référence.",
       ],
-      isPlaceholder: true,
     },
   ],
   articles: adviceArticles,
