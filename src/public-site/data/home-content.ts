@@ -1,10 +1,9 @@
 export const protectionNeeds = [
-  { id: "auto", number: "01", label: "Auto", description: "Roulez l’esprit tranquille" },
-  { id: "moto", number: "02", label: "Moto", description: "Avancez en toute liberté" },
-  { id: "health", number: "03", label: "Santé", description: "Protégez ce qui compte" },
-  { id: "home", number: "04", label: "Habitation", description: "Préservez votre foyer" },
-  { id: "travel", number: "05", label: "Voyage", description: "Partez plus sereinement" },
-  { id: "business", number: "06", label: "Entreprise", description: "Sécurisez vos ambitions" },
+  { id: "auto", number: "01", label: "Automobile", description: "Voiture, moto et 2-3 roues" },
+  { id: "health", number: "02", label: "Santé", description: "Protégez ce qui compte" },
+  { id: "home", number: "03", label: "Habitation", description: "Préservez votre foyer" },
+  { id: "travel", number: "04", label: "Voyage", description: "Partez plus sereinement" },
+  { id: "business", number: "05", label: "Entreprise", description: "Sécurisez vos ambitions" },
 ] as const;
 
 export const brokerBenefits = [
@@ -71,7 +70,6 @@ export const adviceArticles = [
 
 export const footerSolutionLinks = [
   "Automobile",
-  "Moto",
   "Santé",
   "Habitation",
   "Voyage",

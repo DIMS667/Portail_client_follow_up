@@ -68,7 +68,6 @@ export interface PublicLandingPage {
 
 export type SolutionSlug =
   | "automobile"
-  | "moto"
   | "sante"
   | "habitation"
   | "voyage"
@@ -83,6 +82,17 @@ export interface SolutionSummary {
   description: string;
   image: PublicImage;
   ctaLabel: string;
+  tags?: readonly string[];
+}
+
+export interface SolutionVariant {
+  id: string;
+  tag: string;
+  title: string;
+  description: string;
+  image: PublicImage;
+  highlights: readonly string[];
+  cta: PublicCta;
 }
 
 export interface SolutionPageContent extends SolutionSummary {
@@ -100,6 +110,7 @@ export interface SolutionPageContent extends SolutionSummary {
     steps: readonly PublicStep[];
   };
   faq: readonly PublicFaqItem[];
+  variants?: readonly SolutionVariant[];
   finalCta: {
     title: string;
     description: string;
@@ -148,26 +159,13 @@ export const solutionSummaries: readonly SolutionSummary[] = [
     shortTitle: "Automobile",
     tagline: "Roulez avec les bonnes garanties.",
     description:
-      "Une protection adaptée à votre véhicule, à votre usage et aux conducteurs qui prennent le volant.",
+      "Une protection adaptée aux voitures, motos et véhicules motorisés à deux ou trois roues.",
     image: {
       src: "/images/insurance-auto.webp",
       alt: "Voiture rouge moderne vue depuis le dessus",
     },
-    ctaLabel: "Découvrir l’assurance auto",
-  },
-  {
-    slug: "moto",
-    path: "/solutions/moto",
-    title: "Assurance moto",
-    shortTitle: "Moto",
-    tagline: "Gardez votre liberté de mouvement.",
-    description:
-      "Des garanties pensées selon votre deux-roues, vos trajets et votre niveau d’équipement.",
-    image: {
-      src: "/images/insurance-moto.webp",
-      alt: "Motocycliste équipé circulant sur une route",
-    },
-    ctaLabel: "Découvrir l’assurance moto",
+    ctaLabel: "Découvrir l’assurance automobile",
+    tags: ["Voiture", "Moto / 2-3 roues"],
   },
   {
     slug: "sante",
@@ -236,25 +234,53 @@ export const solutionPages: Record<SolutionSlug, SolutionPageContent> = {
     ...solutionBySlug.automobile,
     metaTitle: "Assurance automobile | Follow-Up Insurance",
     metaDescription:
-      "Étudiez une assurance automobile adaptée à votre véhicule, à vos conducteurs et à vos habitudes de déplacement.",
+      "Étudiez une assurance automobile adaptée à votre voiture, votre moto, votre usage et vos habitudes de déplacement.",
     hero: {
       eyebrow: "Assurance automobile",
-      title: "Une couverture alignée sur votre façon de conduire.",
+      title: "Voiture ou moto, une couverture alignée sur votre usage.",
       intro:
-        "Nous analysons votre véhicule, son usage et votre profil afin de vous aider à choisir des garanties utiles et compréhensibles.",
+        "L’assurance automobile couvre ici les voitures comme les véhicules motorisés à deux ou trois roues. Nous adaptons l’étude au véhicule que vous utilisez réellement.",
       image: solutionBySlug.automobile.image,
       primaryCta: {
-        label: "Demander une étude auto",
-        href: "/contact?motif=automobile",
+        label: "Choisir mon type de véhicule",
+        href: "#types-vehicules",
         tone: "primary",
       },
       secondaryCta: { label: "Voir toutes les solutions", href: "/solutions", tone: "text" },
     },
     audience: [
-      "Conducteurs particuliers",
-      "Familles avec plusieurs conducteurs",
+      "Conducteurs de voiture particulière ou professionnelle",
+      "Conducteurs de moto, scooter ou tricycle motorisé",
       "Propriétaires d’un véhicule neuf ou d’occasion",
-      "Professionnels utilisant un véhicule dans leur activité",
+      "Professionnels utilisant un véhicule pour leur activité",
+    ],
+    variants: [
+      {
+        id: "voiture",
+        tag: "Voiture",
+        title: "Assurer une voiture",
+        description:
+          "Une étude fondée sur la puissance, l’usage, les conducteurs et la valeur du véhicule.",
+        image: {
+          src: "/images/insurance-auto.webp",
+          alt: "Voiture rouge moderne vue depuis le dessus",
+        },
+        highlights: ["Usage professionnel ou transport", "Puissance fiscale", "Garanties adaptées à l’automobile"],
+        cta: { label: "Demander une étude voiture", href: "/contact?motif=automobile_voiture", tone: "primary" },
+      },
+      {
+        id: "deux-trois-roues",
+        tag: "Moto / 2-3 roues",
+        title: "Assurer une moto",
+        description:
+          "Une étude adaptée à la cylindrée, aux déplacements et au transport éventuel de passagers.",
+        image: {
+          src: "/images/insurance-moto.webp",
+          alt: "Motocycliste équipé circulant sur une route",
+        },
+        highlights: ["Moto, scooter ou tricycle motorisé", "Usage CAT5 ou CAT5 BIS", "Garanties adaptées aux deux-roues"],
+        cta: { label: "Demander une étude moto", href: "/contact?motif=automobile_moto", tone: "primary" },
+      },
     ],
     coverages: [
       {
@@ -263,7 +289,7 @@ export const solutionPages: Record<SolutionSlug, SolutionPageContent> = {
       },
       {
         title: "Dommages au véhicule",
-        description: "Peut couvrir le vol, l’incendie, le bris de glace ou les dommages tous accidents.",
+        description: "Peut couvrir le vol, l’incendie ou les dommages tous accidents selon le véhicule et la formule.",
       },
       {
         title: "Protection du conducteur",
@@ -275,20 +301,20 @@ export const solutionPages: Record<SolutionSlug, SolutionPageContent> = {
       },
     ],
     optionalBenefits: [
-      "Véhicule de remplacement",
-      "Assistance dès le domicile",
+      "Véhicule de remplacement selon la catégorie",
+      "Assistance et remorquage",
       "Protection juridique automobile",
-      "Couverture des accessoires déclarés",
+      "Couverture des accessoires ou équipements déclarés",
     ],
     watchPoints: [
       "Montant de la franchise",
-      "Conducteurs autorisés et éventuelles restrictions",
+      "Catégorie, cylindrée ou puissance du véhicule",
       "Valeur d’indemnisation du véhicule",
-      "Territoires dans lesquels la garantie s’applique",
+      "Conducteurs autorisés et usage déclaré",
     ],
     documents: [
       "Pièce d’identité",
-      "Permis de conduire des conducteurs",
+      "Permis correspondant à la catégorie du véhicule",
       "Carte grise ou justificatif du véhicule",
       "Historique d’assurance, lorsqu’il est disponible",
     ],
@@ -309,99 +335,15 @@ export const solutionPages: Record<SolutionSlug, SolutionPageContent> = {
           "Non. Chaque contrat prévoit des plafonds, des franchises et des exclusions. Il faut les examiner avant de souscrire.",
       },
       {
-        question: "Puis-je assurer plusieurs conducteurs ?",
+        question: "Une moto relève-t-elle de l’assurance automobile ?",
         answer:
-          "Oui, selon les règles du contrat. Il est important de déclarer les conducteurs réguliers et leur profil réel.",
+          "Oui. Sur ce site, les motos et autres véhicules motorisés à deux ou trois roues sont présentés comme une catégorie de l’assurance automobile, avec des informations et garanties adaptées.",
       },
     ],
     finalCta: {
       title: "Parlons de votre véhicule.",
-      description: "Quelques informations suffisent pour lancer une étude adaptée à votre usage.",
-      action: { label: "Étudier mon besoin", href: "/contact?motif=automobile", tone: "primary" },
-    },
-  },
-  moto: {
-    ...solutionBySlug.moto,
-    metaTitle: "Assurance moto | Follow-Up Insurance",
-    metaDescription:
-      "Choisissez une assurance moto adaptée à votre cylindrée, à vos déplacements et à votre équipement.",
-    hero: {
-      eyebrow: "Assurance moto",
-      title: "Votre deux-roues mérite une protection sur mesure.",
-      intro:
-        "Usage urbain, loisirs ou déplacements quotidiens : nous cherchons avec vous l’équilibre entre garanties, franchise et budget.",
-      image: solutionBySlug.moto.image,
-      primaryCta: { label: "Demander une étude moto", href: "/contact?motif=moto", tone: "primary" },
-      secondaryCta: { label: "Voir toutes les solutions", href: "/solutions", tone: "text" },
-    },
-    audience: [
-      "Conducteurs de scooter",
-      "Motards occasionnels ou réguliers",
-      "Propriétaires d’un deux-roues neuf ou d’occasion",
-      "Professionnels effectuant des déplacements à moto",
-    ],
-    coverages: [
-      {
-        title: "Responsabilité civile",
-        description: "Couvre les dommages causés à un tiers dans les limites prévues au contrat.",
-      },
-      {
-        title: "Dommages au deux-roues",
-        description: "Peut intervenir après un vol, un incendie ou un accident selon la formule retenue.",
-      },
-      {
-        title: "Protection corporelle",
-        description: "Aide à protéger le conducteur, particulièrement exposé en cas d’accident.",
-      },
-      {
-        title: "Équipement",
-        description: "Peut inclure le casque, le blouson et certains accessoires déclarés.",
-      },
-    ],
-    optionalBenefits: [
-      "Assistance et remorquage",
-      "Garantie des accessoires",
-      "Protection juridique",
-      "Indemnisation renforcée du véhicule",
-    ],
-    watchPoints: [
-      "Cylindrée et usage déclarés",
-      "Antivol exigé par l’assureur",
-      "Plafond applicable à l’équipement",
-      "Conditions de prêt du véhicule",
-    ],
-    documents: [
-      "Pièce d’identité",
-      "Permis correspondant à la catégorie du deux-roues",
-      "Carte grise ou justificatif d’acquisition",
-      "Historique d’assurance, lorsqu’il est disponible",
-    ],
-    brokerSupport: {
-      title: "Une analyse qui tient compte de votre pratique",
-      description:
-        "Nous ne regardons pas seulement la cylindrée : fréquence, stationnement et équipement influencent aussi le besoin.",
-      steps: [
-        { number: "01", title: "Décrire", description: "Vous précisez le deux-roues et son utilisation." },
-        { number: "02", title: "Sélectionner", description: "Nous retenons les garanties cohérentes avec votre exposition." },
-        { number: "03", title: "Expliquer", description: "Vous recevez une proposition lisible avant de choisir." },
-      ],
-    },
-    faq: [
-      {
-        question: "L’équipement du motard est-il couvert automatiquement ?",
-        answer:
-          "Pas toujours. La présence de cette garantie, son plafond et les justificatifs requis doivent être vérifiés.",
-      },
-      {
-        question: "Le stationnement influence-t-il l’étude ?",
-        answer:
-          "Oui. Le lieu et les conditions de stationnement peuvent modifier l’exposition au vol et les conditions proposées.",
-      },
-    ],
-    finalCta: {
-      title: "Décrivez-nous votre deux-roues.",
-      description: "Nous vous aidons à identifier les garanties vraiment adaptées à votre pratique.",
-      action: { label: "Étudier mon besoin", href: "/contact?motif=moto", tone: "primary" },
+      description: "Indiquez s’il s’agit d’une voiture ou d’une moto pour lancer une étude adaptée à votre usage.",
+      action: { label: "Être orienté", href: "/contact?motif=orientation", tone: "primary" },
     },
   },
   sante: {
@@ -820,7 +762,7 @@ export const solutionsPage: PublicLandingPage = {
   path: "/solutions",
   metaTitle: "Nos solutions d’assurance | Follow-Up Insurance",
   metaDescription:
-    "Découvrez les solutions automobile, moto, santé, habitation, voyage et entreprise proposées par Follow-Up Insurance.",
+    "Découvrez les solutions automobile, santé, habitation, voyage et entreprise proposées par Follow-Up Insurance.",
   hero: {
     eyebrow: "Nos solutions",
     title: "Une protection construite autour de votre réalité.",
@@ -835,7 +777,7 @@ export const solutionsPage: PublicLandingPage = {
   sections: [
     {
       id: "catalogue",
-      eyebrow: "Six domaines de protection",
+      eyebrow: "Cinq domaines de protection",
       title: "Explorez la solution qui correspond à votre besoin.",
       cards: solutionSummaries.map((solution) => ({
         title: solution.title,
@@ -886,7 +828,7 @@ export const individualsPage: PublicLandingPage = {
       eyebrow: "Vos besoins",
       title: "Des solutions pour chaque étape de vie.",
       cards: [
-        { title: "Se déplacer", description: "Automobile et moto adaptées à votre usage.", href: "/solutions/automobile", label: "Voir la mobilité" },
+        { title: "Se déplacer", description: "Voiture, moto et véhicules à deux ou trois roues adaptés à votre usage.", href: "/solutions/automobile", label: "Voir la mobilité" },
         { title: "Prendre soin", description: "Santé individuelle ou familiale selon vos priorités.", href: "/solutions/sante", label: "Voir la santé" },
         { title: "Protéger son foyer", description: "Logement, biens et responsabilité au quotidien.", href: "/solutions/habitation", label: "Voir l’habitation" },
         { title: "Préparer un départ", description: "Voyage étudié selon la destination et la durée.", href: "/solutions/voyage", label: "Voir le voyage" },
@@ -1318,8 +1260,8 @@ export const contactPage: PublicLandingPage & {
   ],
   formSubjects: [
     { value: "orientation", label: "Être orienté vers une solution" },
-    { value: "automobile", label: "Assurance automobile" },
-    { value: "moto", label: "Assurance moto" },
+    { value: "automobile_voiture", label: "Assurance automobile — Voiture" },
+    { value: "automobile_moto", label: "Assurance automobile — Moto / 2-3 roues" },
     { value: "sante", label: "Assurance santé" },
     { value: "habitation", label: "Assurance habitation" },
     { value: "voyage", label: "Assurance voyage" },

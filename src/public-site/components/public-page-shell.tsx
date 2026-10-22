@@ -11,7 +11,13 @@ interface PublicPageShellProps {
 
 export function PublicPageShell({ children, className = "" }: PublicPageShellProps) {
   const { navigate, store } = usePortal();
-  const goToClientSpace = () => navigate(store.session.authenticated ? "/espace" : "/connexion");
+  const goToClientSpace = () => {
+    if (import.meta.env.DEV) {
+      navigate(store.session.authenticated ? "/espace" : "/connexion");
+      return;
+    }
+    window.location.assign(store.session.authenticated ? "/portail-client/espace" : "/portail-client/");
+  };
   const goToQuote = () => navigate("/contact?objet=devis");
 
   return (

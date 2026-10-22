@@ -234,7 +234,7 @@ export function SolutionsPublicPage() {
       <section className="public-page-section" aria-labelledby="solutions-list-title">
         <div className="public-container">
           <div className="public-page-heading public-page-heading--split">
-            <div><SectionLabel>Six domaines de protection</SectionLabel><h2 id="solutions-list-title">Explorez la solution qui vous ressemble.</h2></div>
+            <div><SectionLabel>Cinq domaines de protection</SectionLabel><h2 id="solutions-list-title">Explorez la solution qui vous ressemble.</h2></div>
             <p>Chaque page vous présente les garanties à examiner, les points de vigilance et les documents utiles avant une étude.</p>
           </div>
           <div className="public-solutions-grid">
@@ -242,7 +242,8 @@ export function SolutionsPublicPage() {
               <article className="public-solution-card" key={solution.slug}>
                 <div className="public-solution-card__image"><img src={solution.image.src} alt={solution.image.alt} width={900} height={600} loading="lazy" /></div>
                 <div className="public-solution-card__body">
-                  <span>{solution.tagline}</span><h2>{solution.shortTitle}</h2><p>{solution.description}</p>
+                  {solution.tags && <div className="public-solution-tags" aria-label="Catégories incluses">{solution.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>}
+                  <span className="public-solution-card__tagline">{solution.tagline}</span><h2>{solution.shortTitle}</h2><p>{solution.description}</p>
                   <PublicLink href={solution.path}>{solution.ctaLabel}<ArrowRight size={15} /></PublicLink>
                 </div>
               </article>
@@ -278,6 +279,20 @@ export function SolutionDetailPublicPage({ slug }: { slug: SolutionSlug }) {
         hero={page.hero}
         breadcrumbs={[{ label: "Accueil", href: "/" }, { label: "Nos solutions", href: "/solutions" }, { label: page.shortTitle }]}
       />
+      {page.variants && <section className="public-vehicle-types public-page-section" id="types-vehicules" aria-labelledby="vehicle-types-title">
+        <div className="public-container">
+          <div className="public-page-heading public-page-heading--split">
+            <div><SectionLabel>Une assurance, deux catégories</SectionLabel><h2 id="vehicle-types-title">Quel véhicule souhaitez-vous assurer ?</h2></div>
+            <p>La catégorie choisie permet d’adapter les informations demandées, les usages et les garanties à examiner.</p>
+          </div>
+          <div className="public-vehicle-types__grid">
+            {page.variants.map((variant) => <article className="public-vehicle-type" id={variant.id} key={variant.id}>
+              <div className="public-vehicle-type__image"><img src={variant.image.src} alt={variant.image.alt} width={900} height={600} loading="lazy" /><span>{variant.tag}</span></div>
+              <div className="public-vehicle-type__body"><h3>{variant.title}</h3><p>{variant.description}</p><Checklist items={variant.highlights} /><CtaLink cta={variant.cta} /></div>
+            </article>)}
+          </div>
+        </div>
+      </section>}
       <section className="public-page-section">
         <div className="public-container public-detail-layout">
           <aside className="public-detail-aside">
@@ -389,6 +404,8 @@ function initialSubject() {
   const query = new URLSearchParams(window.location.search);
   const candidate = query.get("motif") ?? query.get("objet") ?? query.get("profil") ?? "orientation";
   if (candidate === "devis" || candidate === "particulier") return "orientation";
+  if (candidate === "automobile") return "automobile_voiture";
+  if (candidate === "moto") return "automobile_moto";
   return contactPage.formSubjects.some((subject) => subject.value === candidate) ? candidate : "autre";
 }
 

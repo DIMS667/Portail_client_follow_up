@@ -1,5 +1,6 @@
 import { forwardRef, type AnchorHTMLAttributes, type MouseEvent } from "react";
 
+import { fromBrowserPath, toBrowserPath } from "../../app/base-path";
 import { usePortal } from "../../app/portal-context";
 
 export interface PublicLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
@@ -32,12 +33,14 @@ export const PublicLink = forwardRef<HTMLAnchorElement, PublicLinkProps>(functio
       || href.startsWith("#")
     ) return;
 
-    const destination = new URL(href, window.location.href);
+    const browserHref = href.startsWith("/") ? toBrowserPath(href) : href;
+    const destination = new URL(browserHref, window.location.href);
     if (destination.origin !== window.location.origin) return;
 
     event.preventDefault();
-    navigate(`${destination.pathname}${destination.search}${destination.hash}`);
+    navigate(`${fromBrowserPath(destination.pathname)}${destination.search}${destination.hash}`);
   };
 
-  return <a ref={ref} href={href} target={target} download={download} onClick={handleClick} {...props} />;
+  const browserHref = href.startsWith("/") ? toBrowserPath(href) : href;
+  return <a ref={ref} href={browserHref} target={target} download={download} onClick={handleClick} {...props} />;
 });

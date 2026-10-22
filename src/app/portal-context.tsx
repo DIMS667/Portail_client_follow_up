@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { fromBrowserPath, toBrowserPath } from "./base-path";
 import { localStoragePortalRepository } from "../repositories/portal-repository";
 import type { PortalStore } from "../types/domain";
 
@@ -17,7 +18,7 @@ interface PortalContextValue {
 const PortalContext = createContext<PortalContextValue | null>(null);
 
 function currentRoute() {
-  return `${window.location.pathname}${window.location.search}`;
+  return `${fromBrowserPath(window.location.pathname)}${window.location.search}`;
 }
 
 export function PortalProvider({ children }: { children: ReactNode }) {
@@ -43,7 +44,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
       query: url.searchParams,
       updateStore: (updater) => setStore((current) => typeof updater === "function" ? updater(current) : updater),
       navigate: (path) => {
-        window.history.pushState({}, "", path);
+        window.history.pushState({}, "", toBrowserPath(path));
         setRoute(currentRoute());
         window.scrollTo({ top: 0, behavior: "smooth" });
       },

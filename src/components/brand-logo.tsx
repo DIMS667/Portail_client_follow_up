@@ -1,9 +1,10 @@
 import { cn } from "@/lib/utils";
+import { assetUrl } from "../app/base-path";
 
 export function BrandLogo({ className }: { className?: string }) {
   return (
     <img
-      src="/follow-up-insurance-logo.png"
+      src={assetUrl("/follow-up-insurance-logo.png")}
       alt="FOLLOW-UP INSURANCE"
       width={798}
       height={224}

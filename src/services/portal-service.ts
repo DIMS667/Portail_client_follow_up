@@ -36,8 +36,8 @@ export function createInsuranceRequest(store: PortalStore, data: Partial<Insuran
   const reference = `${referencePrefix}${String(sequence).padStart(5, "0")}`;
   const request: InsuranceRequest = {
     id: `REQ-${Date.now()}`, reference, clientId: store.client.id, product, productLabel: data.productLabel ?? "Assurance automobile",
-    date: new Date().toISOString().slice(0, 10), status: "new", advisorId: store.advisor.id, vehicle: data.vehicle,
-    automobileRequest: data.automobileRequest, motoRequest: data.motoRequest, details: data.details, coverage: data.coverage, desiredStartDate: data.desiredStartDate, comments: data.comments,
+    date: new Date().toISOString().slice(0, 10), status: "new", advisorId: store.advisor.id, vehicleKind: data.vehicleKind, vehicle: data.vehicle,
+    automobileRequest: data.automobileRequest, motoRequest: data.motoRequest, healthRequest: data.healthRequest, details: data.details, coverage: data.coverage, desiredStartDate: data.desiredStartDate, comments: data.comments,
     timeline: isVehicleRequest
       ? [{ label: "Demande envoyée", done: true, at: "Aujourd’hui" }, { label: "Analyse par le courtier", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Contrat disponible", done: false }]
       : [{ label: "Demande envoyée", done: true, at: "Aujourd’hui" }, { label: "Analyse du besoin", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Police disponible", done: false }],

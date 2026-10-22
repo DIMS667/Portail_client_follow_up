@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { isPortalDeployment, toBrowserPath } from "./app/base-path";
 import { PortalProvider, usePortal } from "./app/portal-context";
 import { WebMcpBridge } from "./app/webmcp";
 import { ClientShell } from "./components/client-shell";
@@ -31,34 +32,43 @@ function RouteView() {
   const { pathname, store } = usePortal();
   useEffect(() => {
     document.title = routeDocumentTitle(pathname);
-    window.scrollTo({ top: 0, left: 0 });
+    const hashTarget = window.location.hash.slice(1);
+    if (hashTarget) {
+      window.requestAnimationFrame(() => document.getElementById(hashTarget)?.scrollIntoView());
+    } else {
+      window.scrollTo({ top: 0, left: 0 });
+    }
   }, [pathname]);
 
-  if (pathname === "/") return <HomePage />;
-  if (pathname === "/a-propos") return <AboutPublicPage />;
-  if (pathname === "/solutions") return <SolutionsPublicPage />;
-  if (/^\/solutions\/[^/]+$/.test(pathname)) {
-    const slug = decodeURIComponent(pathname.split("/")[2]) as SolutionSlug;
-    return slug in solutionPages ? <SolutionDetailPublicPage slug={slug} /> : <PublicNotFoundPage />;
+  if (!isPortalDeployment) {
+    if (pathname === "/") return <HomePage />;
+    if (pathname === "/a-propos") return <AboutPublicPage />;
+    if (pathname === "/solutions") return <SolutionsPublicPage />;
+    if (pathname === "/solutions/moto") return <LegacyMotoSolutionRedirect />;
+    if (/^\/solutions\/[^/]+$/.test(pathname)) {
+      const slug = decodeURIComponent(pathname.split("/")[2]) as SolutionSlug;
+      return slug in solutionPages ? <SolutionDetailPublicPage slug={slug} /> : <PublicNotFoundPage />;
+    }
+    if (pathname === "/particuliers") return <IndividualsPublicPage />;
+    if (pathname === "/entreprises") return <BusinessesPublicPage />;
+    if (pathname === "/sinistres") return <ClaimsPublicPage />;
+    if (pathname === "/conseils") return <AdvicePublicPage />;
+    if (/^\/conseils\/[^/]+$/.test(pathname)) {
+      const slug = decodeURIComponent(pathname.split("/")[2]) as AdviceArticleSlug;
+      return slug in adviceArticleBySlug ? <AdviceArticlePublicPage slug={slug} /> : <PublicNotFoundPage />;
+    }
+    if (pathname === "/contact") return <ContactPublicPage />;
+    if (pathname === "/faq") return <FaqPublicPage />;
+    if (pathname === "/mentions-legales") return <LegalPublicPage kind="mentions-legales" />;
+    if (pathname === "/confidentialite") return <LegalPublicPage kind="confidentialite" />;
+    if (pathname === "/conditions-utilisation") return <LegalPublicPage kind="conditions-utilisation" />;
   }
-  if (pathname === "/particuliers") return <IndividualsPublicPage />;
-  if (pathname === "/entreprises") return <BusinessesPublicPage />;
-  if (pathname === "/sinistres") return <ClaimsPublicPage />;
-  if (pathname === "/conseils") return <AdvicePublicPage />;
-  if (/^\/conseils\/[^/]+$/.test(pathname)) {
-    const slug = decodeURIComponent(pathname.split("/")[2]) as AdviceArticleSlug;
-    return slug in adviceArticleBySlug ? <AdviceArticlePublicPage slug={slug} /> : <PublicNotFoundPage />;
-  }
-  if (pathname === "/contact") return <ContactPublicPage />;
-  if (pathname === "/faq") return <FaqPublicPage />;
-  if (pathname === "/mentions-legales") return <LegalPublicPage kind="mentions-legales" />;
-  if (pathname === "/confidentialite") return <LegalPublicPage kind="confidentialite" />;
-  if (pathname === "/conditions-utilisation") return <LegalPublicPage kind="conditions-utilisation" />;
+  if (isPortalDeployment && pathname === "/") return <LoginPage />;
   if (pathname === "/connexion") return <LoginPage />;
   if (pathname === "/inscription") return <RegisterPage />;
   if (pathname === "/mot-de-passe-oublie") return <ForgotPasswordPage />;
 
-  if (!pathname.startsWith("/espace")) return <PublicNotFoundPage />;
+  if (!pathname.startsWith("/espace")) return isPortalDeployment ? <LoginPage /> : <PublicNotFoundPage />;
 
   if (pathname.startsWith("/espace") && !store.session.authenticated) {
     return <LoginPage />;
@@ -88,7 +98,16 @@ function RouteView() {
   return <ClientShell>{page}</ClientShell>;
 }
 
+function LegacyMotoSolutionRedirect() {
+  useEffect(() => {
+    window.history.replaceState({}, "", toBrowserPath("/solutions/automobile#deux-trois-roues"));
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, []);
+  return null;
+}
+
 function routeDocumentTitle(pathname: string) {
+  if (isPortalDeployment && pathname === "/") return "Connexion — FOLLOW-UP INSURANCE";
   if (pathname === "/") return "Follow-Up Insurance | Courtier en assurances";
   if (/^\/solutions\/[^/]+$/.test(pathname)) {
     const slug = decodeURIComponent(pathname.split("/")[2]) as SolutionSlug;

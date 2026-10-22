@@ -1,0 +1,64 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpanel-production
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check TypeScript
+        run: npm run typecheck
+
+      - name: Build client portal for /portail-client/
+        run: npm run build:portal
+
+      - name: Verify cPanel configuration
+        env:
+          FTP_SERVER: ${{ secrets.CPANEL_FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.CPANEL_FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.CPANEL_FTP_PASSWORD }}
+          FTP_DIRECTORY: ${{ secrets.CPANEL_FTP_DIRECTORY }}
+        run: |
+          test -n "$FTP_SERVER" || { echo "Missing secret: CPANEL_FTP_SERVER"; exit 1; }
+          test -n "$FTP_USERNAME" || { echo "Missing secret: CPANEL_FTP_USERNAME"; exit 1; }
+          test -n "$FTP_PASSWORD" || { echo "Missing secret: CPANEL_FTP_PASSWORD"; exit 1; }
+          test -n "$FTP_DIRECTORY" || { echo "Missing secret: CPANEL_FTP_DIRECTORY"; exit 1; }
+
+      - name: Deploy dist to cPanel over FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.CPANEL_FTP_SERVER }}
+          username: ${{ secrets.CPANEL_FTP_USERNAME }}
+          password: ${{ secrets.CPANEL_FTP_PASSWORD }}
+          protocol: ${{ vars.CPANEL_FTP_PROTOCOL || 'ftps' }}
+          port: ${{ vars.CPANEL_FTP_PORT || '21' }}
+          local-dir: dist/
+          server-dir: ${{ secrets.CPANEL_FTP_DIRECTORY }}
+          log-level: minimal
+          dangerous-clean-slate: false

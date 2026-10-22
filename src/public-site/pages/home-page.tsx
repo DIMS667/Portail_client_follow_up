@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import {
   ArrowRight,
-  Bike,
   Building2,
   CarFront,
   Check,
@@ -32,12 +31,10 @@ import {
   portalFeatures,
   protectionNeeds,
 } from "../data/home-content";
-import { siteConfig } from "../data/site-config";
 import "../public-site.css";
 
 const needIcons = {
   auto: CarFront,
-  moto: Bike,
   health: HeartPulse,
   home: House,
   travel: Plane,
@@ -64,7 +61,7 @@ function SectionLabel({ children }: { children: ReactNode }) {
 export function HomePage() {
   const { navigate } = usePortal();
   const goToQuote = () => navigate("/contact?objet=devis");
-  const solutionRoutes = { auto: "/solutions/automobile", moto: "/solutions/moto", health: "/solutions/sante", home: "/solutions/habitation", travel: "/solutions/voyage", business: "/solutions/entreprise" } as const;
+  const solutionRoutes = { auto: "/solutions/automobile", health: "/solutions/sante", home: "/solutions/habitation", travel: "/solutions/voyage", business: "/solutions/entreprise" } as const;
 
   return (
     <PublicPageShell className="public-home-page">
@@ -72,7 +69,7 @@ export function HomePage() {
           <div className="public-container public-hero__grid">
             <div className="public-hero__copy">
               <SectionLabel>Courtier en assurances</SectionLabel>
-              <h1 id="public-hero-title">Choisir avec confiance.<span>Avancer en toute quiétude.</span></h1>
+              <h1 id="public-hero-title">Choisir avec confiance.<span>Allez en toute quiétude.</span></h1>
               <p>Follow-Up Insurance comprend vos besoins, recherche des solutions adaptées et vous accompagne dans vos choix comme dans leur suivi.</p>
               <div className="public-hero__actions">
                 <Button type="button" className="public-button public-button--primary public-button--large" onClick={goToQuote}>
@@ -82,7 +79,6 @@ export function HomePage() {
                   <PublicLink href="/a-propos">Découvrir Follow-Up</PublicLink>
                 </Button>
               </div>
-              <p className="public-signature">{siteConfig.signature}</p>
             </div>
             <div className="public-hero__visual">
               <img

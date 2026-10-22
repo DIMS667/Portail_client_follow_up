@@ -5,6 +5,7 @@ export type PaymentStatus = "pending" | "succeeded" | "failed";
 export type ContractStatus = "preparing" | "active" | "expired";
 export type ClaimStatus = "submitted" | "under_review" | "documents_verified" | "sent_to_insurer" | "expertise" | "decision" | "indemnification" | "closed";
 export type PaymentMethod = "mobile_money" | "orange_money" | "bank_card" | "bank_transfer";
+export type AutomobileVehicleKind = "car" | "moto";
 
 export type AutoRequestType = "new_vehicle" | "renewal" | "switch_insurer" | "advice" | "other";
 export type AutoVehicleCategory = "tourism";
@@ -18,6 +19,26 @@ export type AutoVehicleUsage =
   | "transport"
   | "other";
 export type AutoCoverageDurationMonths = 2 | 4 | 6 | 8 | 12;
+export interface AutomobilePartySnapshot {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+}
+export interface AutomobileDriver {
+  isSubscriber: boolean;
+  firstNames?: string;
+  lastName?: string;
+  birthDate?: string;
+  phone?: string;
+  occupation?: string;
+  licenceNumber?: string;
+  licenceCategory?: string;
+  licenceIssuedOn?: string;
+  licenceValidUntil?: string;
+}
 export type AutoGuarantee =
   | "civil_liability"
   | "defense_and_recours"
@@ -39,6 +60,9 @@ export interface SelfServiceAutomobileInsuranceRequestData {
   completionMode: "self_service";
   requestType: AutoRequestType;
   otherNeed?: string;
+  subscriber: AutomobilePartySnapshot;
+  insured: AutomobilePartySnapshot;
+  driver: AutomobileDriver;
   vehicle: {
     category: AutoVehicleCategory;
     brand: string;
@@ -47,8 +71,12 @@ export interface SelfServiceAutomobileInsuranceRequestData {
     registration: string;
     energy: AutoVehicleEnergy;
     fiscalPower: number;
+    seatCount: number;
+    chassisNumber: string;
     usage: AutoVehicleUsage;
     estimatedValue: number | null;
+    carriesFlammableMaterials: boolean;
+    hasTrailer: boolean;
   };
   coverage: {
     durationMonths: AutoCoverageDurationMonths;
@@ -56,14 +84,7 @@ export interface SelfServiceAutomobileInsuranceRequestData {
     startDateUnknown?: boolean;
     guarantees: AutoGuarantee[];
   };
-  previousInsurance: {
-    hasInsurance: boolean;
-    insurerName: string | null;
-    expirationDate: string | null;
-    policyNumber: string | null;
-  };
   hasVignette: boolean;
-  comments: string;
 }
 
 export interface BrokerDelegatedAutomobileInsuranceRequestData {
@@ -94,6 +115,9 @@ export interface SelfServiceMotoInsuranceRequestData {
   completionMode: "self_service";
   requestType: AutoRequestType;
   otherNeed?: string;
+  subscriber: AutomobilePartySnapshot;
+  insured: AutomobilePartySnapshot;
+  driver: AutomobileDriver;
   vehicle: {
     brand: string;
     model: string;
@@ -101,8 +125,12 @@ export interface SelfServiceMotoInsuranceRequestData {
     registration: string;
     energy: MotoVehicleEnergy;
     cylinderCapacity: number;
+    seatCount: number;
+    chassisNumber: string;
     usage: MotoVehicleUsage;
     estimatedValue: number | null;
+    carriesFlammableMaterials: boolean;
+    hasTrailer: boolean;
   };
   coverage: {
     durationMonths: AutoCoverageDurationMonths;
@@ -110,14 +138,7 @@ export interface SelfServiceMotoInsuranceRequestData {
     startDateUnknown?: boolean;
     guarantees: MotoGuarantee[];
   };
-  previousInsurance: {
-    hasInsurance: boolean;
-    insurerName: string | null;
-    expirationDate: string | null;
-    policyNumber: string | null;
-  };
   hasVignette: boolean;
-  comments: string;
 }
 
 export interface BrokerDelegatedMotoInsuranceRequestData {
@@ -129,14 +150,55 @@ export type MotoInsuranceRequestData =
   | SelfServiceMotoInsuranceRequestData
   | BrokerDelegatedMotoInsuranceRequestData;
 
+export type HealthRelationship = "principal" | "spouse" | "child";
+export type HealthSex = "female" | "male";
+export type HealthAnswer = "yes" | "no";
+
+export interface HealthInsuredPerson {
+  id: string;
+  relationship: HealthRelationship;
+  lastName: string;
+  firstNames: string;
+  maidenName?: string;
+  sex: HealthSex | "";
+  birthDate: string;
+  city: string;
+  occupation: string;
+  desiredStartDate: string;
+}
+
+export interface HealthQuestionAnswer {
+  answer: HealthAnswer | "";
+  details?: string;
+}
+
+export interface HealthInsuranceRequestData {
+  subscriberName: string;
+  insuredName: string;
+  adhesionFor: "employee" | "family" | "other";
+  insuredPeople: HealthInsuredPerson[];
+  medicalAnswers: Record<string, Record<string, HealthQuestionAnswer>>;
+  familyHistory?: string;
+  previousInsurance?: string;
+  socialCoverage?: string;
+  otherChildren?: string;
+  additionalMedicalInformation?: string;
+  declarationAccepted: boolean;
+  signedBy: string;
+  signedAt: string;
+  signedIn: string;
+}
+
 export interface StatusEvent { label: string; at?: string; done: boolean; active?: boolean; }
 export interface Client { id: string; firstName: string; lastName: string; phone: string; email: string; address: string; city: string; preferences: { email: boolean; sms: boolean; whatsapp: boolean; inApp: boolean }; }
 export interface Advisor { id: string; name: string; phone: string; email: string; initials: string; }
 export interface InsuranceRequest {
   id: string; reference: string; clientId: string; product: InsuranceProduct; productLabel: string; date: string; status: RequestStatus; advisorId: string;
+  vehicleKind?: AutomobileVehicleKind;
   vehicle?: { brand: string; model: string; year: string; registration: string; value: number | null; usage: string };
   automobileRequest?: AutomobileInsuranceRequestData;
   motoRequest?: MotoInsuranceRequestData;
+  healthRequest?: HealthInsuranceRequestData;
   details?: Record<string, string>;
   coverage?: string; desiredStartDate?: string; comments?: string; proposalId?: string; selectedOfferId?: string; timeline: StatusEvent[]; scope?: "core" | "scenario";
 }

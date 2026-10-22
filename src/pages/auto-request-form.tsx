@@ -16,6 +16,7 @@ import {
   Square,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { usePortal } from "../app/portal-context";
 import { PageHeader } from "../components/portal-ui";
 import { formatDate, formatFcfa } from "../services/portal-service";
 import type {
@@ -30,13 +31,14 @@ import type {
   SelfServiceAutomobileInsuranceRequestData,
 } from "../types/domain";
 
-const DRAFT_KEY = "portail-client-demo:auto-request-draft:v4";
-const STEP_LABELS = ["Besoin", "Véhicule", "Durée", "Garanties", "Compléments", "Vérification"] as const;
+const DRAFT_KEY = "portail-client-demo:auto-request-draft:v6";
+const STEP_LABELS = ["Besoin", "Personnes", "Véhicule", "Durée", "Garanties", "Vérification"] as const;
 const DURATION_OPTIONS = [2, 4, 6, 8, 12] as const;
 
 const guaranteeOptions: Array<{ value: AutoGuarantee; label: string; mandatory?: boolean }> = [
   { value: "civil_liability", label: "Responsabilité Civile", mandatory: true },
-  { value: "defense_and_recours", label: "Défense et Recours" },
+  { value: "ipt", label: "IPT" },
+  { value: "defense_and_recours", label: "Défense et Recours", mandatory: true },
   { value: "glass_all_risk", label: "Bris de Glaces en cas de TOUT RISQUE" },
   { value: "glass_outside_all_risk", label: "Bris de Glaces hors TR" },
   { value: "glass_and_light_blocks", label: "Bris de Glaces et Blocs feux" },
@@ -49,7 +51,6 @@ const guaranteeOptions: Array<{ value: AutoGuarantee; label: string; mandatory?:
   { value: "total_partial_theft", label: "Vol Total / Vol Partiel" },
   { value: "repair_assistance", label: "Assistance à Réparation" },
   { value: "advance_on_recours", label: "Avance sur Recours" },
-  { value: "ipt", label: "IPT" },
 ];
 
 const guaranteeLabels = Object.fromEntries(guaranteeOptions.map(({ value, label }) => [value, label])) as Record<AutoGuarantee, string>;
@@ -83,6 +84,18 @@ interface AutoRequestFormState {
   delegatedMessage: string;
   requestType: AutoRequestType | "";
   otherNeed: string;
+  driver: {
+    isSubscriber: boolean | null;
+    firstNames: string;
+    lastName: string;
+    birthDate: string;
+    phone: string;
+    occupation: string;
+    licenceNumber: string;
+    licenceCategory: string;
+    licenceIssuedOn: string;
+    licenceValidUntil: string;
+  };
   vehicle: {
     category: AutoVehicleCategory;
     brand: string;
@@ -91,8 +104,12 @@ interface AutoRequestFormState {
     registration: string;
     energy: AutoVehicleEnergy | "";
     fiscalPower: string;
+    seatCount: string;
+    chassisNumber: string;
     usage: AutoVehicleUsage | "";
     estimatedValue: string;
+    carriesFlammableMaterials: boolean | null;
+    hasTrailer: boolean | null;
   };
   coverage: {
     durationMonths: AutoCoverageDurationMonths | null;
@@ -100,14 +117,7 @@ interface AutoRequestFormState {
     startDateUnknown: boolean;
     guarantees: AutoGuarantee[];
   };
-  previousInsurance: {
-    hasInsurance: boolean | null;
-    insurerName: string;
-    expirationDate: string;
-    policyNumber: string;
-  };
   hasVignette: boolean | null;
-  comments: string;
 }
 
 interface AutoDraft {
@@ -120,6 +130,7 @@ const initialForm: AutoRequestFormState = {
   delegatedMessage: "",
   requestType: "renewal",
   otherNeed: "",
+  driver: { isSubscriber: true, firstNames: "", lastName: "", birthDate: "", phone: "", occupation: "", licenceNumber: "", licenceCategory: "", licenceIssuedOn: "", licenceValidUntil: "" },
   vehicle: {
     category: "tourism",
     brand: "Toyota",
@@ -128,18 +139,15 @@ const initialForm: AutoRequestFormState = {
     registration: "LT-123-AB",
     energy: "petrol",
     fiscalPower: "9",
+    seatCount: "5",
+    chassisNumber: "",
     usage: "cat1_professional",
     estimatedValue: "",
+    carriesFlammableMaterials: null,
+    hasTrailer: null,
   },
-  coverage: { durationMonths: 12, desiredStartDate: "2026-10-15", startDateUnknown: false, guarantees: ["civil_liability"] },
-  previousInsurance: {
-    hasInsurance: true,
-    insurerName: "Compagnie A",
-    expirationDate: "2026-10-14",
-    policyNumber: "",
-  },
+  coverage: { durationMonths: 12, desiredStartDate: "2026-10-15", startDateUnknown: false, guarantees: ["civil_liability", "defense_and_recours"] },
   hasVignette: true,
-  comments: "",
 };
 
 function loadDraft(): AutoDraft {
@@ -153,9 +161,13 @@ function loadDraft(): AutoDraft {
       form: {
         ...initialForm,
         ...savedForm,
+        driver: { ...initialForm.driver, ...savedForm?.driver },
         vehicle: { ...initialForm.vehicle, ...savedForm?.vehicle },
-        coverage: { ...initialForm.coverage, ...savedForm?.coverage },
-        previousInsurance: { ...initialForm.previousInsurance, ...savedForm?.previousInsurance },
+        coverage: {
+          ...initialForm.coverage,
+          ...savedForm?.coverage,
+          guarantees: Array.from(new Set(["civil_liability", "defense_and_recours", ...(savedForm?.coverage?.guarantees ?? initialForm.coverage.guarantees)])) as AutoGuarantee[],
+        },
       },
     };
   } catch {
@@ -170,8 +182,23 @@ function validateStep(step: number, form: AutoRequestFormState) {
     if (form.requestType === "other" && !form.otherNeed.trim()) errors["other-need"] = "Précisez brièvement votre besoin.";
   }
   if (step === 1) {
+    if (form.driver.isSubscriber === null) errors["driver-is-subscriber"] = "Indiquez si le client est également le conducteur.";
+    if (form.driver.isSubscriber === false) {
+      if (!form.driver.lastName.trim()) errors["driver-last-name"] = "Renseignez le nom du conducteur.";
+      if (!form.driver.firstNames.trim()) errors["driver-first-names"] = "Renseignez les prénoms du conducteur.";
+      if (!form.driver.birthDate) errors["driver-birth-date"] = "Renseignez la date de naissance du conducteur.";
+      if (!form.driver.phone.trim()) errors["driver-phone"] = "Renseignez le téléphone du conducteur.";
+      if (!form.driver.occupation.trim()) errors["driver-occupation"] = "Renseignez la profession du conducteur.";
+      if (!form.driver.licenceNumber.trim()) errors["driver-licence-number"] = "Renseignez le numéro du permis.";
+      if (!form.driver.licenceCategory.trim()) errors["driver-licence-category"] = "Renseignez la catégorie du permis.";
+      if (!form.driver.licenceIssuedOn) errors["driver-licence-issued-on"] = "Renseignez la date de délivrance du permis.";
+      if (!form.driver.licenceValidUntil) errors["driver-licence-valid-until"] = "Renseignez la date de validité du permis.";
+    }
+  }
+  if (step === 2) {
     const year = Number(form.vehicle.year);
     const fiscalPower = Number(form.vehicle.fiscalPower);
+    const seatCount = Number(form.vehicle.seatCount);
     const estimatedValue = Number(form.vehicle.estimatedValue);
     const latestCoherentYear = new Date().getFullYear() + 1;
     if (!form.vehicle.brand.trim()) errors["vehicle-brand"] = "Renseignez la marque du véhicule.";
@@ -180,20 +207,17 @@ function validateStep(step: number, form: AutoRequestFormState) {
     if (!form.vehicle.registration.trim()) errors["vehicle-registration"] = "Renseignez l’immatriculation du véhicule.";
     if (!form.vehicle.energy) errors["vehicle-energy"] = "Choisissez l’énergie du véhicule.";
     if (!Number.isInteger(fiscalPower) || fiscalPower <= 0) errors["vehicle-fiscal-power"] = "Indiquez une puissance fiscale entière et positive.";
+    if (!Number.isInteger(seatCount) || seatCount <= 0) errors["vehicle-seat-count"] = "Indiquez un nombre de places entier et positif.";
+    if (!form.vehicle.chassisNumber.trim()) errors["vehicle-chassis-number"] = "Renseignez le numéro de châssis.";
     if (!form.vehicle.usage) errors["vehicle-usage"] = "Choisissez l’usage du véhicule.";
     if (form.vehicle.estimatedValue && (!Number.isFinite(estimatedValue) || estimatedValue <= 0)) errors["vehicle-estimated-value"] = "Indiquez une valeur positive ou laissez ce champ vide.";
+    if (form.vehicle.carriesFlammableMaterials === null) errors["vehicle-flammable"] = "Indiquez si le véhicule transporte des matières inflammables.";
+    if (form.vehicle.hasTrailer === null) errors["vehicle-trailer"] = "Indiquez si le véhicule utilise une remorque.";
   }
-  if (step === 2) {
+  if (step === 3) {
     if (!form.coverage.durationMonths || !DURATION_OPTIONS.includes(form.coverage.durationMonths)) errors.duration = "Choisissez une durée d’assurance.";
     if (!form.coverage.startDateUnknown && !form.coverage.desiredStartDate) errors["desired-start-date"] = "Choisissez une date de prise d’effet ou indiquez que vous ne la connaissez pas encore.";
     if (form.hasVignette === null) errors["has-vignette"] = "Indiquez si vous avez une vignette.";
-  }
-  if (step === 4) {
-    if (form.previousInsurance.hasInsurance === null) errors["previous-insurance"] = "Indiquez si ce véhicule est déjà assuré.";
-    if (form.previousInsurance.hasInsurance) {
-      if (!form.previousInsurance.insurerName.trim()) errors["insurer-name"] = "Renseignez le nom de l’assureur actuel.";
-      if (!form.previousInsurance.expirationDate) errors["expiration-date"] = "Renseignez la date d’expiration du contrat actuel.";
-    }
   }
   return errors;
 }
@@ -201,11 +225,11 @@ function validateStep(step: number, form: AutoRequestFormState) {
 const focusTargets: Record<string, string> = {
   "request-type": "request-type-new_vehicle",
   duration: "duration-2",
-  "previous-insurance": "previous-insurance-yes",
   "has-vignette": "has-vignette-yes",
 };
 
-export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSubmit: (data: Partial<InsuranceRequest>) => void }) {
+export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’assurance" }: { onBack: () => void; onSubmit: (data: Partial<InsuranceRequest>) => void; backLabel?: string }) {
+  const { store } = usePortal();
   const [draft, setDraft] = useState<AutoDraft>(loadDraft);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { mode, step, form } = draft;
@@ -229,13 +253,17 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
   });
   const updateVehicle = <K extends keyof AutoRequestFormState["vehicle"]>(key: K, value: AutoRequestFormState["vehicle"][K]) => {
     updateForm((current) => ({ ...current, vehicle: { ...current.vehicle, [key]: value } }));
-    clearError(`vehicle-${key === "fiscalPower" ? "fiscal-power" : key === "estimatedValue" ? "estimated-value" : key}`);
+    clearError(`vehicle-${String(key).replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`);
+  };
+  const updateDriver = <K extends keyof AutoRequestFormState["driver"]>(key: K, value: AutoRequestFormState["driver"][K]) => {
+    updateForm((current) => ({ ...current, driver: { ...current.driver, [key]: value } }));
+    clearError(`driver-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`);
   };
   const updateCoverage = <K extends keyof AutoRequestFormState["coverage"]>(key: K, value: AutoRequestFormState["coverage"][K]) => {
     updateForm((current) => ({ ...current, coverage: { ...current.coverage, [key]: value } }));
   };
   const toggleGuarantee = (guarantee: AutoGuarantee) => {
-    if (guarantee === "civil_liability") return;
+    if (guarantee === "civil_liability" || guarantee === "defense_and_recours") return;
     updateForm((current) => {
       const selected = current.coverage.guarantees.includes(guarantee);
       return {
@@ -248,9 +276,6 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
         },
       };
     });
-  };
-  const updatePreviousInsurance = <K extends keyof AutoRequestFormState["previousInsurance"]>(key: K, value: AutoRequestFormState["previousInsurance"][K]) => {
-    updateForm((current) => ({ ...current, previousInsurance: { ...current.previousInsurance, [key]: value } }));
   };
   const focusFirstError = (nextErrors: Record<string, string>) => {
     const first = Object.keys(nextErrors)[0];
@@ -302,10 +327,32 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
       }
     }
 
+    const clientSnapshot = {
+      firstName: store.client.firstName,
+      lastName: store.client.lastName,
+      phone: store.client.phone,
+      email: store.client.email,
+      address: store.client.address,
+      city: store.client.city,
+    };
     const automobileRequest: SelfServiceAutomobileInsuranceRequestData = {
       completionMode: "self_service",
       requestType: form.requestType as AutoRequestType,
       ...(form.requestType === "other" ? { otherNeed: form.otherNeed.trim() } : {}),
+      subscriber: clientSnapshot,
+      insured: clientSnapshot,
+      driver: form.driver.isSubscriber ? { isSubscriber: true } : {
+        isSubscriber: false,
+        firstNames: form.driver.firstNames.trim(),
+        lastName: form.driver.lastName.trim(),
+        birthDate: form.driver.birthDate,
+        phone: form.driver.phone.trim(),
+        occupation: form.driver.occupation.trim(),
+        licenceNumber: form.driver.licenceNumber.trim().toUpperCase(),
+        licenceCategory: form.driver.licenceCategory.trim().toUpperCase(),
+        licenceIssuedOn: form.driver.licenceIssuedOn,
+        licenceValidUntil: form.driver.licenceValidUntil,
+      },
       vehicle: {
         category: form.vehicle.category,
         brand: form.vehicle.brand.trim(),
@@ -314,25 +361,20 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
         registration: form.vehicle.registration.trim().toUpperCase(),
         energy: form.vehicle.energy as AutoVehicleEnergy,
         fiscalPower: Number(form.vehicle.fiscalPower),
+        seatCount: Number(form.vehicle.seatCount),
+        chassisNumber: form.vehicle.chassisNumber.trim().toUpperCase(),
         usage: form.vehicle.usage as AutoVehicleUsage,
         estimatedValue: form.vehicle.estimatedValue ? Number(form.vehicle.estimatedValue) : null,
+        carriesFlammableMaterials: Boolean(form.vehicle.carriesFlammableMaterials),
+        hasTrailer: Boolean(form.vehicle.hasTrailer),
       },
       coverage: {
         durationMonths: form.coverage.durationMonths as AutoCoverageDurationMonths,
         desiredStartDate: form.coverage.startDateUnknown ? null : form.coverage.desiredStartDate,
         ...(form.coverage.startDateUnknown ? { startDateUnknown: true } : {}),
-        guarantees: form.coverage.guarantees.includes("civil_liability")
-          ? form.coverage.guarantees
-          : ["civil_liability", ...form.coverage.guarantees],
-      },
-      previousInsurance: {
-        hasInsurance: Boolean(form.previousInsurance.hasInsurance),
-        insurerName: form.previousInsurance.hasInsurance ? form.previousInsurance.insurerName.trim() : null,
-        expirationDate: form.previousInsurance.hasInsurance ? form.previousInsurance.expirationDate : null,
-        policyNumber: form.previousInsurance.hasInsurance && form.previousInsurance.policyNumber.trim() ? form.previousInsurance.policyNumber.trim() : null,
+        guarantees: Array.from(new Set(["civil_liability", "defense_and_recours", ...form.coverage.guarantees])) as AutoGuarantee[],
       },
       hasVignette: Boolean(form.hasVignette),
-      comments: form.comments.trim(),
     };
 
     clearSavedDraft();
@@ -340,6 +382,7 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
     onSubmit({
       product: "automobile",
       productLabel: "Assurance automobile",
+      vehicleKind: "car",
       automobileRequest,
       vehicle: {
         brand: automobileRequest.vehicle.brand,
@@ -350,7 +393,6 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
         usage: usageLabels[automobileRequest.vehicle.usage],
       },
       desiredStartDate: automobileRequest.coverage.desiredStartDate ?? undefined,
-      comments: automobileRequest.comments || undefined,
     });
   };
 
@@ -371,6 +413,7 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
     onSubmit({
       product: "automobile",
       productLabel: "Assurance automobile",
+      vehicleKind: "car",
       automobileRequest,
       comments: message,
     });
@@ -378,12 +421,12 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
 
   if (mode === null) {
     return <div className="page-stack request-flow-page auto-request-page">
-      <button className="back-link" type="button" onClick={onBack}><ArrowLeft size={17} /> Changer d’assurance</button>
+      <button className="back-link" type="button" onClick={onBack}><ArrowLeft size={17} /> {backLabel}</button>
       <PageHeader eyebrow="Assurance automobile" title="Comment souhaitez-vous préparer votre demande ?" description="Choisissez le parcours qui vous convient. Vous pourrez remplir les informations vous-même ou confier cette étape à votre courtier." />
       <section className="flow-card auto-request-card auto-request-mode-card">
         <div className="auto-request-mode-grid">
           <button type="button" onClick={() => chooseMode("self")}>
-            <span><FileText size={25} /></span><div><strong>Remplir moi-même</strong><p>Je renseigne mon véhicule, la durée, les garanties et les informations complémentaires.</p></div><ChevronRight size={20} />
+            <span><FileText size={25} /></span><div><strong>Remplir moi-même</strong><p>Je renseigne mon véhicule, la durée et les garanties souhaitées.</p></div><ChevronRight size={20} />
           </button>
           <button type="button" onClick={() => chooseMode("broker")}>
             <span><CircleHelp size={25} /></span><div><strong>Déléguer à mon courtier</strong><p>J’explique librement mon besoin et mon courtier me recontacte pour compléter le dossier.</p></div><ChevronRight size={20} />
@@ -455,7 +498,34 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
 
         {step === 1 && (
           <section aria-labelledby="auto-request-step-title">
-            <AutoStepHeading number="2" title="Informations sur votre véhicule" description="Les caractéristiques essentielles permettent à votre courtier d’analyser correctement votre demande." />
+            <AutoStepHeading number="2" title="Souscripteur, assuré et conducteur" description="Le souscripteur et l’assuré correspondent au client connecté. Indiquez ensuite qui conduira le véhicule." />
+            <div className="auto-request-parties-grid">
+              <PartySummary title="Souscripteur" badge="Paie la cotisation" name={`${store.client.firstName} ${store.client.lastName}`} phone={store.client.phone} email={store.client.email} />
+              <PartySummary title="Assuré" badge="Personne couverte" name={`${store.client.firstName} ${store.client.lastName}`} phone={store.client.phone} email={store.client.email} />
+            </div>
+            <div className="auto-request-driver-block">
+              <BinaryChoice id="driver-is-subscriber" legend="Le souscripteur est-il également le conducteur ?" value={form.driver.isSubscriber} error={errors["driver-is-subscriber"]} onChange={(value) => {
+                updateDriver("isSubscriber", value);
+                clearError("driver-is-subscriber");
+              }} required />
+              {form.driver.isSubscriber === false && <div className="auto-request-driver-fields"><h3>Informations sur le conducteur</h3><div className="auto-request-form-grid">
+                <VoiceTextField id="driver-last-name" label="Nom" value={form.driver.lastName} onChange={(value) => updateDriver("lastName", value)} error={errors["driver-last-name"]} required />
+                <VoiceTextField id="driver-first-names" label="Prénoms" value={form.driver.firstNames} onChange={(value) => updateDriver("firstNames", value)} error={errors["driver-first-names"]} required />
+                <label htmlFor="driver-birth-date"><span className="auto-request-label-text">Date de naissance <RequiredMark /></span><input id="driver-birth-date" type="date" value={form.driver.birthDate} onChange={(event) => updateDriver("birthDate", event.target.value)} aria-invalid={Boolean(errors["driver-birth-date"])} /><FieldError id="driver-birth-date-error" message={errors["driver-birth-date"]} /></label>
+                <VoiceTextField id="driver-phone" label="Téléphone" value={form.driver.phone} onChange={(value) => updateDriver("phone", value)} error={errors["driver-phone"]} required inputProps={{ type: "tel" }} />
+                <VoiceTextField id="driver-occupation" label="Profession" value={form.driver.occupation} onChange={(value) => updateDriver("occupation", value)} error={errors["driver-occupation"]} required />
+                <VoiceTextField id="driver-licence-number" label="Numéro du permis" value={form.driver.licenceNumber} onChange={(value) => updateDriver("licenceNumber", value.toUpperCase())} error={errors["driver-licence-number"]} required />
+                <VoiceTextField id="driver-licence-category" label="Catégorie du permis" value={form.driver.licenceCategory} onChange={(value) => updateDriver("licenceCategory", value.toUpperCase())} error={errors["driver-licence-category"]} required />
+                <label htmlFor="driver-licence-issued-on"><span className="auto-request-label-text">Date de délivrance du permis <RequiredMark /></span><input id="driver-licence-issued-on" type="date" value={form.driver.licenceIssuedOn} onChange={(event) => updateDriver("licenceIssuedOn", event.target.value)} aria-invalid={Boolean(errors["driver-licence-issued-on"])} /><FieldError id="driver-licence-issued-on-error" message={errors["driver-licence-issued-on"]} /></label>
+                <label htmlFor="driver-licence-valid-until"><span className="auto-request-label-text">Permis valable jusqu’au <RequiredMark /></span><input id="driver-licence-valid-until" type="date" value={form.driver.licenceValidUntil} onChange={(event) => updateDriver("licenceValidUntil", event.target.value)} aria-invalid={Boolean(errors["driver-licence-valid-until"])} /><FieldError id="driver-licence-valid-until-error" message={errors["driver-licence-valid-until"]} /></label>
+              </div></div>}
+            </div>
+          </section>
+        )}
+
+        {step === 2 && (
+          <section aria-labelledby="auto-request-step-title">
+            <AutoStepHeading number="3" title="Informations sur votre véhicule" description="Les caractéristiques essentielles permettent à votre courtier d’analyser correctement votre demande." />
             <div className="auto-request-form-grid">
               <VoiceTextField id="vehicle-brand" label="Marque" value={form.vehicle.brand} onChange={(value) => updateVehicle("brand", value)} error={errors["vehicle-brand"]} required inputProps={{ autoComplete: "organization" }} />
               <VoiceTextField id="vehicle-model" label="Modèle" value={form.vehicle.model} onChange={(value) => updateVehicle("model", value)} error={errors["vehicle-model"]} required />
@@ -475,6 +545,11 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
                 <small className="auto-request-field-help" id="vehicle-fiscal-power-help">Cette information figure généralement sur la carte grise.</small>
                 <FieldError id="vehicle-fiscal-power-error" message={errors["vehicle-fiscal-power"]} />
               </label>
+              <label htmlFor="vehicle-seat-count"><span className="auto-request-label-text">Nombre de places <RequiredMark /></span>
+                <input id="vehicle-seat-count" type="number" inputMode="numeric" min="1" step="1" value={form.vehicle.seatCount} onChange={(event) => updateVehicle("seatCount", event.target.value)} aria-invalid={Boolean(errors["vehicle-seat-count"])} />
+                <FieldError id="vehicle-seat-count-error" message={errors["vehicle-seat-count"]} />
+              </label>
+              <VoiceTextField id="vehicle-chassis-number" label="Numéro de châssis" value={form.vehicle.chassisNumber} onChange={(value) => updateVehicle("chassisNumber", value.toUpperCase())} error={errors["vehicle-chassis-number"]} required inputProps={{ autoCapitalize: "characters" }} />
               <label htmlFor="vehicle-usage"><span className="auto-request-label-text">Usage du véhicule <RequiredMark /></span>
                 <select id="vehicle-usage" value={form.vehicle.usage} onChange={(event) => updateVehicle("usage", event.target.value as AutoVehicleUsage | "")} aria-invalid={Boolean(errors["vehicle-usage"])} aria-describedby={errors["vehicle-usage"] ? "vehicle-usage-error" : undefined}>
                   <option value="">Sélectionner</option><option value="cat1_professional">CAT1 (VÉHICULE POUR USAGE PROFESSIONNEL)</option><option value="cat2_product_transport">CAT2 (VÉHICULE À USAGE DE TRANSPORT DE PRODUIT)</option><option value="cat3_transport">CAT3 (VÉHICULES DE TRANSPORT DE MARCHANDISES APPARTENANT À DES TIERS)</option>
@@ -486,12 +561,16 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
                 <FieldError id="vehicle-estimated-value-error" message={errors["vehicle-estimated-value"]} />
               </label>
             </div>
+            <div className="auto-request-vehicle-questions">
+              <BinaryChoice id="vehicle-flammable" legend="Le véhicule transporte-t-il des matières inflammables ?" value={form.vehicle.carriesFlammableMaterials} error={errors["vehicle-flammable"]} onChange={(value) => { updateVehicle("carriesFlammableMaterials", value); clearError("vehicle-flammable"); }} required />
+              <BinaryChoice id="vehicle-trailer" legend="Le véhicule utilise-t-il une remorque ?" value={form.vehicle.hasTrailer} error={errors["vehicle-trailer"]} onChange={(value) => { updateVehicle("hasTrailer", value); clearError("vehicle-trailer"); }} required />
+            </div>
           </section>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <section aria-labelledby="auto-request-step-title">
-            <AutoStepHeading number="3" title="Pour quelle période souhaitez-vous être assuré ?" description="Choisissez une durée, puis indiquez la date de prise d’effet souhaitée." />
+            <AutoStepHeading number="4" title="Pour quelle période souhaitez-vous être assuré ?" description="Choisissez une durée, puis indiquez la date de prise d’effet souhaitée." />
             <fieldset className="auto-request-duration-grid" aria-describedby={errors.duration ? "duration-error" : undefined}>
               <legend>Durée souhaitée <RequiredMark /></legend>
               {DURATION_OPTIONS.map((duration) => <label className={form.coverage.durationMonths === duration ? "selected" : ""} key={duration}>
@@ -525,10 +604,10 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
           </section>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <section aria-labelledby="auto-request-step-title">
-            <AutoStepHeading number="4" title="Choisissez vos garanties" description="La Responsabilité Civile est obligatoire. Sélectionnez ensuite les garanties complémentaires qui correspondent à votre besoin." />
-            <div className="auto-request-guarantee-note"><CheckCircle2 size={19} /><div><strong>Responsabilité Civile incluse</strong><span>Cette garantie obligatoire est automatiquement sélectionnée et ne peut pas être retirée.</span></div></div>
+            <AutoStepHeading number="5" title="Choisissez vos garanties" description="La Responsabilité Civile et la Défense et Recours sont obligatoires. Sélectionnez ensuite les garanties complémentaires qui correspondent à votre besoin." />
+            <div className="auto-request-guarantee-note"><CheckCircle2 size={19} /><div><strong>Deux garanties obligatoires incluses</strong><span>La Responsabilité Civile et la Défense et Recours sont automatiquement sélectionnées et ne peuvent pas être retirées.</span></div></div>
             <fieldset className="auto-request-guarantee-grid">
               <legend className="sr-only">Garanties souhaitées</legend>
               {guaranteeOptions.map(({ value, label, mandatory }) => {
@@ -543,46 +622,22 @@ export function AutoRequestForm({ onBack, onSubmit }: { onBack: () => void; onSu
           </section>
         )}
 
-        {step === 4 && (
-          <section aria-labelledby="auto-request-step-title">
-            <AutoStepHeading number="5" title="Quelques informations supplémentaires" description="Ces précisions aident votre courtier à préparer la suite de votre dossier." />
-            <BinaryChoice id="previous-insurance" legend="Avez-vous déjà une assurance pour ce véhicule ?" value={form.previousInsurance.hasInsurance} error={errors["previous-insurance"]} onChange={(value) => {
-              updatePreviousInsurance("hasInsurance", value);
-              clearError("previous-insurance");
-            }} required />
-            {form.previousInsurance.hasInsurance && <div className="auto-request-form-grid auto-request-conditional">
-              <VoiceTextField id="insurer-name" label="Nom de l’ancien assureur" value={form.previousInsurance.insurerName} onChange={(value) => {
-                  updatePreviousInsurance("insurerName", value);
-                  clearError("insurer-name");
-                }} error={errors["insurer-name"]} required />
-              <label htmlFor="expiration-date"><span className="auto-request-label-text">Date d’expiration du contrat actuel <RequiredMark /></span>
-                <input id="expiration-date" type="date" value={form.previousInsurance.expirationDate} onChange={(event) => {
-                  updatePreviousInsurance("expirationDate", event.target.value);
-                  clearError("expiration-date");
-                }} aria-invalid={Boolean(errors["expiration-date"])} aria-describedby={errors["expiration-date"] ? "expiration-date-error" : undefined} />
-                <FieldError id="expiration-date-error" message={errors["expiration-date"]} />
-              </label>
-              <VoiceTextField id="policy-number" label="Numéro de police actuel" value={form.previousInsurance.policyNumber} onChange={(value) => updatePreviousInsurance("policyNumber", value)} optional />
-            </div>}
-            <VoiceTextarea id="auto-request-comments" label="Informations ou précisions complémentaires" value={form.comments} onChange={(value) => updateForm((current) => ({ ...current, comments: value }))} placeholder="Vous pouvez préciser ici toute information utile concernant votre véhicule ou votre besoin." optional />
-          </section>
-        )}
-
         {step === 5 && (
           <section aria-labelledby="auto-request-step-title">
             <AutoStepHeading number="6" title="Vérifiez votre demande" description="Relisez les informations avant de les transmettre à votre courtier." />
             <div className="auto-request-review">
               <ReviewSection title="Votre besoin" items={[["Demande", form.requestType ? requestLabels[form.requestType] : "Non renseigné"], ...(form.requestType === "other" ? [["Précision", form.otherNeed]] as Array<[string, string]> : [])]} />
+              <ReviewSection title="Souscripteur et assuré" items={[["Souscripteur", `${store.client.firstName} ${store.client.lastName}`], ["Assuré", `${store.client.firstName} ${store.client.lastName}`], ["Conducteur", form.driver.isSubscriber ? "Le souscripteur" : `${form.driver.firstNames} ${form.driver.lastName}`], ...(form.driver.isSubscriber ? [] : [["Permis", `${form.driver.licenceNumber} · catégorie ${form.driver.licenceCategory}`]] as Array<[string, string]>)]} />
               <ReviewSection title="Votre véhicule" items={[
                 ["Véhicule", `${form.vehicle.brand} ${form.vehicle.model}`], ["Année", form.vehicle.year],
                 ["Immatriculation", form.vehicle.registration.toUpperCase()], ["Énergie", form.vehicle.energy ? energyLabels[form.vehicle.energy] : "Non renseignée"],
-                ["Puissance fiscale", `${form.vehicle.fiscalPower} CV`], ["Usage", form.vehicle.usage ? usageLabels[form.vehicle.usage] : "Non renseigné"],
+                ["Puissance fiscale", `${form.vehicle.fiscalPower} CV`], ["Nombre de places", form.vehicle.seatCount], ["Numéro de châssis", form.vehicle.chassisNumber.toUpperCase()], ["Usage", form.vehicle.usage ? usageLabels[form.vehicle.usage] : "Non renseigné"],
+                ["Matières inflammables", form.vehicle.carriesFlammableMaterials ? "Oui" : "Non"], ["Remorque", form.vehicle.hasTrailer ? "Oui" : "Non"],
                 ["Valeur estimée", form.vehicle.estimatedValue ? formatFcfa(Number(form.vehicle.estimatedValue)) : "Non renseignée"],
               ]} />
               <ReviewSection title="Durée et prise d’effet" items={[["Durée", `${form.coverage.durationMonths} mois`], ["Prise d’effet", form.coverage.startDateUnknown ? "Date à confirmer" : formatDate(form.coverage.desiredStartDate)]]} />
-              <ReviewSection title="Garanties choisies" items={[["Obligatoire", guaranteeLabels.civil_liability], ["Complémentaires", form.coverage.guarantees.filter((item) => item !== "civil_liability").map((item) => guaranteeLabels[item]).join(" · ") || "Aucune garantie complémentaire"]]} />
-              <ReviewSection title="Assurance actuelle" items={form.previousInsurance.hasInsurance ? [["Véhicule déjà assuré", "Oui"], ["Ancien assureur", form.previousInsurance.insurerName], ["Expiration", formatDate(form.previousInsurance.expirationDate)], ["Numéro de police", form.previousInsurance.policyNumber || "Non renseigné"]] : [["Véhicule déjà assuré", "Non"]]} />
-              <ReviewSection title="Informations complémentaires" items={[["Vignette", form.hasVignette ? "Oui" : "Non"], ["Précisions", form.comments || "Aucune précision ajoutée"]]} />
+              <ReviewSection title="Garanties choisies" items={[["Obligatoires", `${guaranteeLabels.civil_liability} · ${guaranteeLabels.defense_and_recours}`], ["Complémentaires", form.coverage.guarantees.filter((item) => item !== "civil_liability" && item !== "defense_and_recours").map((item) => guaranteeLabels[item]).join(" · ") || "Aucune garantie complémentaire"]]} />
+              <ReviewSection title="Vignette" items={[["Le client possède une vignette", form.hasVignette ? "Oui" : "Non"]]} />
             </div>
             <div className="auto-request-doc-note"><FileText size={20} /><div><strong>Documents à fournir ultérieurement</strong><p>Certains documents pourront être demandés ultérieurement pour finaliser votre dossier. Vous pourrez les déposer dans le module Documents de votre espace client.</p></div></div>
           </section>
@@ -723,7 +778,7 @@ function VoiceTextField({ id, label, value, onChange, error, required, optional,
   </div>;
 }
 
-function VoiceTextarea({ id, label, value, onChange, error, required, optional, placeholder, rows = 5 }: { id: string; label: string; value: string; onChange: (value: string) => void; error?: string; required?: boolean; optional?: boolean; placeholder?: string; rows?: number }) {
+export function VoiceTextarea({ id, label, value, onChange, error, required, optional, placeholder, rows = 5 }: { id: string; label: string; value: string; onChange: (value: string) => void; error?: string; required?: boolean; optional?: boolean; placeholder?: string; rows?: number }) {
   return <div className="auto-request-field auto-request-voice-textarea">
     <label htmlFor={id}><span className="auto-request-label-text">{label}{required && <RequiredMark />}</span>{optional && <span className="field-optional">Facultatif</span>}</label>
     <div className="auto-request-voice-shell">
@@ -751,6 +806,10 @@ function BinaryChoice({ id, legend, value, error, onChange, required = false }: 
     </div>
     <FieldError id={`${id}-error`} message={error} />
   </fieldset>;
+}
+
+function PartySummary({ title, badge, name, phone, email }: { title: string; badge: string; name: string; phone: string; email: string }) {
+  return <article className="auto-request-party-card"><header><strong>{title}</strong><span>{badge}</span></header><h3>{name}</h3><p>{phone}</p><p>{email}</p><small>Informations issues du profil client</small></article>;
 }
 
 function ReviewSection({ title, items }: { title: string; items: Array<[string, string]> }) {

@@ -2,7 +2,8 @@ import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === "portal" ? "/portail-client/" : "/",
   plugins: [react()],
   resolve: {
     alias: {
@@ -11,4 +12,4 @@ export default defineConfig({
   },
   server: { host: "127.0.0.1" },
   preview: { host: "127.0.0.1" },
-});
+}));
