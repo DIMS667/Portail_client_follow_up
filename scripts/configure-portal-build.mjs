@@ -7,6 +7,7 @@ const portalHtaccessPath = path.join(portalDirectory, ".htaccess");
 
 const portalHtaccess = `Options -MultiViews
 DirectoryIndex index.html
+AddDefaultCharset UTF-8
 
 <IfModule mod_rewrite.c>
   RewriteEngine On

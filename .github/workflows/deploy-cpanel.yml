@@ -85,6 +85,8 @@ jobs:
           echo "$root_html" | grep -q 'src="/assets/' || { echo "The public website is not served at /"; exit 1; }
           echo "$login_html" | grep -q 'src="/assets/' || { echo "The login page is not served at /login/"; exit 1; }
           echo "$portal_html" | grep -q 'src="/portail-client/assets/' || { echo "The client portal is not served at /portail-client/"; exit 1; }
+          echo "$root_html" | grep -q 'class="seo-prerender"' || { echo "The home page was not pre-rendered"; exit 1; }
+          echo "$caution_html" | grep -q 'class="seo-prerender"' || { echo "The caution page was not pre-rendered"; exit 1; }
           echo "$root_html" | grep -q 'rel="canonical" href="https://followupassurance.com/"' || { echo "The public canonical tag is missing"; exit 1; }
           echo "$caution_html" | grep -q 'rel="canonical" href="https://followupassurance.com/solutions/caution/"' || { echo "The caution page was not pre-rendered"; exit 1; }
           echo "$login_html" | grep -q 'name="robots" content="noindex, nofollow, noarchive"' || { echo "The login noindex tag is missing"; exit 1; }
