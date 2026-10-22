@@ -1,5 +1,6 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  RewriteRule ^portail-client(?:/|$) - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^ index.html [L]
@@ -11,3 +12,7 @@
     Header always set Cdn-Cache-Control "no-store"
   </FilesMatch>
 </IfModule>
+
+<FilesMatch "^\..*deploy-sync-state\.json$">
+  Require all denied
+</FilesMatch>
