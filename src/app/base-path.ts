@@ -13,10 +13,11 @@ export function toBrowserPath(path: string) {
 }
 
 export function fromBrowserPath(pathname: string) {
-  if (!appBasePath) return pathname || "/";
+  const normalize = (path: string) => path.length > 1 ? path.replace(/\/+$/, "") : path;
+  if (!appBasePath) return normalize(pathname || "/");
   if (pathname === appBasePath || pathname === `${appBasePath}/`) return "/";
-  if (pathname.startsWith(`${appBasePath}/`)) return pathname.slice(appBasePath.length) || "/";
-  return pathname || "/";
+  if (pathname.startsWith(`${appBasePath}/`)) return normalize(pathname.slice(appBasePath.length) || "/");
+  return normalize(pathname || "/");
 }
 
 export function assetUrl(path: string) {

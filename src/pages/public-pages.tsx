@@ -3,6 +3,7 @@ import { CheckCircle2, Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { BrandLogo } from "../components/brand-logo";
 import { usePortal } from "../app/portal-context";
 import { DEMO_CREDENTIALS } from "../data/demo-seed";
+import { localStoragePortalRepository } from "../repositories/portal-repository";
 import { authenticate } from "../services/portal-service";
 
 function AuthFrame({ title, intro, children }: { title: string; intro: string; children: React.ReactNode }) {
@@ -29,7 +30,16 @@ export function LoginPage() {
     const next = authenticate(store, identifier, password);
     if (!next) return setError("Email, téléphone ou mot de passe incorrect.");
     updateStore(next);
-    navigate(query.get("retour") || "/espace");
+    if (import.meta.env.DEV) {
+      navigate("/espace");
+      return;
+    }
+    localStoragePortalRepository.save(next);
+    const requestedReturn = query.get("retour");
+    const destination = requestedReturn?.startsWith("/portail-client/")
+      ? requestedReturn
+      : "/portail-client/";
+    window.location.assign(destination);
   };
   return (
     <AuthFrame title="Heureux de vous revoir" intro="Connectez-vous pour suivre vos assurances.">
@@ -60,7 +70,7 @@ export function RegisterPage() {
   };
   return (
     <AuthFrame title="Créer mon compte" intro="Quelques informations suffisent pour commencer.">
-      {success ? <div className="success-panel"><span><CheckCircle2 size={28} /></span><h3>Votre compte de démonstration est prêt.</h3><p>Vous pouvez maintenant utiliser les identifiants de démonstration pour découvrir le portail.</p><button className="button button-primary full" onClick={() => navigate("/connexion")} type="button">Accéder à la connexion</button></div> :
+      {success ? <div className="success-panel"><span><CheckCircle2 size={28} /></span><h3>Votre compte de démonstration est prêt.</h3><p>Vous pouvez maintenant utiliser les identifiants de démonstration pour découvrir le portail.</p><button className="button button-primary full" onClick={() => navigate("/login")} type="button">Accéder à la connexion</button></div> :
         <form className="form-stack" onSubmit={submit}>
           {error && <div className="form-alert error" role="alert">{error}</div>}
           <div className="form-grid"><label>Prénom<input name="firstName" required /></label><label>Nom<input name="lastName" required /></label></div>
@@ -69,7 +79,7 @@ export function RegisterPage() {
           <label className="check-row"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} /><span>J’accepte les conditions d’utilisation et la politique de confidentialité.</span></label>
           <button className="button button-primary full" type="submit">Créer mon compte</button>
         </form>}
-      <p className="auth-switch">Déjà inscrit ? <button type="button" onClick={() => navigate("/connexion")}>Se connecter</button></p>
+      <p className="auth-switch">Déjà inscrit ? <button type="button" onClick={() => navigate("/login")}>Se connecter</button></p>
     </AuthFrame>
   );
 }
@@ -79,7 +89,7 @@ export function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
   return (
     <AuthFrame title="Mot de passe oublié" intro="Cette action est simulée pour la démonstration.">
-      {sent ? <div className="success-panel"><span><CheckCircle2 size={28} /></span><h3>Demande enregistrée</h3><p>Dans une vraie version, des instructions seraient envoyées si ce compte existait.</p><button className="button button-primary full" type="button" onClick={() => navigate("/connexion")}>Retour à la connexion</button></div> : <form className="form-stack" onSubmit={(event) => { event.preventDefault(); setSent(true); }}><label>Votre adresse email<input type="email" required /></label><button className="button button-primary full" type="submit">Continuer</button></form>}
+      {sent ? <div className="success-panel"><span><CheckCircle2 size={28} /></span><h3>Demande enregistrée</h3><p>Dans une vraie version, des instructions seraient envoyées si ce compte existait.</p><button className="button button-primary full" type="button" onClick={() => navigate("/login")}>Retour à la connexion</button></div> : <form className="form-stack" onSubmit={(event) => { event.preventDefault(); setSent(true); }}><label>Votre adresse email<input type="email" required /></label><button className="button button-primary full" type="submit">Continuer</button></form>}
     </AuthFrame>
   );
 }

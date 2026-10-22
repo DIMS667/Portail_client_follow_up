@@ -10,6 +10,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "build:portal": "vite build --mode portal",
+    "build:production": "npm run build && npm run build:portal",
     "start": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit"
   },

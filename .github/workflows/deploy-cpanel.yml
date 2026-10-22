@@ -1,4 +1,4 @@
-name: Deploy to cPanel
+name: Deploy website and client portal to cPanel
 
 on:
   push:
@@ -35,23 +35,26 @@ jobs:
       - name: Check TypeScript
         run: npm run typecheck
 
-      - name: Build client portal for /portail-client/
-        run: npm run build:portal
+      - name: Build website and client portal
+        run: npm run build:production
+
+      - name: Verify production package
+        run: |
+          test -f dist/index.html || { echo "Missing website index"; exit 1; }
+          test -f dist/portail-client/index.html || { echo "Missing client portal index"; exit 1; }
 
       - name: Verify cPanel configuration
         env:
           FTP_SERVER: ${{ secrets.CPANEL_FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.CPANEL_FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.CPANEL_FTP_PASSWORD }}
-          FTP_DIRECTORY: ${{ secrets.CPANEL_FTP_DIRECTORY }}
         run: |
           test -n "$FTP_SERVER" || { echo "Missing secret: CPANEL_FTP_SERVER"; exit 1; }
           test -n "$FTP_USERNAME" || { echo "Missing secret: CPANEL_FTP_USERNAME"; exit 1; }
           test -n "$FTP_PASSWORD" || { echo "Missing secret: CPANEL_FTP_PASSWORD"; exit 1; }
-          test -n "$FTP_DIRECTORY" || { echo "Missing secret: CPANEL_FTP_DIRECTORY"; exit 1; }
 
-      - name: Deploy dist to cPanel over FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+      - name: Deploy website and portal to public_html over FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.CPANEL_FTP_SERVER }}
           username: ${{ secrets.CPANEL_FTP_USERNAME }}
@@ -59,6 +62,16 @@ jobs:
           protocol: ${{ vars.CPANEL_FTP_PROTOCOL || 'ftps' }}
           port: ${{ vars.CPANEL_FTP_PORT || '21' }}
           local-dir: dist/
-          server-dir: ${{ secrets.CPANEL_FTP_DIRECTORY }}
+          server-dir: /
+          state-name: .followup-deploy-sync-state.json
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .well-known/**
+            api/**
+            cgi-bin/**
+            .user.ini
+            php.ini
           log-level: minimal
           dangerous-clean-slate: false

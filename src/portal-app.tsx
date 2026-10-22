@@ -63,19 +63,26 @@ function RouteView() {
     if (pathname === "/confidentialite") return <LegalPublicPage kind="confidentialite" />;
     if (pathname === "/conditions-utilisation") return <LegalPublicPage kind="conditions-utilisation" />;
   }
-  if (isPortalDeployment && pathname === "/") return <LoginPage />;
-  if (pathname === "/connexion") return <LoginPage />;
-  if (pathname === "/inscription") return <RegisterPage />;
-  if (pathname === "/mot-de-passe-oublie") return <ForgotPasswordPage />;
+  if (!isPortalDeployment && import.meta.env.PROD && pathname === "/connexion") {
+    return <BrowserRedirect to={`/login/${window.location.search}`} />;
+  }
+  if (!isPortalDeployment && import.meta.env.PROD && pathname.startsWith("/espace")) {
+    const portalDestination = `/portail-client${pathname}${window.location.search}`;
+    return <BrowserRedirect to={store.session.authenticated ? portalDestination : `/login/?retour=${encodeURIComponent(portalDestination)}`} />;
+  }
+  if (!isPortalDeployment && (pathname === "/login" || pathname === "/connexion")) return <LoginPage />;
+  if (!isPortalDeployment && pathname === "/inscription") return <RegisterPage />;
+  if (!isPortalDeployment && pathname === "/mot-de-passe-oublie") return <ForgotPasswordPage />;
 
-  if (!pathname.startsWith("/espace")) return isPortalDeployment ? <LoginPage /> : <PublicNotFoundPage />;
+  const isPortalArea = pathname.startsWith("/espace") || (isPortalDeployment && pathname === "/");
+  if (!isPortalArea) return isPortalDeployment ? <NotFoundPage /> : <PublicNotFoundPage />;
 
-  if (pathname.startsWith("/espace") && !store.session.authenticated) {
-    return <LoginPage />;
+  if (!store.session.authenticated) {
+    return isPortalDeployment ? <PortalLoginRedirect /> : <LoginPage />;
   }
 
   let page: React.ReactNode;
-  if (pathname === "/espace") page = <DashboardPage />;
+  if (pathname === "/" || pathname === "/espace") page = <DashboardPage />;
   else if (pathname === "/espace/demandes") page = <RequestsPage />;
   else if (pathname === "/espace/demandes/nouvelle") page = <NewRequestPage />;
   else if (/^\/espace\/demandes\/[^/]+\/propositions$/.test(pathname)) page = <ProposalsPage requestReference={decodeURIComponent(pathname.split("/")[3])} />;
@@ -98,6 +105,24 @@ function RouteView() {
   return <ClientShell>{page}</ClientShell>;
 }
 
+function PortalLoginRedirect() {
+  useEffect(() => {
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    const loginUrl = currentPath === "/portail-client/"
+      ? "/login/"
+      : `/login/?retour=${encodeURIComponent(currentPath)}`;
+    window.location.replace(loginUrl);
+  }, []);
+  return null;
+}
+
+function BrowserRedirect({ to }: { to: string }) {
+  useEffect(() => {
+    window.location.replace(to);
+  }, [to]);
+  return null;
+}
+
 function LegacyMotoSolutionRedirect() {
   useEffect(() => {
     window.history.replaceState({}, "", toBrowserPath("/solutions/automobile#deux-trois-roues"));
@@ -107,7 +132,7 @@ function LegacyMotoSolutionRedirect() {
 }
 
 function routeDocumentTitle(pathname: string) {
-  if (isPortalDeployment && pathname === "/") return "Connexion — FOLLOW-UP INSURANCE";
+  if (isPortalDeployment && pathname === "/") return "Mon espace assurance — FOLLOW-UP INSURANCE";
   if (pathname === "/") return "Follow-Up Insurance | Courtier en assurances";
   if (/^\/solutions\/[^/]+$/.test(pathname)) {
     const slug = decodeURIComponent(pathname.split("/")[2]) as SolutionSlug;
@@ -145,7 +170,7 @@ function routeTitle(pathname: string) {
   if (pathname.includes("notifications")) return "Notifications";
   if (pathname.includes("profil")) return "Mon profil";
   if (pathname.includes("aide")) return "Aide";
-  if (pathname.includes("connexion")) return "Connexion";
+  if (pathname.includes("login") || pathname.includes("connexion")) return "Connexion";
   return "Mon espace assurance";
 }
 

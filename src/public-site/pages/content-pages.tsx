@@ -328,7 +328,16 @@ export function SolutionDetailPublicPage({ slug }: { slug: SolutionSlug }) {
 export function ClaimsPublicPage() {
   const { navigate, store } = usePortal();
   usePublicMeta(claimsPage.metaTitle, claimsPage.metaDescription);
-  const startClaim = () => navigate(store.session.authenticated ? "/espace/sinistres/nouveau" : "/connexion?retour=%2Fespace%2Fsinistres%2Fnouveau");
+  const startClaim = () => {
+    if (import.meta.env.DEV) {
+      navigate(store.session.authenticated ? "/espace/sinistres/nouveau" : "/login");
+      return;
+    }
+    const destination = store.session.authenticated
+      ? "/portail-client/espace/sinistres/nouveau"
+      : "/login/?retour=%2Fportail-client%2Fespace%2Fsinistres%2Fnouveau";
+    window.location.assign(destination);
+  };
   return (
     <PublicPageShell>
       <PublicHeroBlock hero={claimsPage.hero} breadcrumbs={[{ label: "Accueil", href: "/" }, { label: "Sinistres" }]} />

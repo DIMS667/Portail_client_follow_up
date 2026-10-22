@@ -13,10 +13,10 @@ export function PublicPageShell({ children, className = "" }: PublicPageShellPro
   const { navigate, store } = usePortal();
   const goToClientSpace = () => {
     if (import.meta.env.DEV) {
-      navigate(store.session.authenticated ? "/espace" : "/connexion");
+      navigate(store.session.authenticated ? "/espace" : "/login");
       return;
     }
-    window.location.assign(store.session.authenticated ? "/portail-client/espace" : "/portail-client/");
+    window.location.assign(store.session.authenticated ? "/portail-client/" : "/login/");
   };
   const goToQuote = () => navigate("/contact?objet=devis");
 
