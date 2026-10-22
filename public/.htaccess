@@ -13,6 +13,6 @@
   </FilesMatch>
 </IfModule>
 
-<FilesMatch "^\..*deploy-sync-state\.json$">
+<FilesMatch "^\..*deploy-sync-state.*\.json$">
   Require all denied
 </FilesMatch>
