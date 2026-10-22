@@ -63,7 +63,7 @@ jobs:
           port: ${{ vars.CPANEL_FTP_PORT || '21' }}
           local-dir: dist/
           server-dir: /
-          state-name: .followup-deploy-sync-state.json
+          state-name: .followup-deploy-sync-state-v2.json
           exclude: |
             **/.git*
             **/.git*/**
@@ -75,3 +75,12 @@ jobs:
             php.ini
           log-level: minimal
           dangerous-clean-slate: false
+
+      - name: Verify live website and client portal
+        run: |
+          root_html="$(curl --fail --silent --show-error --retry 5 --retry-delay 3 "https://followupassurance.com/?deployment=${{ github.sha }}")"
+          login_html="$(curl --fail --silent --show-error --retry 5 --retry-delay 3 "https://followupassurance.com/login/?deployment=${{ github.sha }}")"
+          portal_html="$(curl --fail --silent --show-error --retry 5 --retry-delay 3 "https://followupassurance.com/portail-client/?deployment=${{ github.sha }}")"
+          echo "$root_html" | grep -q 'src="/assets/' || { echo "The public website is not served at /"; exit 1; }
+          echo "$login_html" | grep -q 'src="/assets/' || { echo "The login page is not served at /login/"; exit 1; }
+          echo "$portal_html" | grep -q 'src="/portail-client/assets/' || { echo "The client portal is not served at /portail-client/"; exit 1; }
