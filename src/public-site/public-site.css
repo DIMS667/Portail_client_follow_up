@@ -89,7 +89,7 @@
 .public-hero__visual img { width: 100%; aspect-ratio: 1.6; object-fit: cover; object-position: center; }
 
 .public-needs { background: #fafafa; border-bottom: 1px solid var(--public-line); }
-.public-needs__grid { min-height: 154px; display: grid; grid-template-columns: repeat(5, 1fr); }
+.public-needs__grid { min-height: 154px; display: grid; grid-template-columns: repeat(7, 1fr); }
 .public-need { position: relative; min-width: 0; padding: 20px 16px; display: grid; place-items: center; align-content: center; gap: 5px; border: 0; border-right: 1px solid var(--public-line); color: var(--public-ink); background: transparent; cursor: pointer; transition: color .18s ease, background .18s ease; }
 .public-need:first-child { border-left: 1px solid var(--public-line); }
 .public-need:hover, .public-need:focus-visible { color: var(--public-red); background: #fff; }

@@ -69,9 +69,11 @@ export interface PublicLandingPage {
 export type SolutionSlug =
   | "automobile"
   | "sante"
+  | "vie-capitalisation"
   | "habitation"
   | "voyage"
-  | "entreprise";
+  | "entreprise"
+  | "caution";
 
 export interface SolutionSummary {
   slug: SolutionSlug;
@@ -182,6 +184,21 @@ export const solutionSummaries: readonly SolutionSummary[] = [
     ctaLabel: "Découvrir l’assurance santé",
   },
   {
+    slug: "vie-capitalisation",
+    path: "/solutions/vie-capitalisation",
+    title: "Assurance vie & capitalisation",
+    shortTitle: "Vie & capitalisation",
+    tagline: "Protégez aujourd’hui, préparez demain.",
+    description:
+      "Des solutions pour protéger vos proches, constituer un capital et préparer vos projets dans la durée.",
+    image: {
+      src: "/images/advisor-amina.webp",
+      alt: "Conseillère échangeant avec un client sur ses projets de long terme",
+    },
+    ctaLabel: "Découvrir la vie & capitalisation",
+    tags: ["Protection", "Épargne"],
+  },
+  {
     slug: "habitation",
     path: "/solutions/habitation",
     title: "Assurance habitation",
@@ -222,6 +239,21 @@ export const solutionSummaries: readonly SolutionSummary[] = [
       alt: "Équipe de professionnelles réunies autour d’un projet",
     },
     ctaLabel: "Découvrir l’assurance entreprise",
+  },
+  {
+    slug: "caution",
+    path: "/solutions/caution",
+    title: "Assurance caution",
+    shortTitle: "Caution",
+    tagline: "Donnez à vos marchés les garanties attendues.",
+    description:
+      "Soumission, avance de démarrage, retenue de garantie ou bonne fin : préparez la caution adaptée à votre marché.",
+    image: {
+      src: "/images/public-entrepreneur.png",
+      alt: "Entrepreneure préparant les documents d’un marché",
+    },
+    ctaLabel: "Découvrir l’assurance caution",
+    tags: ["Soumission", "AVD", "RTG", "Bonne fin"],
   },
 ] as const;
 
@@ -428,6 +460,90 @@ export const solutionPages: Record<SolutionSlug, SolutionPageContent> = {
       title: "Faisons le point sur vos priorités santé.",
       description: "Un échange permet de cibler les niveaux de couverture à comparer.",
       action: { label: "Étudier mon besoin", href: "/contact?motif=sante", tone: "primary" },
+    },
+  },
+  "vie-capitalisation": {
+    ...solutionBySlug["vie-capitalisation"],
+    metaTitle: "Assurance vie et capitalisation | Follow-Up Insurance",
+    metaDescription:
+      "Préparez la protection de vos proches, votre épargne et vos projets de long terme avec une solution vie et capitalisation adaptée.",
+    hero: {
+      eyebrow: "Vie & capitalisation",
+      title: "Protégez vos proches et construisez vos projets dans la durée.",
+      intro:
+        "Protection, épargne, retraite ou transmission : nous vous aidons à clarifier l’objectif avant de comparer les solutions.",
+      image: solutionBySlug["vie-capitalisation"].image,
+      primaryCta: { label: "Préparer mon projet", href: "/contact?motif=vie-capitalisation", tone: "primary" },
+      secondaryCta: { label: "Voir toutes les solutions", href: "/solutions", tone: "text" },
+    },
+    audience: [
+      "Personnes souhaitant protéger leurs proches",
+      "Épargnants préparant un projet à moyen ou long terme",
+      "Actifs anticipant leur retraite",
+      "Entrepreneurs organisant la transmission d’un capital",
+    ],
+    coverages: [
+      {
+        title: "Protection décès",
+        description: "Prévoit le versement d’un capital aux bénéficiaires désignés selon les conditions du contrat.",
+      },
+      {
+        title: "Constitution d’un capital",
+        description: "Permet d’organiser des versements ponctuels ou réguliers autour d’un objectif défini.",
+      },
+      {
+        title: "Préparation de la retraite",
+        description: "Aide à construire progressivement une ressource complémentaire pour l’avenir.",
+      },
+      {
+        title: "Transmission",
+        description: "Structure la désignation des bénéficiaires et la préparation du capital à transmettre.",
+      },
+    ],
+    optionalBenefits: [
+      "Garantie complémentaire en cas d’invalidité",
+      "Versements libres ou programmés",
+      "Possibilité d’adapter l’effort d’épargne",
+      "Accompagnement dans la désignation des bénéficiaires",
+    ],
+    watchPoints: [
+      "Objectif et horizon de placement clairement définis",
+      "Montant et fréquence des versements",
+      "Conditions de rachat ou de sortie",
+      "Frais, exclusions et règles applicables aux bénéficiaires",
+    ],
+    documents: [
+      "Pièce d’identité du souscripteur",
+      "Informations sur les bénéficiaires",
+      "Justificatif de domicile",
+      "Éléments financiers demandés selon la solution",
+    ],
+    brokerSupport: {
+      title: "Partir du projet, pas seulement du produit",
+      description:
+        "Nous clarifions l’objectif, l’horizon et l’effort de versement avant de rapprocher les solutions disponibles.",
+      steps: [
+        { number: "01", title: "Définir", description: "Protection, épargne, retraite ou transmission : l’objectif est précisé." },
+        { number: "02", title: "Projeter", description: "Capital cible, durée et capacité de versement sont mis en cohérence." },
+        { number: "03", title: "Comparer", description: "Garanties, frais, souplesse et conditions de sortie sont expliqués." },
+      ],
+    },
+    faq: [
+      {
+        question: "Quelle différence entre assurance vie et capitalisation ?",
+        answer:
+          "L’assurance vie associe généralement un objectif de protection et la désignation de bénéficiaires. La capitalisation met davantage l’accent sur la constitution et la valorisation d’un capital. Le cadre exact dépend de la solution proposée.",
+      },
+      {
+        question: "Puis-je modifier mes versements ?",
+        answer:
+          "Cela dépend du contrat. Les possibilités de suspension, d’augmentation ou de versement libre doivent être vérifiées avant la souscription.",
+      },
+    ],
+    finalCta: {
+      title: "Donnons un cadre concret à votre projet.",
+      description: "Indiquez votre objectif et l’horizon envisagé pour démarrer une étude personnalisée.",
+      action: { label: "Étudier mon projet", href: "/contact?motif=vie-capitalisation", tone: "primary" },
     },
   },
   habitation: {
@@ -690,6 +806,90 @@ export const solutionPages: Record<SolutionSlug, SolutionPageContent> = {
       action: { label: "Demander un diagnostic", href: "/contact?motif=entreprise", tone: "primary" },
     },
   },
+  caution: {
+    ...solutionBySlug.caution,
+    metaTitle: "Assurance caution des marchés | Follow-Up Insurance",
+    metaDescription:
+      "Préparez une caution de soumission, d’avance de démarrage, de retenue de garantie ou de bonne fin pour vos marchés.",
+    hero: {
+      eyebrow: "Assurance caution",
+      title: "La garantie adaptée à chaque étape de votre marché.",
+      intro:
+        "Sélectionnez la nature de la caution, rassemblez les pièces correspondantes et confiez l’étude de votre dossier à votre courtier.",
+      image: solutionBySlug.caution.image,
+      primaryCta: { label: "Préparer ma caution", href: "/contact?motif=caution", tone: "primary" },
+      secondaryCta: { label: "Voir l’offre entreprises", href: "/entreprises", tone: "text" },
+    },
+    audience: [
+      "Entreprises répondant à un appel d’offres",
+      "Titulaires d’un marché public ou privé",
+      "Entreprises recevant une avance de démarrage",
+      "Prestataires devant garantir la bonne exécution d’un contrat",
+    ],
+    coverages: [
+      {
+        title: "Caution de soumission",
+        description: "Garantit le sérieux de l’engagement pris lors de la réponse à un appel d’offres.",
+      },
+      {
+        title: "Avance de démarrage",
+        description: "Garantit l’avance versée au titulaire pour lancer l’exécution du marché.",
+      },
+      {
+        title: "Retenue de garantie",
+        description: "Permet de substituer une caution à la retenue opérée sur les règlements du marché.",
+      },
+      {
+        title: "Bonne fin",
+        description: "Garantit l’exécution conforme des obligations prévues au contrat.",
+      },
+    ],
+    optionalBenefits: [
+      "Étude des exigences du maître d’ouvrage",
+      "Vérification du modèle de caution",
+      "Accompagnement dans la constitution du dossier",
+      "Suivi des pièces complémentaires demandées",
+    ],
+    watchPoints: [
+      "Nature exacte de la caution demandée",
+      "Montant, durée et date limite de remise",
+      "Conformité du modèle imposé par le bénéficiaire",
+      "Capacité financière et références de l’entreprise",
+    ],
+    documents: [
+      "Demande adressée à la compagnie et modèle de caution",
+      "Avis d’appel d’offres ou copie du marché selon la caution",
+      "Documents juridiques et financiers de l’entreprise",
+      "Références, procès-verbaux et justificatifs patrimoniaux lorsqu’ils sont requis",
+    ],
+    brokerSupport: {
+      title: "Un dossier adapté à la nature de la caution",
+      description:
+        "Les pièces ne sont pas identiques pour une soumission, une bonne fin, une retenue de garantie ou une avance de démarrage.",
+      steps: [
+        { number: "01", title: "Choisir", description: "La nature de la caution et les exigences du marché sont identifiées." },
+        { number: "02", title: "Constituer", description: "Le portail affiche uniquement les informations et pièces correspondantes." },
+        { number: "03", title: "Étudier", description: "Le courtier vérifie la cohérence du dossier avant sa présentation." },
+      ],
+    },
+    faq: [
+      {
+        question: "Les pièces à fournir sont-elles les mêmes pour toutes les cautions ?",
+        answer:
+          "Non. La soumission exige notamment l’avis d’appel d’offres, tandis que les cautions liées à l’exécution demandent le marché et davantage d’informations sur l’entreprise.",
+      },
+      {
+        question: "Pourquoi choisir le type de caution avant de remplir le formulaire ?",
+        answer:
+          "Ce choix permet d’afficher la bonne liste de documents et d’éviter de demander des pièces inutiles.",
+      },
+    ],
+    finalCta: {
+      title: "Préparez la caution correspondant à votre marché.",
+      description: "Indiquez la nature de la garantie et l’échéance pour recevoir la liste de pièces adaptée.",
+      action: { label: "Démarrer ma demande", href: "/contact?motif=caution", tone: "primary" },
+    },
+  },
 };
 
 export const aboutPage: PublicLandingPage = {
@@ -762,7 +962,7 @@ export const solutionsPage: PublicLandingPage = {
   path: "/solutions",
   metaTitle: "Nos solutions d’assurance | Follow-Up Insurance",
   metaDescription:
-    "Découvrez les solutions automobile, santé, habitation, voyage et entreprise proposées par Follow-Up Insurance.",
+    "Découvrez les solutions automobile, santé, vie et capitalisation, habitation, voyage, entreprise et caution proposées par Follow-Up Insurance.",
   hero: {
     eyebrow: "Nos solutions",
     title: "Une protection construite autour de votre réalité.",
@@ -777,7 +977,7 @@ export const solutionsPage: PublicLandingPage = {
   sections: [
     {
       id: "catalogue",
-      eyebrow: "Cinq domaines de protection",
+      eyebrow: "Sept domaines de protection",
       title: "Explorez la solution qui correspond à votre besoin.",
       cards: solutionSummaries.map((solution) => ({
         title: solution.title,
@@ -830,6 +1030,7 @@ export const individualsPage: PublicLandingPage = {
       cards: [
         { title: "Se déplacer", description: "Voiture, moto et véhicules à deux ou trois roues adaptés à votre usage.", href: "/solutions/automobile", label: "Voir la mobilité" },
         { title: "Prendre soin", description: "Santé individuelle ou familiale selon vos priorités.", href: "/solutions/sante", label: "Voir la santé" },
+        { title: "Préparer l’avenir", description: "Vie, épargne et capitalisation selon vos objectifs de long terme.", href: "/solutions/vie-capitalisation", label: "Voir vie & capitalisation" },
         { title: "Protéger son foyer", description: "Logement, biens et responsabilité au quotidien.", href: "/solutions/habitation", label: "Voir l’habitation" },
         { title: "Préparer un départ", description: "Voyage étudié selon la destination et la durée.", href: "/solutions/voyage", label: "Voir le voyage" },
       ],
@@ -893,6 +1094,7 @@ export const businessesPage: PublicLandingPage = {
         { title: "Biens", description: "Les locaux, stocks, outils, équipements et données nécessaires à l’activité." },
         { title: "Mobilité", description: "Les véhicules, missions et déplacements professionnels." },
         { title: "Personnes", description: "Les dirigeants et équipes dont dépend la continuité de l’organisation." },
+        { title: "Cautions de marché", description: "Soumission, avance, retenue de garantie et bonne fin selon les engagements contractuels.", href: "/solutions/caution", label: "Voir les cautions" },
       ],
     },
     {
@@ -1263,9 +1465,11 @@ export const contactPage: PublicLandingPage & {
     { value: "automobile_voiture", label: "Assurance automobile — Voiture" },
     { value: "automobile_moto", label: "Assurance automobile — Moto / 2-3 roues" },
     { value: "sante", label: "Assurance santé" },
+    { value: "vie_capitalisation", label: "Assurance vie & capitalisation" },
     { value: "habitation", label: "Assurance habitation" },
     { value: "voyage", label: "Assurance voyage" },
     { value: "entreprise", label: "Assurance entreprise" },
+    { value: "caution", label: "Assurance caution" },
     { value: "sinistre", label: "Signaler un sinistre" },
     { value: "autre", label: "Autre demande" },
   ],

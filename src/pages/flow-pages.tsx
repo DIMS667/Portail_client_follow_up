@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import {
   ArrowLeft, Bike, Building2, Car, Check, CheckCircle2, ChevronLeft, ChevronRight,
-  CircleAlert, CircleHelp, FileText, HeartPulse, Home, LifeBuoy, Plane, Save, ShieldCheck, Upload,
+  CircleAlert, CircleHelp, FileText, HeartPulse, Home, Landmark, LifeBuoy, PiggyBank, Plane, Save, ShieldCheck, Upload,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { assetUrl } from "../app/base-path";
@@ -9,14 +9,15 @@ import { usePortal } from "../app/portal-context";
 import { PageHeader, StatusBadge, Timeline } from "../components/portal-ui";
 import {
   insuranceProductForms,
+  type ConfiguredInsuranceProduct,
   type InsuranceFormField,
-  type NonAutomobileInsuranceProduct,
 } from "../data/insurance-product-forms";
 import {
   createClaim, createInsuranceRequest, formatDate, formatFcfa, requestRenewal, selectOffer,
 } from "../services/portal-service";
 import type { AutomobileVehicleKind, InsuranceProduct, InsuranceRequest } from "../types/domain";
 import { AutoRequestForm, VoiceTextarea } from "./auto-request-form";
+import { CautionRequestForm } from "./caution-request-form";
 import { HealthRequestForm } from "./health-request-form";
 import { MotoRequestForm } from "./moto-request-form";
 
@@ -25,9 +26,11 @@ interface ProductChoice { id: InsuranceProduct; label: string; help: string; ima
 const productChoices: ProductChoice[] = [
   { id: "automobile", label: "Automobile", help: "Voiture, moto et véhicules à 2 ou 3 roues", image: assetUrl("/images/insurance-auto.webp"), icon: Car },
   { id: "sante", label: "Santé", help: "Protection individuelle ou familiale", image: assetUrl("/images/insurance-health.webp"), icon: HeartPulse },
+  { id: "vie_capitalisation", label: "Vie & capitalisation", help: "Protection, épargne et préparation de l’avenir", image: assetUrl("/images/advisor-amina.webp"), icon: PiggyBank },
   { id: "voyage", label: "Voyage", help: "Déplacements et séjours", image: assetUrl("/images/insurance-travel.webp"), icon: Plane },
   { id: "habitation", label: "Habitation", help: "Maison, appartement et biens", image: assetUrl("/images/insurance-home.webp"), icon: Home },
   { id: "entreprise", label: "Entreprise", help: "Activité et responsabilité", image: assetUrl("/images/insurance-business.webp"), icon: Building2 },
+  { id: "caution", label: "Caution", help: "Soumission, avance, retenue de garantie et bonne fin", image: assetUrl("/images/public-entrepreneur.png"), icon: Landmark },
 ];
 
 export function NewRequestPage() {
@@ -56,6 +59,7 @@ export function NewRequestPage() {
   if (!preparationMode) return <RequestPreparationChoice product={selectedProduct} onBack={() => setProduct(null)} onSelect={setPreparationMode} />;
   if (preparationMode === "broker") return <BrokerDelegationForm product={selectedProduct} onBack={() => setPreparationMode(null)} onSubmit={submitRequest} />;
   if (product === "sante") return <HealthRequestForm backLabel="Choisir un autre parcours" onBack={() => setPreparationMode(null)} onSubmit={submitRequest} />;
+  if (product === "caution") return <CautionRequestForm backLabel="Choisir un autre parcours" onBack={() => setPreparationMode(null)} onSubmit={submitRequest} />;
   return <ProductRequestForm product={selectedProduct} backLabel="Choisir un autre parcours" onBack={() => setPreparationMode(null)} onSubmit={submitRequest} />;
 }
 
@@ -117,7 +121,7 @@ function BrokerDelegationForm({ product, onBack, onSubmit }: { product: ProductC
 }
 
 function ProductRequestForm({ product, onBack, onSubmit, backLabel = "Changer d’assurance" }: { product: ProductChoice; onBack: () => void; onSubmit: (data: Partial<InsuranceRequest>) => void; backLabel?: string }) {
-  const config = insuranceProductForms[product.id as NonAutomobileInsuranceProduct];
+  const config = insuranceProductForms[product.id as ConfiguredInsuranceProduct];
   const fields = config.sections.flatMap((section) => section.fields);
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map((field) => [field.key, field.defaultValue])));
   const [coverage, setCoverage] = useState(config.coverageOptions.at(-1) ?? config.coverageOptions[0]);
@@ -147,7 +151,7 @@ function ProductRequestForm({ product, onBack, onSubmit, backLabel = "Changer d�
       <header className="product-request-hero"><span className="generic-product-icon"><Icon size={30} /></span><div><span className="product-form-tag">Formulaire personnalisé</span><h2>{config.title}</h2><p>{config.intro}</p></div></header>
       {config.sections.map((section, sectionIndex) => <section className="product-form-section" key={section.title}>
         <div className="product-form-heading"><span>{sectionIndex + 1}</span><div><h3>{section.title}</h3>{section.description && <p>{section.description}</p>}</div></div>
-        <div className="form-grid">{section.fields.map((field) => <label className={field.full ? "full-span" : undefined} key={field.key}>{field.label}{!field.required && <small className="field-optional">Facultatif</small>}{field.type === "select" ? <select value={values[field.key]} onChange={(event) => updateValue(field.key, event.target.value)} required={field.required}>{field.options?.map((option) => <option key={option}>{option}</option>)}</select> : <input type={field.type} value={values[field.key]} onChange={(event) => updateValue(field.key, event.target.value)} placeholder={field.placeholder} min={field.min} required={field.required} inputMode={field.type === "number" ? "numeric" : undefined} />}</label>)}</div>
+        <div className="form-grid">{section.fields.map((field) => <label className={field.full ? "full-span" : undefined} key={field.key}>{field.label}{field.required && <span className="required-mark" aria-hidden="true">*</span>}{!field.required && <small className="field-optional">Facultatif</small>}{field.type === "select" ? <select value={values[field.key]} onChange={(event) => updateValue(field.key, event.target.value)} required={field.required}>{field.options?.map((option) => <option key={option}>{option}</option>)}</select> : <input type={field.type} value={values[field.key]} onChange={(event) => updateValue(field.key, event.target.value)} placeholder={field.placeholder} min={field.min} required={field.required} inputMode={field.type === "number" ? "numeric" : undefined} />}</label>)}</div>
       </section>)}
       <section className="product-form-section">
         <div className="product-form-heading"><span>{config.sections.length + 1}</span><div><h3>Protection recherchée</h3><p>Choisissez le niveau qui se rapproche le plus de votre besoin. Votre courtier pourra l’ajuster avec vous.</p></div></div>

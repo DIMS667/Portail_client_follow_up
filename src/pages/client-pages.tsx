@@ -28,7 +28,16 @@ import type {
 
 const iconForKind: Record<string, typeof Bell> = { proposal: ClipboardList, document: FileCheck2, payment: WalletCards, contract: ShieldCheck, request: FileText, renewal: RefreshCcw, claim: LifeBuoy, message: MessageCircle };
 const paymentLabels: Record<PaymentMethod, string> = { mobile_money: "Mobile Money", orange_money: "Orange Money", bank_card: "Carte bancaire", bank_transfer: "Virement" };
-const iconForProduct: Record<InsuranceProduct, typeof Car> = { automobile: Car, moto: Bike, sante: HeartPulse, voyage: Plane, habitation: Home, entreprise: Building2 };
+const iconForProduct: Record<InsuranceProduct, typeof Car> = {
+  automobile: Car,
+  moto: Bike,
+  sante: HeartPulse,
+  vie_capitalisation: HandCoins,
+  voyage: Plane,
+  habitation: Home,
+  entreprise: Building2,
+  caution: ShieldCheck,
+};
 const getRequestVehicleKind = (request: InsuranceRequest) => request.vehicleKind ?? (request.motoRequest || request.product === "moto" ? "moto" : request.automobileRequest || request.product === "automobile" ? "car" : undefined);
 const autoRequestTypeLabels: Record<AutoRequestType, string> = { new_vehicle: "Assurer un nouveau véhicule", renewal: "Renouveler mon assurance", switch_insurer: "Changer d’assureur", advice: "Obtenir un conseil", other: "Autre besoin" };
 const autoEnergyLabels: Record<AutoVehicleEnergy, string> = { petrol: "Essence", diesel: "Diesel" };

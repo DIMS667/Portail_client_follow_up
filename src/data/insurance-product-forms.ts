@@ -1,6 +1,6 @@
 import type { InsuranceProduct } from "../types/domain";
 
-export type NonAutomobileInsuranceProduct = Exclude<InsuranceProduct, "automobile">;
+export type ConfiguredInsuranceProduct = Exclude<InsuranceProduct, "automobile" | "caution">;
 
 export type InsuranceFormFieldType = "text" | "number" | "date" | "select";
 export type InsuranceFormFieldFormat = "fcfa" | "date";
@@ -33,7 +33,7 @@ export interface InsuranceProductFormConfig {
 }
 
 export const insuranceProductForms: Record<
-  NonAutomobileInsuranceProduct,
+  ConfiguredInsuranceProduct,
   InsuranceProductFormConfig
 > = {
   moto: {
@@ -226,6 +226,114 @@ export const insuranceProductForms: Record<
       "Hospitalisation",
       "Hospitalisation et soins courants",
       "Couverture complète",
+      "Je souhaite être conseillé",
+    ],
+    startDateKey: "desiredStartDate",
+  },
+
+  vie_capitalisation: {
+    title: "Votre projet de vie et d’épargne",
+    intro:
+      "Précisez votre objectif, l’horizon envisagé et l’effort d’épargne souhaité pour permettre à votre courtier de préparer une solution adaptée.",
+    sections: [
+      {
+        title: "Votre projet",
+        description: "Ces informations permettent de distinguer le besoin de protection du besoin de capitalisation.",
+        fields: [
+          {
+            key: "solutionType",
+            label: "Solution recherchée",
+            type: "select",
+            defaultValue: "Assurance vie",
+            options: ["Assurance vie", "Contrat de capitalisation", "Solution mixte"],
+            required: true,
+          },
+          {
+            key: "objective",
+            label: "Objectif principal",
+            type: "select",
+            defaultValue: "Protéger mes proches",
+            options: [
+              "Protéger mes proches",
+              "Constituer une épargne",
+              "Préparer ma retraite",
+              "Financer un projet",
+              "Préparer une transmission",
+            ],
+            required: true,
+          },
+          {
+            key: "subscriberProfile",
+            label: "Profil du souscripteur",
+            type: "select",
+            defaultValue: "Particulier",
+            options: ["Particulier", "Professionnel", "Entreprise"],
+            required: true,
+          },
+          {
+            key: "birthDate",
+            label: "Date de naissance du souscripteur",
+            type: "date",
+            defaultValue: "",
+            required: true,
+            format: "date",
+          },
+        ],
+      },
+      {
+        title: "Capital, versements et durée",
+        description: "Indiquez des montants estimatifs. Ils pourront être ajustés avec votre courtier.",
+        fields: [
+          {
+            key: "targetCapital",
+            label: "Capital souhaité",
+            type: "number",
+            defaultValue: "",
+            placeholder: "Ex. 25 000 000",
+            min: 0,
+            format: "fcfa",
+          },
+          {
+            key: "paymentFrequency",
+            label: "Rythme de versement envisagé",
+            type: "select",
+            defaultValue: "Mensuel",
+            options: ["Versement unique", "Mensuel", "Trimestriel", "Semestriel", "Annuel"],
+            required: true,
+          },
+          {
+            key: "periodicAmount",
+            label: "Montant du versement envisagé",
+            type: "number",
+            defaultValue: "",
+            placeholder: "Ex. 50 000",
+            min: 0,
+            required: true,
+            format: "fcfa",
+          },
+          {
+            key: "investmentHorizon",
+            label: "Horizon souhaité",
+            type: "select",
+            defaultValue: "10 ans",
+            options: ["5 ans", "10 ans", "15 ans", "20 ans", "Durée à définir avec le courtier"],
+            required: true,
+          },
+          {
+            key: "desiredStartDate",
+            label: "Date de prise d’effet souhaitée",
+            type: "date",
+            defaultValue: "",
+            required: true,
+            format: "date",
+          },
+        ],
+      },
+    ],
+    coverageOptions: [
+      "Protection décès",
+      "Épargne et capitalisation",
+      "Préparation de la retraite",
       "Je souhaite être conseillé",
     ],
     startDateKey: "desiredStartDate",

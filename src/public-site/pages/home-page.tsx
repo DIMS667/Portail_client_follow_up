@@ -10,7 +10,9 @@ import {
   HandHeart,
   HeartPulse,
   House,
+  Landmark,
   MessageCircleMore,
+  PiggyBank,
   Plane,
   Scale,
   SearchCheck,
@@ -36,9 +38,11 @@ import "../public-site.css";
 const needIcons = {
   auto: CarFront,
   health: HeartPulse,
+  life: PiggyBank,
   home: House,
   travel: Plane,
   business: Building2,
+  bond: Landmark,
 } as const;
 
 const commitmentIcons = {
@@ -61,7 +65,15 @@ function SectionLabel({ children }: { children: ReactNode }) {
 export function HomePage() {
   const { navigate } = usePortal();
   const goToQuote = () => navigate("/contact?objet=devis");
-  const solutionRoutes = { auto: "/solutions/automobile", health: "/solutions/sante", home: "/solutions/habitation", travel: "/solutions/voyage", business: "/solutions/entreprise" } as const;
+  const solutionRoutes = {
+    auto: "/solutions/automobile",
+    health: "/solutions/sante",
+    life: "/solutions/vie-capitalisation",
+    home: "/solutions/habitation",
+    travel: "/solutions/voyage",
+    business: "/solutions/entreprise",
+    bond: "/solutions/caution",
+  } as const;
 
   return (
     <PublicPageShell className="public-home-page">

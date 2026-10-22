@@ -234,7 +234,7 @@ export function SolutionsPublicPage() {
       <section className="public-page-section" aria-labelledby="solutions-list-title">
         <div className="public-container">
           <div className="public-page-heading public-page-heading--split">
-            <div><SectionLabel>Cinq domaines de protection</SectionLabel><h2 id="solutions-list-title">Explorez la solution qui vous ressemble.</h2></div>
+            <div><SectionLabel>Sept domaines de protection</SectionLabel><h2 id="solutions-list-title">Explorez la solution qui vous ressemble.</h2></div>
             <p>Chaque page vous présente les garanties à examiner, les points de vigilance et les documents utiles avant une étude.</p>
           </div>
           <div className="public-solutions-grid">

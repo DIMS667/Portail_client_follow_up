@@ -1,4 +1,12 @@
-export type InsuranceProduct = "automobile" | "moto" | "sante" | "voyage" | "habitation" | "entreprise";
+export type InsuranceProduct =
+  | "automobile"
+  | "moto"
+  | "sante"
+  | "vie_capitalisation"
+  | "voyage"
+  | "habitation"
+  | "entreprise"
+  | "caution";
 export type RequestStatus = "new" | "under_review" | "proposals_available" | "offer_selected" | "documents_required" | "payment_pending" | "policy_issuing" | "policy_available" | "completed";
 export type DocumentStatus = "required" | "received" | "reviewing" | "validated" | "correction_required";
 export type PaymentStatus = "pending" | "succeeded" | "failed";
