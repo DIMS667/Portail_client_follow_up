@@ -25,10 +25,11 @@ const NewClaimPage = lazy(() => import("../pages/new-claim-page").then((module) 
 const LoginPage = lazy(() => import("../pages/public-pages").then((module) => ({ default: module.LoginPage })));
 
 export function PortalRouteView() {
-  const { pathname, store } = usePortal();
+  const { authenticationReady, pathname, store } = usePortal();
   const isPortalArea = pathname.startsWith("/espace") || (isPortalDeployment && pathname === "/");
 
   if (!isPortalArea) return isPortalDeployment ? <NotFoundPage /> : null;
+  if (!authenticationReady) return <PortalSessionLoadingFallback />;
   if (!store.session.authenticated) {
     return isPortalDeployment ? <PortalLoginRedirect /> : <LoginPage />;
   }
@@ -61,6 +62,10 @@ export function PortalRouteView() {
       </Suspense>
     </ClientShell>
   );
+}
+
+function PortalSessionLoadingFallback() {
+  return <div className="portal-session-loading" role="status" aria-live="polite"><span>Vérification de votre session…</span></div>;
 }
 
 function PortalPageLoadingFallback() {

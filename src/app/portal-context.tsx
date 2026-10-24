@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { fromBrowserPath, toBrowserPath } from "./base-path";
+import { fromBrowserPath, isPortalDeployment, toBrowserPath } from "./base-path";
 import { localStoragePortalRepository } from "../repositories/portal-repository";
+import { appliquerCompteAuthentifie, obtenirMonCompte } from "../services/authentication-api";
 import type { PortalStore } from "../types/domain";
 
 type StoreUpdater = PortalStore | ((current: PortalStore) => PortalStore);
@@ -10,6 +11,7 @@ interface PortalContextValue {
   route: string;
   pathname: string;
   query: URLSearchParams;
+  authenticationReady: boolean;
   updateStore: (updater: StoreUpdater) => void;
   navigate: (path: string) => void;
   resetDemo: () => void;
@@ -24,6 +26,23 @@ function currentRoute() {
 export function PortalProvider({ children }: { children: ReactNode }) {
   const [store, setStore] = useState(() => localStoragePortalRepository.load());
   const [route, setRoute] = useState(currentRoute);
+  const [authenticationReady, setAuthenticationReady] = useState(!isPortalDeployment);
+
+  useEffect(() => {
+    if (!isPortalDeployment) return;
+    let active = true;
+    void obtenirMonCompte()
+      .then((compte) => {
+        if (active) setStore((current) => appliquerCompteAuthentifie(current, compte));
+      })
+      .catch(() => {
+        if (active) setStore((current) => ({ ...current, session: { authenticated: false } }));
+      })
+      .finally(() => {
+        if (active) setAuthenticationReady(true);
+      });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const handlePopState = () => setRoute(currentRoute());
@@ -42,6 +61,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
       route,
       pathname: url.pathname,
       query: url.searchParams,
+      authenticationReady,
       updateStore: (updater) => setStore((current) => typeof updater === "function" ? updater(current) : updater),
       navigate: (path) => {
         window.history.pushState({}, "", toBrowserPath(path));
@@ -50,7 +70,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
       },
       resetDemo: () => setStore(localStoragePortalRepository.reset()),
     };
-  }, [route, store]);
+  }, [authenticationReady, route, store]);
 
   return <PortalContext.Provider value={value}>{children}</PortalContext.Provider>;
 }

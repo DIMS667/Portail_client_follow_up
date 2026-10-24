@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { BrandLogo } from "./brand-logo";
 import { usePortal } from "../app/portal-context";
 import { signOut } from "../services/portal-service";
+import { deconnecter } from "../services/authentication-api";
 
 const primaryNav = [
   { label: "Accueil", route: "/espace", icon: Home },
@@ -37,7 +38,18 @@ function isActive(pathname: string, route: string) {
 export function ClientShell({ children }: { children: ReactNode }) {
   const { store, pathname, navigate, updateStore, resetDemo } = usePortal();
   const unread = store.notifications.filter((notification) => !notification.read).length;
-  const logout = () => { updateStore(signOut(store)); navigate("/"); };
+  const clientName = `${store.client.firstName} ${store.client.lastName}`.trim();
+  const clientInitials = `${store.client.firstName[0] || ""}${store.client.lastName[0] || ""}`.toUpperCase() || "CL";
+  const logout = async () => {
+    try {
+      await deconnecter();
+    } finally {
+      const next = signOut(store);
+      updateStore(next);
+      if (import.meta.env.PROD) window.location.assign("/login/");
+      else navigate("/");
+    }
+  };
   return (
     <div className="min-h-screen bg-[#fbf8f7] text-slate-950">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col overflow-hidden bg-[linear-gradient(180deg,#4a0710_0%,#710d17_58%,#98131d_100%)] px-4 py-5 text-red-50 shadow-[18px_0_45px_rgba(94,10,19,.12)] lg:flex">
@@ -65,7 +77,7 @@ export function ClientShell({ children }: { children: ReactNode }) {
               <AlertDialogFooter><AlertDialogCancel className="dialog-cancel">Annuler</AlertDialogCancel><AlertDialogAction className="dialog-confirm" onClick={() => { resetDemo(); navigate("/"); }}>Réinitialiser</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <button type="button" className="flex items-center gap-3 rounded-2xl border border-white/[.1] bg-white/[.06] p-2.5 text-left transition-colors hover:bg-white/[.1]" onClick={() => navigate("/espace/profil")}><span className="grid size-9 place-items-center rounded-xl bg-brand-orange text-xs font-bold text-white">JD</span><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">Jean Dupont</strong><small className="text-[10px] text-red-100/55">Client · CL-001</small></div><ChevronRight size={15} className="text-red-100/40" /></button>
+          <button type="button" className="flex items-center gap-3 rounded-2xl border border-white/[.1] bg-white/[.06] p-2.5 text-left transition-colors hover:bg-white/[.1]" onClick={() => navigate("/espace/profil")}><span className="grid size-9 place-items-center rounded-xl bg-brand-orange text-xs font-bold text-white">{clientInitials}</span><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">{clientName}</strong><small className="text-[10px] text-red-100/55">Client · {store.client.id}</small></div><ChevronRight size={15} className="text-red-100/40" /></button>
         </div>
       </aside>
 

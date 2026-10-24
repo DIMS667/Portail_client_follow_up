@@ -36,6 +36,9 @@ jobs:
         run: npm run typecheck
 
       - name: Build website and client portal
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://api.followupassurance.com' }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
         run: npm run build:production
 
       - name: Verify production and SEO package
