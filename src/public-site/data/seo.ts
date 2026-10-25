@@ -125,7 +125,7 @@ const legalRoutes: Readonly<Record<string, SeoRouteDefinition>> = {
   },
   "/confidentialite": {
     title: "Politique de confidentialité | Follow-Up Insurance",
-    description: "Principes appliqués au traitement des informations transmises sur le site Follow-Up Insurance.",
+    description: "Découvrez comment Follow-Up Insurance collecte, utilise, protège, conserve et supprime les données personnelles, y compris lors de la connexion Google.",
     image: DEFAULT_SOCIAL_IMAGE,
     imageAlt: "Follow-Up Insurance",
     indexable: false,

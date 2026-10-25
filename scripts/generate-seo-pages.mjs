@@ -10,6 +10,7 @@ import {
   solutionPages,
   solutionSummaries,
 } from "../src/public-site/data/public-pages.ts";
+import { privacyPolicy } from "../src/public-site/data/privacy-policy.ts";
 import {
   PUBLIC_INDEXABLE_ROUTES,
   PUBLIC_ORIGIN,
@@ -125,6 +126,10 @@ const legalContent = {
 };
 
 function renderLegal(route) {
+  if (route === "/confidentialite") {
+    const sections = privacyPolicy.sections.map((section) => `<section><h2>${escapeHtml(section.title)}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}${section.bullets ? renderList(section.bullets) : ""}</section>`).join("");
+    return `${renderHeader()}<main><article><h1>${escapeHtml(privacyPolicy.title)}</h1><p>${escapeHtml(privacyPolicy.intro)}</p><p><strong>Dernière mise à jour :</strong> ${escapeHtml(privacyPolicy.updatedAt)}</p>${sections}<section><h2>Nous contacter au sujet de vos données</h2><p>Utilisez la page Contact pour adresser une demande relative à votre compte ou à vos données personnelles.</p>${renderLink("/contact", "Accéder à la page Contact")}</section></article></main>${renderFooter()}`;
+  }
   const [title, intro] = legalContent[route];
   return `${renderHeader()}<main><article><h1>${escapeHtml(title)}</h1><p>${escapeHtml(intro)}</p><h2>Informations en cours de validation</h2><p>Cette page est en cours de validation. Les informations définitives seront publiées après confirmation des éléments relatifs à l’éditeur, à l’hébergement et, selon la page, au traitement des données.</p>${renderLink("/contact", "Nous contacter")}</article></main>${renderFooter()}`;
 }

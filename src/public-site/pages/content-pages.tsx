@@ -38,6 +38,7 @@ import {
   type SolutionPageContent,
   type SolutionSlug,
 } from "../data/public-pages";
+import { privacyPolicy } from "../data/privacy-policy";
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return <span className="public-kicker"><span aria-hidden="true" />{children}</span>;
@@ -514,6 +515,7 @@ const legalContent = {
 export type LegalPageKind = keyof typeof legalContent;
 
 export function LegalPublicPage({ kind }: { kind: LegalPageKind }) {
+  if (kind === "confidentialite") return <PrivacyPolicyPage />;
   const content = legalContent[kind];
   return (
     <PublicPageShell>
@@ -525,6 +527,34 @@ export function LegalPublicPage({ kind }: { kind: LegalPageKind }) {
           <h2>Contact</h2><p>Pour toute question relative à cette page, utilisez le formulaire de contact afin d’être orienté vers l’interlocuteur compétent.</p>
           <PublicLink className="public-text-link" href="/contact">Nous contacter<ArrowRight size={16} /></PublicLink>
         </div>
+      </section>
+    </PublicPageShell>
+  );
+}
+
+function PrivacyPolicyPage() {
+  return (
+    <PublicPageShell>
+      <section className="public-page-section">
+        <article className="public-container public-legal-copy">
+          <Breadcrumbs items={[{ label: "Accueil", href: "/" }, { label: privacyPolicy.title }]} />
+          <SectionLabel>Protection des données</SectionLabel>
+          <h1>{privacyPolicy.title}</h1>
+          <p className="public-legal-copy__intro">{privacyPolicy.intro}</p>
+          <p className="public-legal-copy__updated"><strong>Dernière mise à jour :</strong> {privacyPolicy.updatedAt}</p>
+          {privacyPolicy.sections.map((section) => (
+            <section key={section.title}>
+              <h2>{section.title}</h2>
+              {section.paragraphs?.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+              {section.bullets && <ul>{section.bullets.map((item) => <li key={item}>{item}</li>)}</ul>}
+            </section>
+          ))}
+          <div className="public-legal-copy__contact">
+            <h2>Nous contacter au sujet de vos données</h2>
+            <p>Utilisez la page Contact pour adresser une demande relative à votre compte ou à vos données personnelles.</p>
+            <PublicLink className="public-text-link" href="/contact">Accéder à la page Contact<ArrowRight size={16} /></PublicLink>
+          </div>
+        </article>
       </section>
     </PublicPageShell>
   );

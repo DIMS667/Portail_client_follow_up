@@ -336,6 +336,13 @@
 .public-legal-copy h1 { margin-top: 16px; font-size: clamp(44px, 5vw, 70px); line-height: .98; letter-spacing: -.045em; }
 .public-legal-copy h2 { margin: 36px 0 12px; font-size: 28px; }
 .public-legal-copy p { color: var(--public-muted); line-height: 1.7; }
+.public-legal-copy section { scroll-margin-top: 120px; }
+.public-legal-copy ul { margin: 12px 0 0; padding-left: 24px; color: var(--public-muted); }
+.public-legal-copy li { margin: 8px 0; padding-left: 4px; line-height: 1.65; }
+.public-legal-copy__intro { max-width: 780px; font-size: 18px; }
+.public-legal-copy__updated { display: inline-flex; gap: 5px; margin: 18px 0 4px; padding: 9px 13px; border: 1px solid var(--public-line); border-radius: 10px; background: var(--public-soft); font-size: 13px; }
+.public-legal-copy__contact { margin-top: 42px; padding: 24px; border-left: 4px solid var(--public-orange); border-radius: 0 16px 16px 0; background: var(--public-soft); }
+.public-legal-copy__contact h2 { margin-top: 0; }
 .public-faq-category { margin-top: 54px; }
 .public-faq-category > h2 { font-size: clamp(27px, 3vw, 38px); letter-spacing: -.03em; }
 .public-contact-form__grid label:not(.public-contact-consent) { display: grid; gap: 8px; }
