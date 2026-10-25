@@ -136,12 +136,27 @@ export function obtenirMonCompte() {
   return envoyer<CompteClientAuthentifie>("/moi");
 }
 
+export function mettreAJourMonCompte(nomComplet: string, numeroTelephone: string) {
+  return envoyer<CompteClientAuthentifie>("/moi", {
+    method: "PATCH",
+    headers: enteteCsrf(),
+    body: JSON.stringify({
+      nom_complet: nomComplet,
+      numero_telephone: numeroTelephone,
+    }),
+  });
+}
+
 export function deconnecter() {
-  const jetonCsrf = lireCookie("followup_csrf_client");
   return envoyer<void>("/deconnexion", {
     method: "POST",
-    headers: jetonCsrf ? { "X-CSRF-Token": jetonCsrf } : {},
+    headers: enteteCsrf(),
   });
+}
+
+function enteteCsrf(): HeadersInit {
+  const jetonCsrf = lireCookie("followup_csrf_client");
+  return jetonCsrf ? { "X-CSRF-Token": jetonCsrf } : {};
 }
 
 function lireCookie(nom: string) {

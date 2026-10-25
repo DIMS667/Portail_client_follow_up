@@ -17,6 +17,11 @@ import { assetUrl } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
 import { EmptyState, InfoCard, LinkButton, PageHeader, StatusBadge, Timeline, documentLabels, requestLabels } from "../components/portal-ui";
 import {
+  appliquerCompteAuthentifie,
+  deconnecter,
+  mettreAJourMonCompte,
+} from "../services/authentication-api";
+import {
   addMessage, formatDate, formatFcfa, markNotificationRead, replaceDocument,
   signOut, simulatePayment, updateProfile,
 } from "../services/portal-service";
@@ -411,8 +416,83 @@ export function ProfilePage() {
   const { store, updateStore, navigate } = usePortal();
   const [draft, setDraft] = useState(store.client);
   const [saved, setSaved] = useState(false);
-  const submit = (event: FormEvent) => { event.preventDefault(); updateStore(updateProfile(store, draft)); setSaved(true); setTimeout(() => setSaved(false), 2500); };
-  return <div className="page-stack"><PageHeader eyebrow="Informations personnelles" title="Mon profil" description="Tenez vos coordonnées et vos préférences de notification à jour." /><form className="profile-layout" onSubmit={submit}><section className="panel"><div className="profile-identity"><span className="profile-avatar">JD</span><div><h2>Jean Dupont</h2><p>Client depuis 2026 · {store.client.id}</p></div></div>{saved && <div className="form-alert success" role="status"><CheckCircle2 size={17} /> Vos modifications ont été enregistrées.</div>}<div className="form-grid"><label>Prénom<input value={draft.firstName} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} /></label><label>Nom<input value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></label><label>Téléphone<input value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} /></label><label>Email<input type="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} /></label><label>Adresse<input value={draft.address} onChange={(event) => setDraft({ ...draft, address: event.target.value })} /></label><label>Ville<input value={draft.city} onChange={(event) => setDraft({ ...draft, city: event.target.value })} /></label></div></section><aside className="panel preferences"><span className="page-eyebrow">Préférences</span><h2>Notifications</h2><p>Choisissez comment vous souhaitez être informé.</p>{([['email','Email'],['sms','SMS'],['whatsapp','WhatsApp'],['inApp','Notification application']] as const).map(([key, label]) => <label className="switch-row" key={key}><span>{label}</span><input type="checkbox" checked={draft.preferences[key]} onChange={(event) => setDraft({ ...draft, preferences: { ...draft.preferences, [key]: event.target.checked } })} /></label>)}<button className="button button-primary full" type="submit">Enregistrer les modifications</button><Button className="mt-3 w-full rounded-xl" variant="outline" type="button" onClick={() => { updateStore(signOut(store)); navigate("/"); }}><LogOut size={16} /> Se déconnecter</Button></aside></form></div>;
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const fullName = `${store.client.firstName} ${store.client.lastName}`.trim();
+  const initials = `${store.client.firstName[0] || ""}${store.client.lastName[0] || ""}`.toUpperCase() || "CL";
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    setSaved(false);
+    setSaving(true);
+    try {
+      const compte = await mettreAJourMonCompte(`${draft.firstName} ${draft.lastName}`.trim(), draft.phone);
+      const storeAuthentifie = appliquerCompteAuthentifie(store, compte);
+      updateStore(updateProfile(storeAuthentifie, {
+        ...draft,
+        firstName: storeAuthentifie.client.firstName,
+        lastName: storeAuthentifie.client.lastName,
+        email: compte.adresse_email,
+        phone: compte.numero_telephone,
+      }));
+      setDraft((current) => ({
+        ...current,
+        firstName: storeAuthentifie.client.firstName,
+        lastName: storeAuthentifie.client.lastName,
+        email: compte.adresse_email,
+        phone: compte.numero_telephone,
+      }));
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2500);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "La mise à jour du profil a échoué.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await deconnecter();
+    } finally {
+      updateStore(signOut(store));
+      if (import.meta.env.PROD) window.location.assign("/login/");
+      else navigate("/");
+    }
+  };
+
+  return (
+    <div className="page-stack">
+      <PageHeader eyebrow="Informations personnelles" title="Mon profil" description="Tenez vos coordonnées et vos préférences de notification à jour." />
+      <form className="profile-layout" onSubmit={submit}>
+        <section className="panel">
+          <div className="profile-identity">
+            <span className="profile-avatar">{initials}</span>
+            <div><h2>{fullName}</h2><p>Compte client · {store.client.id}</p></div>
+          </div>
+          {saved && <div className="form-alert success" role="status"><CheckCircle2 size={17} /> Vos modifications ont été enregistrées.</div>}
+          {error && <div className="form-alert error" role="alert">{error}</div>}
+          <div className="form-grid">
+            <label>Prénom<input value={draft.firstName} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} required /></label>
+            <label>Nom<input value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></label>
+            <label>Téléphone<input value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} type="tel" autoComplete="tel" required /></label>
+            <label>Email<input type="email" value={draft.email} readOnly aria-readonly="true" /><small className="field-hint">L’adresse liée à votre mode de connexion ne peut pas être modifiée ici.</small></label>
+            <label>Adresse<input value={draft.address} onChange={(event) => setDraft({ ...draft, address: event.target.value })} /></label>
+            <label>Ville<input value={draft.city} onChange={(event) => setDraft({ ...draft, city: event.target.value })} /></label>
+          </div>
+        </section>
+        <aside className="panel preferences">
+          <span className="page-eyebrow">Préférences</span>
+          <h2>Notifications</h2>
+          <p>Choisissez comment vous souhaitez être informé.</p>
+          {([['email','Email'],['sms','SMS'],['whatsapp','WhatsApp'],['inApp','Notification application']] as const).map(([key, label]) => <label className="switch-row" key={key}><span>{label}</span><input type="checkbox" checked={draft.preferences[key]} onChange={(event) => setDraft({ ...draft, preferences: { ...draft.preferences, [key]: event.target.checked } })} /></label>)}
+          <button className="button button-primary full" type="submit" disabled={saving}>{saving ? "Enregistrement…" : "Enregistrer les modifications"}</button>
+          <Button className="mt-3 w-full rounded-xl" variant="outline" type="button" onClick={logout}><LogOut size={16} /> Se déconnecter</Button>
+        </aside>
+      </form>
+    </div>
+  );
 }
 
 export function HelpPage() {
