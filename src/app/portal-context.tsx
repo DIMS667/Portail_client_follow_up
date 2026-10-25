@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { fromBrowserPath, isPortalDeployment, toBrowserPath } from "./base-path";
 import { localStoragePortalRepository } from "../repositories/portal-repository";
 import { appliquerCompteAuthentifie, obtenirMonCompte } from "../services/authentication-api";
+import { fusionnerDemandesAutomobile, obtenirDemandesAutomobile } from "../services/automobile-request-api";
 import type { PortalStore } from "../types/domain";
 
 type StoreUpdater = PortalStore | ((current: PortalStore) => PortalStore);
@@ -32,8 +33,12 @@ export function PortalProvider({ children }: { children: ReactNode }) {
     if (!isPortalDeployment) return;
     let active = true;
     void obtenirMonCompte()
-      .then((compte) => {
-        if (active) setStore((current) => appliquerCompteAuthentifie(current, compte));
+      .then(async (compte) => {
+        const demandes = await obtenirDemandesAutomobile().catch(() => []);
+        if (active) setStore((current) => {
+          const authentifie = appliquerCompteAuthentifie(current, compte);
+          return { ...authentifie, requests: fusionnerDemandesAutomobile(authentifie.requests, demandes) };
+        });
       })
       .catch(() => {
         if (active) setStore((current) => ({ ...current, session: { authenticated: false } }));

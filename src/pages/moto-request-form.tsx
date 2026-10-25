@@ -216,10 +216,12 @@ const focusTargets: Record<string, string> = {
   "has-vignette": "has-vignette-yes",
 };
 
-export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’assurance" }: { onBack: () => void; onSubmit: (data: Partial<InsuranceRequest>) => void; backLabel?: string }) {
+export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’assurance" }: { onBack: () => void; onSubmit: (data: Partial<InsuranceRequest>) => Promise<void> | void; backLabel?: string }) {
   const { store } = usePortal();
   const [draft, setDraft] = useState<MotoDraft>(loadDraft);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submissionError, setSubmissionError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const { mode, step, form } = draft;
 
   useEffect(() => {
@@ -291,7 +293,7 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
     }
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (step < STEP_LABELS.length - 1) {
       const nextErrors = validateStep(step, form);
@@ -364,26 +366,33 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
       hasVignette: Boolean(form.hasVignette),
     };
 
-    clearSavedDraft();
-
-    onSubmit({
-      product: "automobile",
-      productLabel: "Assurance automobile",
-      vehicleKind: "moto",
-      motoRequest,
-      vehicle: {
-        brand: motoRequest.vehicle.brand,
-        model: motoRequest.vehicle.model,
-        year: String(motoRequest.vehicle.year),
-        registration: motoRequest.vehicle.registration,
-        value: motoRequest.vehicle.estimatedValue,
-        usage: usageLabels[motoRequest.vehicle.usage],
-      },
-      desiredStartDate: motoRequest.coverage.desiredStartDate ?? undefined,
-    });
+    setSubmissionError("");
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        product: "automobile",
+        productLabel: "Assurance automobile",
+        vehicleKind: "moto",
+        motoRequest,
+        vehicle: {
+          brand: motoRequest.vehicle.brand,
+          model: motoRequest.vehicle.model,
+          year: String(motoRequest.vehicle.year),
+          registration: motoRequest.vehicle.registration,
+          value: motoRequest.vehicle.estimatedValue,
+          usage: usageLabels[motoRequest.vehicle.usage],
+        },
+        desiredStartDate: motoRequest.coverage.desiredStartDate ?? undefined,
+      });
+      clearSavedDraft();
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : "La demande n’a pas pu être transmise.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const submitDelegatedRequest = (event: FormEvent<HTMLFormElement>) => {
+  const submitDelegatedRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const message = form.delegatedMessage.trim();
     if (!message) {
@@ -396,14 +405,22 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
       completionMode: "broker_delegation",
       delegatedMessage: message,
     };
-    clearSavedDraft();
-    onSubmit({
-      product: "automobile",
-      productLabel: "Assurance automobile",
-      vehicleKind: "moto",
-      motoRequest,
-      comments: message,
-    });
+    setSubmissionError("");
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        product: "automobile",
+        productLabel: "Assurance automobile",
+        vehicleKind: "moto",
+        motoRequest,
+        comments: message,
+      });
+      clearSavedDraft();
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : "La demande n’a pas pu être transmise.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (mode === null) {
@@ -434,8 +451,9 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
           clearError("delegated-message");
         }} error={errors["delegated-message"]} placeholder="Exemple : je souhaite assurer ma moto et être accompagné pour choisir les garanties adaptées…" required rows={8} />
         <div className="auto-request-helper"><CircleHelp size={17} /> Votre courtier pourra vous demander des précisions ou des documents avant de préparer ses propositions.</div>
+        {submissionError && <div className="form-alert error" role="alert"><CircleAlert size={18} /> {submissionError}</div>}
         <div className="auto-request-save"><Save size={15} /><span>Brouillon enregistré automatiquement pendant cette session</span></div>
-        <div className="flow-actions auto-request-actions"><button className="button button-secondary" type="button" onClick={returnToModeSelection}>Retour</button><button className="button button-primary" type="submit">Transmettre au courtier <ChevronRight size={18} /></button></div>
+        <div className="flow-actions auto-request-actions"><button className="button button-secondary" type="button" onClick={returnToModeSelection}>Retour</button><button className="button button-primary" type="submit" disabled={submitting}>{submitting ? "Transmission…" : "Transmettre au courtier"} {!submitting && <ChevronRight size={18} />}</button></div>
       </form>
     </div>;
   }
@@ -631,10 +649,11 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
         )}
 
         {Object.keys(errors).length > 0 && <div className="form-alert error auto-request-error-summary" role="alert"><CircleAlert size={18} /><span>Vérifiez les champs signalés avant de continuer.</span></div>}
+        {submissionError && <div className="form-alert error auto-request-error-summary" role="alert"><CircleAlert size={18} /><span>{submissionError}</span></div>}
         <div className="auto-request-save"><Save size={15} /><span>Brouillon enregistré automatiquement pendant cette session</span></div>
         <div className="flow-actions auto-request-actions">
           {step > 0 && <button className="button button-secondary" type="button" onClick={goToPreviousStep}><ChevronLeft size={18} /> Précédent</button>}
-          <button className="button button-primary" type="submit">{step === STEP_LABELS.length - 1 ? "Envoyer ma demande" : "Continuer"}{step < STEP_LABELS.length - 1 && <ChevronRight size={18} />}</button>
+          <button className="button button-primary" type="submit" disabled={submitting}>{submitting ? "Transmission…" : step === STEP_LABELS.length - 1 ? "Envoyer ma demande" : "Continuer"}{!submitting && step < STEP_LABELS.length - 1 && <ChevronRight size={18} />}</button>
         </div>
       </form>
     </div>

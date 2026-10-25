@@ -4,7 +4,7 @@ import {
   CircleAlert, CircleHelp, FileText, HeartPulse, Home, Landmark, LifeBuoy, PiggyBank, Plane, Save, ShieldCheck, Upload,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { assetUrl } from "../app/base-path";
+import { assetUrl, isPortalDeployment } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
 import { PageHeader, StatusBadge, Timeline } from "../components/portal-ui";
 import {
@@ -15,6 +15,7 @@ import {
 import {
   createClaim, createInsuranceRequest, formatDate, formatFcfa, requestRenewal, selectOffer,
 } from "../services/portal-service";
+import { creerDemandeAutomobile } from "../services/automobile-request-api";
 import type { AutomobileVehicleKind, InsuranceProduct, InsuranceRequest } from "../types/domain";
 import { AutoRequestForm, VoiceTextarea } from "./auto-request-form";
 import { CautionRequestForm } from "./caution-request-form";
@@ -41,7 +42,27 @@ export function NewRequestPage() {
   const [createdReference, setCreatedReference] = useState("");
   const [createdProductLabel, setCreatedProductLabel] = useState("Assurance automobile");
   const [createdVehicleKind, setCreatedVehicleKind] = useState<AutomobileVehicleKind | undefined>();
-  const submitRequest = (data: Partial<InsuranceRequest>) => {
+  const submitRequest = async (data: Partial<InsuranceRequest>) => {
+    if (data.product === "automobile" && isPortalDeployment) {
+      const request = await creerDemandeAutomobile(data);
+      updateStore((current) => ({
+        ...current,
+        requests: [request, ...current.requests.filter((item) => item.reference !== request.reference)],
+        notifications: [{
+          id: `NOT-${Date.now()}`,
+          title: "Demande transmise",
+          body: `Votre demande ${request.reference} a bien été transmise.`,
+          date: new Date().toISOString(),
+          route: `/espace/demandes/${request.reference}`,
+          read: false,
+          kind: "request",
+        }, ...current.notifications],
+      }));
+      setCreatedProductLabel(request.productLabel);
+      setCreatedVehicleKind(request.vehicleKind);
+      setCreatedReference(request.reference);
+      return;
+    }
     const result = createInsuranceRequest(store, data);
     updateStore(result.store);
     setCreatedProductLabel(result.request.productLabel);
