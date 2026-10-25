@@ -427,7 +427,13 @@ export function ProfilePage() {
     setSaved(false);
     setSaving(true);
     try {
-      const compte = await mettreAJourMonCompte(`${draft.firstName} ${draft.lastName}`.trim(), draft.phone);
+      const compte = await mettreAJourMonCompte({
+        nomComplet: `${draft.firstName} ${draft.lastName}`.trim(),
+        numeroTelephone: draft.phone,
+        adresse: draft.address,
+        ville: draft.city,
+        preferences: draft.preferences,
+      });
       const storeAuthentifie = appliquerCompteAuthentifie(store, compte);
       updateStore(updateProfile(storeAuthentifie, {
         ...draft,
@@ -486,7 +492,7 @@ export function ProfilePage() {
           <span className="page-eyebrow">Préférences</span>
           <h2>Notifications</h2>
           <p>Choisissez comment vous souhaitez être informé.</p>
-          {([['email','Email'],['sms','SMS'],['whatsapp','WhatsApp'],['inApp','Notification application']] as const).map(([key, label]) => <label className="switch-row" key={key}><span>{label}</span><input type="checkbox" checked={draft.preferences[key]} onChange={(event) => setDraft({ ...draft, preferences: { ...draft.preferences, [key]: event.target.checked } })} /></label>)}
+          {([['email','Email'],['whatsapp','WhatsApp'],['inApp','Notification application']] as const).map(([key, label]) => <label className="switch-row" key={key}><span>{label}</span><input type="checkbox" checked={draft.preferences[key]} onChange={(event) => setDraft({ ...draft, preferences: { ...draft.preferences, [key]: event.target.checked } })} /></label>)}
           <button className="button button-primary full" type="submit" disabled={saving}>{saving ? "Enregistrement…" : "Enregistrer les modifications"}</button>
           <Button className="mt-3 w-full rounded-xl" variant="outline" type="button" onClick={logout}><LogOut size={16} /> Se déconnecter</Button>
         </aside>

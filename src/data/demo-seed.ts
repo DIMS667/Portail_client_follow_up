@@ -9,7 +9,7 @@ export function createDemoSeed(): PortalStore {
     credentials: DEMO_CREDENTIALS,
     client: {
       id: "CL-001", firstName: "Jean", lastName: "Dupont", phone: "+237 6 99 00 11 22", email: DEMO_CREDENTIALS.email,
-      address: "Quartier Bonapriso", city: "Douala", preferences: { email: true, sms: true, whatsapp: false, inApp: true },
+      address: "Quartier Bonapriso", city: "Douala", preferences: { email: true, whatsapp: false, inApp: true },
     },
     advisor: { id: "ADV-001", name: "Aminata Mballa", phone: "+237 6 55 10 20 30", email: "aminata.mballa@demo.local", initials: "AM" },
     requests: [

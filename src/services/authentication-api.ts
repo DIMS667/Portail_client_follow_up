@@ -13,6 +13,20 @@ export interface CompteClientAuthentifie {
   numero_telephone: string;
 }
 
+export interface ProfilClientAuthentifie extends CompteClientAuthentifie {
+  adresse: string;
+  ville: string;
+  preferences_notifications: {
+    email: boolean;
+    whatsapp: boolean;
+    application: boolean;
+  };
+}
+
+function estProfilClient(compte: CompteClientAuthentifie): compte is ProfilClientAuthentifie {
+  return "adresse" in compte && "ville" in compte && "preferences_notifications" in compte;
+}
+
 interface AuthentificationReussie {
   statut: "connecte";
   compte: CompteClientAuthentifie;
@@ -133,16 +147,29 @@ export function reinitialiserMotDePasse(entree: {
 }
 
 export function obtenirMonCompte() {
-  return envoyer<CompteClientAuthentifie>("/moi");
+  return envoyer<ProfilClientAuthentifie>("/moi");
 }
 
-export function mettreAJourMonCompte(nomComplet: string, numeroTelephone: string) {
-  return envoyer<CompteClientAuthentifie>("/moi", {
+export function mettreAJourMonCompte(entree: {
+  nomComplet: string;
+  numeroTelephone: string;
+  adresse: string;
+  ville: string;
+  preferences: { email: boolean; whatsapp: boolean; inApp: boolean };
+}) {
+  return envoyer<ProfilClientAuthentifie>("/moi", {
     method: "PATCH",
     headers: enteteCsrf(),
     body: JSON.stringify({
-      nom_complet: nomComplet,
-      numero_telephone: numeroTelephone,
+      nom_complet: entree.nomComplet,
+      numero_telephone: entree.numeroTelephone,
+      adresse: entree.adresse,
+      ville: entree.ville,
+      preferences_notifications: {
+        email: entree.preferences.email,
+        whatsapp: entree.preferences.whatsapp,
+        application: entree.preferences.inApp,
+      },
     }),
   });
 }
@@ -179,6 +206,15 @@ export function appliquerCompteAuthentifie(store: PortalStore, compte: CompteCli
       lastName,
       email: compte.adresse_email,
       phone: compte.numero_telephone,
+      ...(estProfilClient(compte) ? {
+        address: compte.adresse,
+        city: compte.ville,
+        preferences: {
+          email: compte.preferences_notifications.email,
+          whatsapp: compte.preferences_notifications.whatsapp,
+          inApp: compte.preferences_notifications.application,
+        },
+      } : {}),
     },
   };
 }
