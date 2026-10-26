@@ -199,9 +199,10 @@ export interface HealthInsuranceRequestData {
 
 export interface StatusEvent { label: string; at?: string; done: boolean; active?: boolean; }
 export interface Client { id: string; firstName: string; lastName: string; phone: string; email: string; address: string; city: string; preferences: { email: boolean; whatsapp: boolean; inApp: boolean }; }
-export interface Advisor { id: string; name: string; phone: string; email: string; initials: string; }
+export interface Advisor { id: string; name: string; phone: string; email: string; initials: string; role?: "courtier" | "admin" | "super_admin"; }
 export interface InsuranceRequest {
   id: string; reference: string; clientId: string; product: InsuranceProduct; productLabel: string; date: string; status: RequestStatus; advisorId: string;
+  advisor?: Advisor | null;
   vehicleKind?: AutomobileVehicleKind;
   vehicle?: { brand: string; model: string; year: string; registration: string; value: number | null; usage: string };
   automobileRequest?: AutomobileInsuranceRequestData;

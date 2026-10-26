@@ -116,7 +116,26 @@ interface DemandeAutomobileApi {
   statut: string;
   cree_le: string;
   historique_statuts: Array<{ statut: string; cree_le: string }>;
+  courtier?: {
+    id: string;
+    nom_complet: string;
+    adresse_email: string;
+    numero_telephone: string;
+    role: "courtier" | "admin" | "super_admin";
+  } | null;
 }
+
+const chaineStatuts: Array<{ statut: string; libelle: string }> = [
+  { statut: "nouvelle", libelle: "Demande envoyée" },
+  { statut: "en_analyse", libelle: "Analyse du dossier" },
+  { statut: "propositions_disponibles", libelle: "Propositions disponibles" },
+  { statut: "offre_selectionnee", libelle: "Offre sélectionnée" },
+  { statut: "documents_requis", libelle: "Informations à compléter" },
+  { statut: "paiement_en_attente", libelle: "Paiement en attente" },
+  { statut: "contrat_en_preparation", libelle: "Contrat en préparation" },
+  { statut: "police_disponible", libelle: "Police disponible" },
+  { statut: "finalisee", libelle: "Demande terminée" },
+];
 
 function personneVersApi(personne: {
   firstName: string; lastName: string; phone: string; email: string; address: string; city: string;
@@ -308,16 +327,24 @@ function versDemandePortail(api: DemandeAutomobileApi): InsuranceRequest {
   }
   const demandeDirecte = estMoto ? motoRequest : automobileRequest;
   const vehicule = demandeDirecte?.completionMode === "self_service" ? demandeDirecte.vehicle : undefined;
-  const timeline: StatusEvent[] = api.historique_statuts.map((evenement, index) => ({
-    label: index === 0 ? "Demande envoyée" : evenement.statut.replaceAll("_", " "),
-    at: new Date(evenement.cree_le).toLocaleDateString("fr-FR"),
-    done: true,
+  const indexStatut = Math.max(0, chaineStatuts.findIndex((etape) => etape.statut === api.statut));
+  const historiqueParStatut = new Map(api.historique_statuts.map((evenement) => [evenement.statut, evenement.cree_le]));
+  const timeline: StatusEvent[] = chaineStatuts.map((etape, index) => ({
+    label: etape.libelle,
+    at: historiqueParStatut.has(etape.statut)
+      ? new Date(historiqueParStatut.get(etape.statut)!).toLocaleDateString("fr-FR")
+      : undefined,
+    done: index < indexStatut || api.statut === "finalisee",
+    active: index === indexStatut && api.statut !== "finalisee",
   }));
-  timeline.push(
-    { label: "Analyse par le courtier", done: false, active: true },
-    { label: "Préparation des propositions", done: false },
-    { label: "Propositions disponibles", done: false },
-  );
+  const courtier = api.courtier ? {
+    id: api.courtier.id,
+    name: api.courtier.nom_complet,
+    phone: api.courtier.numero_telephone,
+    email: api.courtier.adresse_email,
+    initials: api.courtier.nom_complet.split(/\s+/).filter(Boolean).map((partie) => partie[0]).join("").slice(0, 2).toUpperCase(),
+    role: api.courtier.role,
+  } : null;
   return {
     id: api.id,
     reference: api.reference,
@@ -326,7 +353,8 @@ function versDemandePortail(api: DemandeAutomobileApi): InsuranceRequest {
     productLabel: "Assurance automobile",
     date: api.cree_le.slice(0, 10),
     status: statutsDepuisApi[api.statut] ?? "new",
-    advisorId: "ADV-001",
+    advisorId: courtier?.id ?? "",
+    advisor: courtier,
     vehicleKind: estMoto ? "moto" : "car",
     automobileRequest,
     motoRequest,
@@ -401,12 +429,8 @@ export async function obtenirDemandesAutomobile() {
 }
 
 export function fusionnerDemandesAutomobile(
-  existantes: InsuranceRequest[],
+  _existantes: InsuranceRequest[],
   persistantes: InsuranceRequest[],
 ) {
-  const referencesPersistantes = new Set(persistantes.map((demande) => demande.reference));
-  return [
-    ...persistantes,
-    ...existantes.filter((demande) => !referencesPersistantes.has(demande.reference)),
-  ];
+  return persistantes;
 }
