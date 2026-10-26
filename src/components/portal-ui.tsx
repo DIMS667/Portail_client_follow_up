@@ -9,15 +9,15 @@ import type { DocumentStatus, RequestStatus, StatusEvent } from "../types/domain
 import { usePortal } from "../app/portal-context";
 
 const requestLabels: Record<RequestStatus, string> = {
-  new: "Nouvelle demande",
+  new: "À traiter",
   under_review: "En cours d’analyse",
   proposals_available: "Propositions disponibles",
-  offer_selected: "Offre sélectionnée",
-  documents_required: "Documents à compléter",
+  offer_selected: "Souscription en cours",
+  documents_required: "Informations à compléter",
   payment_pending: "Paiement à effectuer",
   policy_issuing: "Contrat en préparation",
   policy_available: "Police disponible",
-  completed: "Finalisée",
+  completed: "Terminée",
 };
 
 const documentLabels: Record<DocumentStatus, string> = {
