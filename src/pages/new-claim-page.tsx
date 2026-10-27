@@ -14,7 +14,6 @@ import {
   LifeBuoy,
   MapPin,
   ShieldCheck,
-  Upload,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -90,7 +89,6 @@ type AutoClaimForm = {
   insuredVehicle: Vehicle;
   adverseVehicle: Vehicle;
   circumstances: CircumstanceSelection;
-  sketchFileName: string;
   impactPointA: string;
   impactPointB: string;
   damageDescriptionA: string;
@@ -103,12 +101,11 @@ type AutoClaimForm = {
   policeReportBy: string;
   gendarmerie: string;
   brigade: string;
-  files: string[];
   attested: boolean;
 };
 
 const autoSteps = ["Contrat", "Événement", "Conducteur", "Tiers", "Circonstances", "Dommages", "Récapitulatif"];
-const genericSteps = ["Contrat", "Type", "Date et lieu", "Description", "Documents", "Récapitulatif"];
+const genericSteps = ["Contrat", "Type", "Date et lieu", "Description", "Récapitulatif"];
 
 const circumstances = [
   ["1", "Était à l’arrêt ou en stationnement"],
@@ -143,7 +140,7 @@ export function NewClaimPage() {
   const [showErrors, setShowErrors] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
-  const [generic, setGeneric] = useState({ type: "Dégât des eaux", date: "2026-10-08", location: "Douala", description: "", files: [] as string[] });
+  const [generic, setGeneric] = useState({ type: "Dégât des eaux", date: "2026-10-08", location: "Douala", description: "" });
   const [auto, setAuto] = useState<AutoClaimForm>(() => ({
     clientNumber: store.client.id,
     pointOfSale: "Agence de Douala",
@@ -193,7 +190,6 @@ export function NewClaimPage() {
     },
     adverseVehicle: emptyVehicle(),
     circumstances: Object.fromEntries(circumstances.map(([code]) => [code, { vehicleA: false, vehicleB: false }])),
-    sketchFileName: "",
     impactPointA: "Avant droit",
     impactPointB: "",
     damageDescriptionA: "",
@@ -206,7 +202,6 @@ export function NewClaimPage() {
     policeReportBy: "",
     gendarmerie: "",
     brigade: "",
-    files: [],
     attested: false,
   }));
 
@@ -300,7 +295,7 @@ export function NewClaimPage() {
         date: isAutomobile ? auto.accidentDate : generic.date,
         location: isAutomobile ? auto.location : generic.location,
         description: isAutomobile ? auto.narrative : generic.description,
-        attachments: isAutomobile ? auto.files : generic.files,
+        attachments: [],
         ...(isAutomobile ? {
           autoDeclaration: {
             clientNumber: auto.clientNumber,
@@ -316,7 +311,6 @@ export function NewClaimPage() {
             insuredVehicle: auto.insuredVehicle,
             adverseVehicle: auto.adversePartyInvolved ? auto.adverseVehicle : undefined,
             circumstances: selectedCircumstances,
-            sketchFileName: auto.sketchFileName || undefined,
             impactPointA: auto.impactPointA,
             impactPointB: auto.impactPointB,
             damageDescriptionA: auto.damageDescriptionA,
@@ -336,27 +330,9 @@ export function NewClaimPage() {
           },
         } : {}),
       });
-      const documentNames = Array.from(new Set([
-        ...(isAutomobile ? auto.files : generic.files),
-        ...(isAutomobile && auto.sketchFileName ? [auto.sketchFileName] : []),
-      ]));
-      const documentDate = new Date().toISOString().slice(0, 10);
       updateStore((current) => ({
         ...current,
         claims: [claim, ...current.claims.filter((item) => item.id !== claim.id)],
-        documents: [
-          ...documentNames.map((fileName, index) => ({
-            id: `DOC-CLAIM-${claim.id}-${index}`,
-            title: fileName.replace(/\.[^.]+$/, ""),
-            category: "sinistres",
-            type: fileName.split(".").pop()?.toUpperCase() || "Document",
-            ownerId: current.client.id,
-            status: "received" as const,
-            fileName,
-            date: documentDate,
-          })),
-          ...current.documents,
-        ],
       }));
       setCreated(claim.reference);
     } catch (caught) {
@@ -379,7 +355,8 @@ export function NewClaimPage() {
   return <div className="page-stack request-flow-page auto-claim-form" data-testid="auto-claim-form">
     <button className="back-link" type="button" onClick={() => step === 0 ? navigate("/espace/sinistres") : previous()}><ArrowLeft size={17} /> {step === 0 ? "Retour aux sinistres" : "Étape précédente"}</button>
     <PageHeader eyebrow="Nouvelle déclaration" title={isAutomobile ? "Déclarer un accident automobile" : "Déclarer un sinistre"} description={isAutomobile ? "Un parcours complet, conforme aux informations demandées par la déclaration automobile GMC." : "Transmettez les premières informations. Votre courtier vous accompagnera ensuite."} />
-    <ol className={`stepper auto-claim-stepper ${isAutomobile ? "seven" : "six"}`} aria-label="Progression de la déclaration">{steps.map((name, index) => <li className={index < step ? "done" : index === step ? "active" : ""} aria-current={index === step ? "step" : undefined} key={name}><span>{index < step ? <Check size={15} /> : index + 1}</span><small>{name}</small></li>)}</ol>
+    <ol className={`stepper auto-claim-stepper ${isAutomobile ? "seven" : "five"}`} aria-label="Progression de la déclaration">{steps.map((name, index) => <li className={index < step ? "done" : index === step ? "active" : ""} aria-current={index === step ? "step" : undefined} key={name}><span>{index < step ? <Check size={15} /> : index + 1}</span><small>{name}</small></li>)}</ol>
+    <aside className="form-alert info auto-claim-documents-note"><FileText size={18} /><div><strong>Les justificatifs se déposent dans votre dossier Sinistres.</strong><span>Constat, photos, rapport des autorités, devis et factures sont centralisés dans la rubrique Documents.</span></div><button className="button button-secondary" type="button" onClick={() => navigate("/espace/documents?dossier=sinistres")}>Ouvrir le dossier</button></aside>
     <section className="flow-card auto-claim-card">
       {step === 0 && <ContractStep contracts={store.contracts} contractId={contractId} onChange={chooseContract} />}
       {!isAutomobile && step > 0 && <GenericClaimStep step={step} generic={generic} update={(key, value) => setGeneric((current) => ({ ...current, [key]: value }))} />}
@@ -421,25 +398,24 @@ function AdversaryStep({ auto, onAutoChange, onNestedChange }: StepProps) {
 }
 
 function CircumstancesStep({ auto, onAutoChange, onToggle }: { auto: AutoClaimForm; onAutoChange: <K extends keyof AutoClaimForm>(key: K, value: AutoClaimForm[K]) => void; onToggle: (code: string, vehicle: "vehicleA" | "vehicleB", checked: boolean) => void }) {
-  return <><FlowHeading number="5" icon={<ClipboardCheck size={18} />} title="Circonstances et récit" description="Cochez ce qui décrit chaque véhicule puis racontez précisément le déroulement de l’accident." /><div className="circumstance-table" role="group" aria-label="Circonstances de l’accident"><div className="circumstance-head"><span>Situation au moment de l’accident</span><strong>Véhicule A</strong><strong>Véhicule B</strong></div>{circumstances.map(([code, label]) => <div className="circumstance-row" key={code}><span><em>{code}</em>{label}</span><label><input type="checkbox" checked={auto.circumstances[code]?.vehicleA ?? false} onChange={(event) => onToggle(code, "vehicleA", event.target.checked)} /><span className="sr-only">Véhicule A : {label}</span></label><label><input type="checkbox" checked={auto.circumstances[code]?.vehicleB ?? false} onChange={(event) => onToggle(code, "vehicleB", event.target.checked)} /><span className="sr-only">Véhicule B : {label}</span></label></div>)}</div><div className="auto-impact-grid"><SelectField label="Point de choc initial · véhicule A" value={auto.impactPointA} onChange={(value) => onAutoChange("impactPointA", value)} options={["Avant", "Avant droit", "Avant gauche", "Côté droit", "Côté gauche", "Arrière", "Toit / dessous"]} /><SelectField label="Point de choc initial · véhicule B" value={auto.impactPointB} onChange={(value) => onAutoChange("impactPointB", value)} options={["", "Avant", "Avant droit", "Avant gauche", "Côté droit", "Côté gauche", "Arrière", "Toit / dessous"]} /></div><label className="auto-textarea">Dites brièvement mais exactement comment l’accident est arrivé<textarea rows={7} value={auto.narrative} onChange={(event) => onAutoChange("narrative", event.target.value)} placeholder="Ex. : je circulais sur… lorsque le véhicule B…" required /></label><label className="drop-zone auto-sketch-upload"><Upload size={27} /><strong>Joindre un croquis de l’accident</strong><span>Photo ou scan du schéma — facultatif</span><input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(event) => onAutoChange("sketchFileName", event.target.files?.[0]?.name ?? "")} /></label>{auto.sketchFileName && <p className="auto-file-chip"><FileText size={15} /> {auto.sketchFileName}</p>}</>;
+  return <><FlowHeading number="5" icon={<ClipboardCheck size={18} />} title="Circonstances et récit" description="Cochez ce qui décrit chaque véhicule puis racontez précisément le déroulement de l’accident." /><div className="circumstance-table" role="group" aria-label="Circonstances de l’accident"><div className="circumstance-head"><span>Situation au moment de l’accident</span><strong>Véhicule A</strong><strong>Véhicule B</strong></div>{circumstances.map(([code, label]) => <div className="circumstance-row" key={code}><span><em>{code}</em>{label}</span><label><input type="checkbox" checked={auto.circumstances[code]?.vehicleA ?? false} onChange={(event) => onToggle(code, "vehicleA", event.target.checked)} /><span className="sr-only">Véhicule A : {label}</span></label><label><input type="checkbox" checked={auto.circumstances[code]?.vehicleB ?? false} onChange={(event) => onToggle(code, "vehicleB", event.target.checked)} /><span className="sr-only">Véhicule B : {label}</span></label></div>)}</div><div className="auto-impact-grid"><SelectField label="Point de choc initial · véhicule A" value={auto.impactPointA} onChange={(value) => onAutoChange("impactPointA", value)} options={["Avant", "Avant droit", "Avant gauche", "Côté droit", "Côté gauche", "Arrière", "Toit / dessous"]} /><SelectField label="Point de choc initial · véhicule B" value={auto.impactPointB} onChange={(value) => onAutoChange("impactPointB", value)} options={["", "Avant", "Avant droit", "Avant gauche", "Côté droit", "Côté gauche", "Arrière", "Toit / dessous"]} /></div><label className="auto-textarea">Dites brièvement mais exactement comment l’accident est arrivé<textarea rows={7} value={auto.narrative} onChange={(event) => onAutoChange("narrative", event.target.value)} placeholder="Ex. : je circulais sur… lorsque le véhicule B…" required /></label></>;
 }
 
 function DamageStep({ auto, onAutoChange, onInjuryChange, onWitnessChange }: { auto: AutoClaimForm; onAutoChange: <K extends keyof AutoClaimForm>(key: K, value: AutoClaimForm[K]) => void; onInjuryChange: (group: "injuriesInVehicle" | "otherInjuries", index: number, field: keyof InjuredPerson, value: string) => void; onWitnessChange: (index: number, field: keyof Witness, value: string) => void }) {
   const addInjury = (group: "injuriesInVehicle" | "otherInjuries") => onAutoChange(group, [...auto[group], emptyInjury()]);
-  return <><FlowHeading number="6" icon={<HeartPulse size={18} />} title="Dommages, blessés et témoins" description="Décrivez les dommages et ajoutez les éléments utiles au traitement du dossier." /><div className="auto-party-grid"><label className="auto-textarea">Dommages au véhicule assuré A<textarea rows={5} value={auto.damageDescriptionA} onChange={(event) => onAutoChange("damageDescriptionA", event.target.value)} placeholder="Pièces touchées, état du véhicule, possibilité de rouler…" required /></label><label className="auto-textarea">Dommages au véhicule adverse B<textarea rows={5} value={auto.damageDescriptionB} onChange={(event) => onAutoChange("damageDescriptionB", event.target.value)} placeholder="Dommages observés sur le véhicule adverse" /></label></div><fieldset className="auto-binary-choice compact"><legend>Y a-t-il des dommages corporels ?</legend><label className={auto.hasInjuries ? "selected" : ""}><input type="radio" name="injuries" checked={auto.hasInjuries} onChange={() => onAutoChange("hasInjuries", true)} /><HeartPulse size={19} /><span><strong>Oui</strong><small>Je renseigne les personnes blessées</small></span></label><label className={!auto.hasInjuries ? "selected" : ""}><input type="radio" name="injuries" checked={!auto.hasInjuries} onChange={() => onAutoChange("hasInjuries", false)} /><CheckCircle2 size={19} /><span><strong>Non</strong><small>Aucun blessé déclaré</small></span></label></fieldset>{auto.hasInjuries && <div className="auto-party-grid"><InjuryGroup title="Dans le véhicule assuré" people={auto.injuriesInVehicle} onChange={(index, field, value) => onInjuryChange("injuriesInVehicle", index, field, value)} onAdd={() => addInjury("injuriesInVehicle")} /><InjuryGroup title="Autres que dans le véhicule assuré" people={auto.otherInjuries} onChange={(index, field, value) => onInjuryChange("otherInjuries", index, field, value)} onAdd={() => addInjury("otherInjuries")} /></div>}<FormSection icon={<UsersRound size={19} />} title="Témoins de l’accident" description="Deux témoins peuvent être enregistrés."><div className="auto-witness-grid">{auto.witnesses.map((witness, index) => <div className="auto-repeat-card" key={index}><strong>Témoin {index + 1}{index === 1 && <small> facultatif</small>}</strong><TextField label="Nom et prénoms" value={witness.name} onChange={(value) => onWitnessChange(index, "name", value)} /><TextField label="Adresse" value={witness.address} onChange={(value) => onWitnessChange(index, "address", value)} /><TextField label="Téléphone" value={witness.phone} onChange={(value) => onWitnessChange(index, "phone", value)} type="tel" /></div>)}</div></FormSection><FormSection icon={<ClipboardCheck size={19} />} title="Autorités" description="Complétez cette partie uniquement si un constat officiel a été établi."><div className="auto-claim-grid three"><TextField label="Rapport de police établi par" value={auto.policeReportBy} onChange={(value) => onAutoChange("policeReportBy", value)} /><TextField label="P.V. / Gendarmerie" value={auto.gendarmerie} onChange={(value) => onAutoChange("gendarmerie", value)} /><TextField label="Brigade" value={auto.brigade} onChange={(value) => onAutoChange("brigade", value)} /></div></FormSection><label className="drop-zone"><Upload size={28} /><strong>Ajouter photos et justificatifs</strong><span>Constat, photos, permis, carte grise ou rapport — métadonnées uniquement</span><input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => onAutoChange("files", Array.from(event.target.files || []).map((file) => file.name))} /></label>{auto.files.length > 0 && <ul className="selected-files">{auto.files.map((file) => <li key={file}><FileText size={16} /> {file}</li>)}</ul>}</>;
+  return <><FlowHeading number="6" icon={<HeartPulse size={18} />} title="Dommages, blessés et témoins" description="Décrivez les dommages et ajoutez les éléments utiles au traitement du dossier." /><div className="auto-party-grid"><label className="auto-textarea">Dommages au véhicule assuré A<textarea rows={5} value={auto.damageDescriptionA} onChange={(event) => onAutoChange("damageDescriptionA", event.target.value)} placeholder="Pièces touchées, état du véhicule, possibilité de rouler…" required /></label><label className="auto-textarea">Dommages au véhicule adverse B<textarea rows={5} value={auto.damageDescriptionB} onChange={(event) => onAutoChange("damageDescriptionB", event.target.value)} placeholder="Dommages observés sur le véhicule adverse" /></label></div><fieldset className="auto-binary-choice compact"><legend>Y a-t-il des dommages corporels ?</legend><label className={auto.hasInjuries ? "selected" : ""}><input type="radio" name="injuries" checked={auto.hasInjuries} onChange={() => onAutoChange("hasInjuries", true)} /><HeartPulse size={19} /><span><strong>Oui</strong><small>Je renseigne les personnes blessées</small></span></label><label className={!auto.hasInjuries ? "selected" : ""}><input type="radio" name="injuries" checked={!auto.hasInjuries} onChange={() => onAutoChange("hasInjuries", false)} /><CheckCircle2 size={19} /><span><strong>Non</strong><small>Aucun blessé déclaré</small></span></label></fieldset>{auto.hasInjuries && <div className="auto-party-grid"><InjuryGroup title="Dans le véhicule assuré" people={auto.injuriesInVehicle} onChange={(index, field, value) => onInjuryChange("injuriesInVehicle", index, field, value)} onAdd={() => addInjury("injuriesInVehicle")} /><InjuryGroup title="Autres que dans le véhicule assuré" people={auto.otherInjuries} onChange={(index, field, value) => onInjuryChange("otherInjuries", index, field, value)} onAdd={() => addInjury("otherInjuries")} /></div>}<FormSection icon={<UsersRound size={19} />} title="Témoins de l’accident" description="Deux témoins peuvent être enregistrés."><div className="auto-witness-grid">{auto.witnesses.map((witness, index) => <div className="auto-repeat-card" key={index}><strong>Témoin {index + 1}{index === 1 && <small> facultatif</small>}</strong><TextField label="Nom et prénoms" value={witness.name} onChange={(value) => onWitnessChange(index, "name", value)} /><TextField label="Adresse" value={witness.address} onChange={(value) => onWitnessChange(index, "address", value)} /><TextField label="Téléphone" value={witness.phone} onChange={(value) => onWitnessChange(index, "phone", value)} type="tel" /></div>)}</div></FormSection><FormSection icon={<ClipboardCheck size={19} />} title="Autorités" description="Complétez cette partie uniquement si un constat officiel a été établi."><div className="auto-claim-grid three"><TextField label="Rapport de police établi par" value={auto.policeReportBy} onChange={(value) => onAutoChange("policeReportBy", value)} /><TextField label="P.V. / Gendarmerie" value={auto.gendarmerie} onChange={(value) => onAutoChange("gendarmerie", value)} /><TextField label="Brigade" value={auto.brigade} onChange={(value) => onAutoChange("brigade", value)} /></div></FormSection></>;
 }
 
 function ReviewStep({ auto, contractId, selectedCircumstances, onAutoChange }: { auto: AutoClaimForm; contractId: string; selectedCircumstances: { code: string; label: string; vehicleA: boolean; vehicleB: boolean }[]; onAutoChange: <K extends keyof AutoClaimForm>(key: K, value: AutoClaimForm[K]) => void }) {
   const injuryCount = auto.hasInjuries ? [...auto.injuriesInVehicle, ...auto.otherInjuries].filter((person) => person.name.trim()).length : 0;
-  return <><FlowHeading number="7" icon={<CheckCircle2 size={18} />} title="Vérifier et déclarer" description="Relisez la synthèse avant de transmettre votre déclaration à votre courtier." /><div className="auto-review-grid"><ReviewCard title="Accident" items={[["Contrat", contractId], ["Date", safeDate(auto.accidentDate)], ["Heure", auto.accidentTime], ["Lieu", auto.location]]} /><ReviewCard title="Véhicule A" items={[["Véhicule", auto.insuredVehicle.brand], ["Immatriculation", auto.insuredVehicle.registration], ["Conducteur", `${auto.insuredDriver.firstNames} ${auto.insuredDriver.lastName}`.trim()], ["Permis", auto.insuredDriver.licenceNumber]]} /><ReviewCard title="Tiers" items={auto.adversePartyInvolved ? [["Adversaire", `${auto.adversary.firstNames} ${auto.adversary.lastName}`.trim()], ["Immatriculation", auto.adversary.registration], ["Conducteur B", `${auto.adversaryDriver.firstNames} ${auto.adversaryDriver.lastName}`.trim()], ["Assureur", auto.adversary.insurer || "Non renseigné"]] : [["Véhicule adverse", "Aucun tiers impliqué"]]} /><ReviewCard title="Circonstances" items={[["Cases cochées", selectedCircumstances.length ? selectedCircumstances.map((item) => `${item.code}${item.vehicleA ? "A" : ""}${item.vehicleB ? "B" : ""}`).join(", ") : "Aucune"], ["Point de choc A", auto.impactPointA], ["Croquis", auto.sketchFileName || "Non joint"]]} /><ReviewCard title="Dommages" items={[["Véhicule A", auto.damageDescriptionA], ["Véhicule B", auto.damageDescriptionB || "Non renseigné"], ["Blessés", String(injuryCount)]]} /><ReviewCard title="Pièces" items={[["Documents", auto.files.length ? `${auto.files.length} fichier(s)` : "Aucun fichier"], ["Témoins", String(auto.witnesses.filter((witness) => witness.name.trim()).length)], ["Autorités", auto.policeReportBy || auto.gendarmerie || "Non renseigné"]]} /></div><div className="auto-narrative-review"><strong>Votre récit</strong><p>{auto.narrative}</p></div><div className="form-alert info"><CircleAlert size={18} /> La partie « réservée au rédacteur » du document papier sera complétée par le courtier ou la compagnie.</div><label className="check-row auto-attestation"><input type="checkbox" checked={auto.attested} onChange={(event) => onAutoChange("attested", event.target.checked)} /><span>Je certifie que les informations fournies sont exactes et j’autorise leur utilisation pour l’instruction de ce sinistre.</span></label></>;
+  return <><FlowHeading number="7" icon={<CheckCircle2 size={18} />} title="Vérifier et déclarer" description="Relisez la synthèse avant de transmettre votre déclaration à votre courtier." /><div className="auto-review-grid"><ReviewCard title="Accident" items={[["Contrat", contractId], ["Date", safeDate(auto.accidentDate)], ["Heure", auto.accidentTime], ["Lieu", auto.location]]} /><ReviewCard title="Véhicule A" items={[["Véhicule", auto.insuredVehicle.brand], ["Immatriculation", auto.insuredVehicle.registration], ["Conducteur", `${auto.insuredDriver.firstNames} ${auto.insuredDriver.lastName}`.trim()], ["Permis", auto.insuredDriver.licenceNumber]]} /><ReviewCard title="Tiers" items={auto.adversePartyInvolved ? [["Adversaire", `${auto.adversary.firstNames} ${auto.adversary.lastName}`.trim()], ["Immatriculation", auto.adversary.registration], ["Conducteur B", `${auto.adversaryDriver.firstNames} ${auto.adversaryDriver.lastName}`.trim()], ["Assureur", auto.adversary.insurer || "Non renseigné"]] : [["Véhicule adverse", "Aucun tiers impliqué"]]} /><ReviewCard title="Circonstances" items={[["Cases cochées", selectedCircumstances.length ? selectedCircumstances.map((item) => `${item.code}${item.vehicleA ? "A" : ""}${item.vehicleB ? "B" : ""}`).join(", ") : "Aucune"], ["Point de choc A", auto.impactPointA]]} /><ReviewCard title="Dommages" items={[["Véhicule A", auto.damageDescriptionA], ["Véhicule B", auto.damageDescriptionB || "Non renseigné"], ["Blessés", String(injuryCount)]]} /><ReviewCard title="Suivi" items={[["Témoins", String(auto.witnesses.filter((witness) => witness.name.trim()).length)], ["Autorités", auto.policeReportBy || auto.gendarmerie || "Non renseigné"], ["Justificatifs", "Dossier Documents · Sinistres"]]} /></div><div className="auto-narrative-review"><strong>Votre récit</strong><p>{auto.narrative}</p></div><div className="form-alert info"><CircleAlert size={18} /> La partie « réservée au rédacteur » du document papier sera complétée par le courtier ou la compagnie.</div><label className="check-row auto-attestation"><input type="checkbox" checked={auto.attested} onChange={(event) => onAutoChange("attested", event.target.checked)} /><span>Je certifie que les informations fournies sont exactes et j’autorise leur utilisation pour l’instruction de ce sinistre.</span></label></>;
 }
 
-function GenericClaimStep({ step, generic, update }: { step: number; generic: { type: string; date: string; location: string; description: string; files: string[] }; update: (key: string, value: string | string[]) => void }) {
+function GenericClaimStep({ step, generic, update }: { step: number; generic: { type: string; date: string; location: string; description: string }; update: (key: string, value: string) => void }) {
   if (step === 1) return <><FlowHeading number="2" icon={<LifeBuoy size={18} />} title="Type de sinistre" description="Choisissez la situation qui correspond le mieux." /><fieldset className="choice-grid"><legend className="sr-only">Type de sinistre</legend>{["Incendie", "Dégât des eaux", "Vol", "Autre"].map((type) => <label className={generic.type === type ? "selected" : ""} key={type}><input type="radio" name="generic-claim-type" checked={generic.type === type} onChange={() => update("type", type)} /><LifeBuoy size={21} /><strong>{type}</strong></label>)}</fieldset></>;
   if (step === 2) return <><FlowHeading number="3" icon={<MapPin size={18} />} title="Date et lieu" description="Indiquez quand et où l’événement s’est produit." /><div className="form-grid"><TextField label="Date du sinistre" value={generic.date} onChange={(value) => update("date", value)} type="date" required /><TextField label="Lieu" value={generic.location} onChange={(value) => update("location", value)} required /></div></>;
   if (step === 3) return <><FlowHeading number="4" icon={<FileText size={18} />} title="Description" description="Décrivez les circonstances aussi clairement que possible." /><label>Description de l’événement<textarea rows={7} value={generic.description} onChange={(event) => update("description", event.target.value)} placeholder="Que s’est-il passé ? Quels dommages avez-vous constatés ?" /></label></>;
-  if (step === 4) return <><FlowHeading number="5" icon={<Upload size={18} />} title="Photos et documents" description="Sélectionnez les pièces utiles ; elles seront ajoutées dans votre espace Documents." /><label className="drop-zone"><Upload size={28} /><strong>Sélectionner des fichiers</strong><span>Photos, constat ou justificatifs</span><input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => update("files", Array.from(event.target.files || []).map((file) => file.name))} /></label>{generic.files.length > 0 && <ul className="selected-files">{generic.files.map((file) => <li key={file}><FileText size={16} /> {file}</li>)}</ul>}</>;
-  return <><FlowHeading number="6" icon={<CheckCircle2 size={18} />} title="Récapitulatif" description="Vérifiez les informations avant d’envoyer votre déclaration." /><div className="auto-review-grid"><ReviewCard title="Sinistre" items={[["Type", generic.type], ["Date", safeDate(generic.date)], ["Lieu", generic.location], ["Description", generic.description]]} /><ReviewCard title="Documents" items={[["Fichiers", generic.files.length ? `${generic.files.length} fichier(s)` : "Aucun fichier"]]} /></div></>;
+  return <><FlowHeading number="5" icon={<CheckCircle2 size={18} />} title="Récapitulatif" description="Vérifiez les informations avant d’envoyer votre déclaration." /><div className="auto-review-grid"><ReviewCard title="Sinistre" items={[["Type", generic.type], ["Date", safeDate(generic.date)], ["Lieu", generic.location], ["Description", generic.description]]} /><ReviewCard title="Justificatifs" items={[["Emplacement", "Dossier Documents · Sinistres"]]} /></div></>;
 }
 
 type StepProps = {

@@ -284,8 +284,10 @@ export function ProposalsPage({ requestReference }: { requestReference: string }
 }
 
 export function DocumentsPage() {
-  const { store, updateStore } = usePortal();
-  const [folderId, setFolderId] = useState<DocumentFolderId | null>(null);
+  const { store, updateStore, query } = usePortal();
+  const dossierDemande = query.get("dossier") as DocumentFolderId | null;
+  const dossierInitial = documentFolders.some((item) => item.id === dossierDemande) ? dossierDemande : null;
+  const [folderId, setFolderId] = useState<DocumentFolderId | null>(dossierInitial);
   const [previewDocument, setPreviewDocument] = useState<ClientDocument | null>(null);
   const [operationEnCours, setOperationEnCours] = useState<string | null>(null);
   const [documentError, setDocumentError] = useState("");
@@ -490,7 +492,7 @@ export function ClaimDetailPage({ reference }: { reference: string }) {
   const circumstancesA = declaration?.circumstances.filter((item) => item.vehicleA).map((item) => item.label).filter(Boolean) ?? [];
   const circumstancesB = declaration?.circumstances.filter((item) => item.vehicleB).map((item) => item.label).filter(Boolean) ?? [];
   const authority = declaration ? [declaration.policeReportBy, declaration.gendarmerie, declaration.brigade].filter(Boolean).join(" · ") : "";
-  const documents = Array.from(new Set([...(claim.attachments ?? []), ...(declaration?.sketchFileName ? [declaration.sketchFileName] : [])]));
+  const documents = store.documents.filter((document) => documentFolderId(document) === "sinistres" && Boolean(document.fileName || document.downloadUrl));
 
   return <div className="page-stack">
     <button className="back-link" type="button" onClick={() => navigate("/espace/sinistres")}><ArrowLeft size={17} /> Retour aux sinistres</button>
@@ -551,10 +553,10 @@ export function ClaimDetailPage({ reference }: { reference: string }) {
       </section>
     </>}
 
-    {documents.length > 0 && <section className="panel">
-      <div className="panel-heading"><div><span className="page-eyebrow">Pièces jointes</span><h2>Documents transmis</h2></div></div>
-      <ul className="plain-list">{documents.map((document) => <li key={document}><FileText size={16} /><span>{document}</span></li>)}</ul>
-    </section>}
+    <section className="panel">
+      <div className="panel-heading"><div><span className="page-eyebrow">Dossier documentaire</span><h2>Justificatifs du sinistre</h2></div><button className="button button-secondary" type="button" onClick={() => navigate("/espace/documents?dossier=sinistres")}>{documents.length ? "Gérer les documents" : "Ajouter des documents"}</button></div>
+      {documents.length > 0 ? <ul className="plain-list">{documents.map((document) => <li key={document.id}><FileText size={16} /><span>{document.title}{document.fileName ? ` · ${document.fileName}` : ""}</span></li>)}</ul> : <p className="text-sm text-slate-500">Aucun justificatif n’a encore été déposé dans le dossier « Sinistres ».</p>}
+    </section>
   </div>;
 }
 
