@@ -2,6 +2,7 @@ import { Suspense, useEffect } from "react";
 import { isPortalDeployment } from "./app/base-path";
 import { PortalProvider, usePortal } from "./app/portal-context";
 import { WebMcpBridge } from "./app/webmcp";
+import { RouteLoadingSkeleton } from "./components/portal-loading";
 import { PortalRouteView } from "./routes/portal-route-view";
 import { PublicRouteView } from "./routes/public-route-view";
 
@@ -55,15 +56,7 @@ function BrowserRedirect({ to }: { to: string }) {
 }
 
 function RouteLoadingFallback() {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#fbfdff" }}
-    >
-      <span className="sr-only">Chargement de la page…</span>
-    </div>
-  );
+  return <RouteLoadingSkeleton />;
 }
 
 export function PortalApp() {

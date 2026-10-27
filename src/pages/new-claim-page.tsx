@@ -336,9 +336,27 @@ export function NewClaimPage() {
           },
         } : {}),
       });
+      const documentNames = Array.from(new Set([
+        ...(isAutomobile ? auto.files : generic.files),
+        ...(isAutomobile && auto.sketchFileName ? [auto.sketchFileName] : []),
+      ]));
+      const documentDate = new Date().toISOString().slice(0, 10);
       updateStore((current) => ({
         ...current,
         claims: [claim, ...current.claims.filter((item) => item.id !== claim.id)],
+        documents: [
+          ...documentNames.map((fileName, index) => ({
+            id: `DOC-CLAIM-${claim.id}-${index}`,
+            title: fileName.replace(/\.[^.]+$/, ""),
+            category: "sinistres",
+            type: fileName.split(".").pop()?.toUpperCase() || "Document",
+            ownerId: current.client.id,
+            status: "received" as const,
+            fileName,
+            date: documentDate,
+          })),
+          ...current.documents,
+        ],
       }));
       setCreated(claim.reference);
     } catch (caught) {

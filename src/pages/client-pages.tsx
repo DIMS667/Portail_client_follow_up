@@ -4,8 +4,12 @@ import {
   CircleAlert, CircleHelp, ClipboardList, Clock3, Download, FileCheck2, FileText, Filter, FolderOpen,
   HandCoins, HeartHandshake, HeartPulse, Home, LifeBuoy, Mail, MapPin, MessageCircle, Paperclip,
   LogOut, Phone, Plane, Plus, RefreshCcw, Search, Send, ShieldCheck, Smartphone, Upload, UserRound,
-  WalletCards, XCircle,
+  Trash2, WalletCards, XCircle,
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -16,13 +20,14 @@ import { Separator } from "@/components/ui/separator";
 import { assetUrl } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
 import { EmptyState, InfoCard, LinkButton, PageHeader, StatusBadge, Timeline, documentLabels, requestLabels } from "../components/portal-ui";
+import { documentFolderId, type DocumentFolderId } from "../data/document-folders";
 import {
   appliquerCompteAuthentifie,
   deconnecter,
   mettreAJourMonCompte,
 } from "../services/authentication-api";
 import {
-  addMessage, formatDate, formatFcfa, markNotificationRead, replaceDocument,
+  addMessage, formatDate, formatFcfa, markNotificationRead, removeDocument, replaceDocument,
   signOut, simulatePayment, updateProfile,
 } from "../services/portal-service";
 import type {
@@ -33,6 +38,18 @@ import type {
 
 const iconForKind: Record<string, typeof Bell> = { proposal: ClipboardList, document: FileCheck2, payment: WalletCards, contract: ShieldCheck, request: FileText, renewal: RefreshCcw, claim: LifeBuoy, message: MessageCircle };
 const paymentLabels: Record<PaymentMethod, string> = { mobile_money: "Mobile Money", orange_money: "Orange Money", bank_card: "Carte bancaire", bank_transfer: "Virement" };
+const claimStatusLabels: Record<string, string> = {
+  submitted: "Déclaration reçue",
+  under_review: "En cours d’analyse",
+  documents_pending: "Documents attendus",
+  documents_verified: "Documents vérifiés",
+  sent_to_insurer: "Transmis à l’assureur",
+  expertise: "En expertise",
+  decision: "Décision en cours",
+  indemnification: "Indemnisation en cours",
+  indemnified: "Indemnisé",
+  closed: "Clôturé",
+};
 const iconForProduct: Record<InsuranceProduct, typeof Car> = {
   automobile: Car,
   moto: Bike,
@@ -52,22 +69,8 @@ const documentFolders = [
   { id: "voyage", label: "Assurance voyage", description: "Passeport, réservation et justificatifs de voyage", icon: Plane },
   { id: "entreprise", label: "Assurance entreprise", description: "Documents administratifs et risques professionnels", icon: Building2 },
   { id: "caution", label: "Assurance caution", description: "Marchés, contrats et pièces de l’entreprise", icon: ShieldCheck },
+  { id: "sinistres", label: "Sinistres", description: "Constats, photos, rapports et justificatifs de vos déclarations", icon: LifeBuoy },
 ] as const;
-type DocumentFolderId = typeof documentFolders[number]["id"];
-
-function documentFolderId(document: ClientDocument): DocumentFolderId {
-  const category = document.category.toLowerCase();
-  const identity = `${document.title} ${document.type}`.toLowerCase();
-  if (documentFolders.some((folder) => folder.id === category)) return category as DocumentFolderId;
-  if (/cni|passeport|identité|domicile/.test(identity) && !/permis/.test(identity)) return "informations_personnelles";
-  if (/santé|medical|médical|maladie/.test(`${category} ${identity}`)) return "sante";
-  if (/vie|capitalisation/.test(`${category} ${identity}`)) return "vie_capitalisation";
-  if (/habitation|logement|maison/.test(`${category} ${identity}`)) return "habitation";
-  if (/voyage|visa|billet/.test(`${category} ${identity}`)) return "voyage";
-  if (/entreprise|commerce|patente/.test(`${category} ${identity}`)) return "entreprise";
-  if (/caution|marché|soumission/.test(`${category} ${identity}`)) return "caution";
-  return "automobile";
-}
 const getRequestVehicleKind = (request: InsuranceRequest) => request.vehicleKind ?? (request.motoRequest || request.product === "moto" ? "moto" : request.automobileRequest || request.product === "automobile" ? "car" : undefined);
 const autoRequestTypeLabels: Record<AutoRequestType, string> = { new_vehicle: "Assurer un nouveau véhicule", renewal: "Renouveler mon assurance", switch_insurer: "Changer d’assureur", advice: "Obtenir un conseil", other: "Autre besoin" };
 const autoEnergyLabels: Record<AutoVehicleEnergy, string> = { petrol: "Essence", diesel: "Diesel" };
@@ -242,6 +245,7 @@ export function RequestDetailPage({ reference }: { reference: string }) {
       {!automobileRequest && !motoRequest && request.vehicle && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Véhicule et couverture</h2></div></div><div className="details-grid"><Detail label="Véhicule" value={`${request.vehicle.brand} ${request.vehicle.model}`} /><Detail label="Année" value={request.vehicle.year} /><Detail label="Immatriculation" value={request.vehicle.registration} /><Detail label="Usage" value={request.vehicle.usage} />{request.vehicle.value !== null && <Detail label="Valeur estimée" value={formatFcfa(request.vehicle.value)} />}<Detail label="Couverture" value={request.coverage || "Conseil demandé"} /></div></section>}
       {healthRequest && <section className="panel health-request-detail"><div className="panel-heading"><div><span className="page-eyebrow">Questionnaire Santé</span><h2>Résumé de la demande d’adhésion</h2></div><span className="health-confidential-tag"><ShieldCheck size={14} /> Confidentiel</span></div><div className="details-grid"><Detail label="Souscripteur" value={healthRequest.subscriberName} /><Detail label="Assuré principal" value={healthRequest.insuredName || healthRequest.subscriberName} /><Detail label="Bénéficiaires" value={`${healthRequest.insuredPeople.length} personne${healthRequest.insuredPeople.length > 1 ? "s" : ""}`} /><Detail label="Déclaration signée par" value={healthRequest.signedBy} /><Detail label="Lieu et date" value={`${healthRequest.signedIn}, le ${formatDate(healthRequest.signedAt)}`} /><Detail label="Date d’effet souhaitée" value={healthRequest.insuredPeople[0]?.desiredStartDate ? formatDate(healthRequest.insuredPeople[0].desiredStartDate) : "À confirmer"} /></div><p className="auto-request-detail-note"><ShieldCheck size={17} /> Les réponses médicales détaillées ne sont pas affichées dans ce résumé. Elles doivent rester accessibles uniquement aux personnes habilitées.</p></section>}
       {request.details && !healthRequest && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre besoin</h2></div></div><div className="details-grid">{Object.entries(request.details).map(([label, value]) => <Detail key={label} label={label} value={value} />)}</div>{request.comments && <div className="request-comments"><span>Précisions complémentaires</span><p>{request.comments}</p></div>}</section>}
+      {request.documents && request.documents.length > 0 && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Pièces transmises</span><h2>Documents rattachés à cette demande</h2><p>Seules les pièces personnelles et celles du produit concerné ont été ajoutées.</p></div><Badge variant="outline">{request.documents.length} document{request.documents.length > 1 ? "s" : ""}</Badge></div><div className="grid gap-2 sm:grid-cols-2">{request.documents.map((document) => <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3" key={document.id}><span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-brand-red"><FileText size={17} /></span><div className="min-w-0 flex-1"><strong className="block truncate text-sm text-slate-900">{document.title}</strong><small className="mt-0.5 block truncate text-xs text-slate-500">{document.fileName ?? document.type}</small></div><StatusBadge status={document.status}>{documentLabels[document.status]}</StatusBadge></div>)}</div></section>}
     </div>
   );
 }
@@ -282,6 +286,7 @@ export function DocumentsPage() {
     ? store.documents.filter((document) => documentFolderId(document) === folderId)
     : [];
   const handleFile = (document: ClientDocument, file?: File) => { if (file) updateStore(replaceDocument(store, document.id, file)); };
+  const deleteDocument = (documentId: string) => updateStore((current) => removeDocument(current, documentId));
   const addFiles = (files?: FileList | null) => {
     if (!folderId || !files?.length) return;
     const date = new Date().toISOString().slice(0, 10);
@@ -289,7 +294,7 @@ export function DocumentsPage() {
       ...current,
       documents: [
         ...Array.from(files).map((file, index): ClientDocument => ({
-          id: `DOC-${Date.now()}-${index}`,
+          id: `DOC-UPLOAD-${Date.now()}-${index}`,
           title: file.name.replace(/\.[^.]+$/, ""),
           category: folderId,
           type: file.type || "Document",
@@ -320,7 +325,7 @@ export function DocumentsPage() {
       <button className="back-link" type="button" onClick={() => setFolderId(null)}><ArrowLeft size={17} /> Retour aux dossiers</button>
       <PageHeader eyebrow="Dossier documentaire" title={folder.label} description={folder.description} />
       <label className="document-folder-upload"><Upload size={28} /><div><strong>Ajouter des documents dans ce dossier</strong><span>Ces fichiers seront utilisés uniquement pour les démarches « {folder.label} ».</span></div><span className="button button-primary">Choisir des fichiers</span><input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => addFiles(event.target.files)} /></label>
-      {documents.length > 0 ? <div className="documents-grid">{documents.map((document) => <article className={`document-card ${document.status}`} key={document.id}><div className="document-top"><span className="document-icon"><FileText size={22} /></span><StatusBadge status={document.status}>{documentLabels[document.status]}</StatusBadge></div><h3>{document.title}</h3><p>{document.fileName || "Aucun fichier transmis"}</p>{document.correctionMessage && <div className="correction-message"><CircleAlert size={17} /><span>{document.correctionMessage}</span></div>}<div className="document-footer">{document.downloadUrl ? <a className="button button-secondary" href={assetUrl(document.downloadUrl)} download><Download size={17} /> Télécharger</a> : document.status === "correction_required" ? <label className="button button-secondary upload-label"><Upload size={17} /> Remplacer le document<input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => handleFile(document, event.target.files?.[0])} /></label> : <span className="document-stored-label"><FileCheck2 size={17} /> Document classé</span>}</div></article>)}</div> : <EmptyState title="Ce dossier est vide" description="Ajoutez les premiers documents liés à cette assurance." />}
+      {documents.length > 0 ? <div className="documents-grid">{documents.map((document) => <article className={`document-card ${document.status}`} key={document.id}><div className="document-top"><span className="document-icon"><FileText size={22} /></span><StatusBadge status={document.status}>{documentLabels[document.status]}</StatusBadge></div><h3>{document.title}</h3><p>{document.fileName || "Aucun fichier transmis"}</p>{document.correctionMessage && <div className="correction-message"><CircleAlert size={17} /><span>{document.correctionMessage}</span></div>}<div className="document-footer">{document.downloadUrl ? <a className="button button-secondary" href={assetUrl(document.downloadUrl)} download><Download size={17} /> Télécharger</a> : document.status === "correction_required" ? <label className="button button-secondary upload-label"><Upload size={17} /> Remplacer le document<input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => handleFile(document, event.target.files?.[0])} /></label> : <span className="document-stored-label"><FileCheck2 size={17} /> Document classé</span>}{document.fileName && !document.downloadUrl && <AlertDialog><AlertDialogTrigger asChild><Button type="button" variant="ghost" className="document-delete-button"><Trash2 size={16} /> Supprimer</Button></AlertDialogTrigger><AlertDialogContent className="portal-dialog"><AlertDialogHeader><AlertDialogTitle>Supprimer ce document ?</AlertDialogTitle><AlertDialogDescription>« {document.fileName} » sera retiré de votre bibliothèque documentaire. Cette action est définitive.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => deleteDocument(document.id)}>Supprimer le document</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}</div></article>)}</div> : <EmptyState title="Ce dossier est vide" description="Ajoutez les premiers documents liés à cette assurance." />}
       <p className="simulation-note"><CircleAlert size={16} /> Seuls le nom, le type, la date et le statut du fichier sont mémorisés. Aucun contenu de fichier n’est stocké.</p>
     </div>
   );
@@ -373,7 +378,43 @@ export function ContractDetailPage({ policyNumber }: { policyNumber: string }) {
 export function ClaimsPage() {
   const { store, navigate } = usePortal();
   const claims = store.claims.filter((claim) => claim.scope === "core");
-  return <div className="page-stack"><PageHeader eyebrow="Assistance et suivi" title="Mes sinistres" description="Déclarez un événement et suivez l’avancement de son traitement." action={<LinkButton to="/espace/sinistres/nouveau"><Plus size={18} /> Déclarer un sinistre</LinkButton>} />{claims.length > 0 ? <div className="claim-list">{claims.map((claim) => <button type="button" onClick={() => navigate(`/espace/sinistres/${claim.reference}`)} className="claim-card" key={claim.id}><span className="claim-icon"><LifeBuoy size={22} /></span><div><span className="reference">{claim.reference}</span><strong>{claim.productLabel} · {claim.type}</strong><small>Déclaré le {formatDate(claim.date)}{claim.advisor ? ` · Suivi par ${claim.advisor.name}` : " · En attente de prise en charge"}</small></div><StatusBadge status={claim.status}>{claim.status === "closed" ? "Clôturé" : "En traitement"}</StatusBadge><ChevronRight size={18} /></button>)}</div> : <section className="panel empty-state"><LifeBuoy size={30} /><h2>Aucun sinistre déclaré</h2><p>Vos déclarations apparaîtront ici dès leur transmission.</p><LinkButton to="/espace/sinistres/nouveau"><Plus size={18} /> Déclarer un sinistre</LinkButton></section>}</div>;
+  const activeClaims = claims.filter((claim) => claim.status !== "closed").length;
+  const closedClaims = claims.length - activeClaims;
+  const claimDocuments = store.documents.filter((document) => documentFolderId(document) === "sinistres" && Boolean(document.fileName || document.downloadUrl)).length;
+
+  return <div className="grid gap-6 lg:gap-8">
+    <PageHeader eyebrow="Assistance et suivi" title="Mes sinistres" description="Déclarez un événement, retrouvez vos pièces et suivez chaque étape du traitement." />
+
+    <section className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
+      <Card className="relative overflow-hidden border-0 bg-[linear-gradient(120deg,#6f0912_0%,#b8141e_64%,#e5691c_135%)] text-white shadow-[0_22px_55px_rgba(108,12,20,.18)]">
+        <CardContent className="relative z-10 grid gap-5 p-6 sm:grid-cols-[1fr_auto] sm:items-end sm:p-8">
+          <div className="max-w-2xl"><span className="text-[11px] font-bold uppercase tracking-[.16em] text-orange-100/80">Assistance immédiate</span><h2 className="mt-2 text-2xl font-semibold tracking-[-.03em] text-white sm:text-3xl">Un incident vient de se produire ?</h2><p className="mt-3 max-w-xl text-sm leading-6 text-red-50/80">Décrivez la situation et transmettez les premiers justificatifs. Votre courtier suit ensuite le dossier avec vous.</p></div>
+          <LinkButton to="/espace/sinistres/nouveau" className="border-0 bg-white text-brand-red shadow-sm hover:bg-orange-50"><Plus size={18} /> Déclarer un sinistre</LinkButton>
+        </CardContent>
+        <span className="pointer-events-none absolute -right-12 -top-20 size-64 rounded-full border-[42px] border-white/5" />
+      </Card>
+
+      <Card className="rounded-2xl bg-white shadow-[0_10px_35px_rgba(15,35,65,.04)]">
+        <CardContent className="grid divide-y divide-slate-100 p-0 sm:grid-cols-3 sm:divide-x sm:divide-y-0 xl:grid-cols-1 xl:divide-x-0 xl:divide-y">
+          {[{ label: "En cours", value: activeClaims, icon: Clock3 }, { label: "Pièces classées", value: claimDocuments, icon: FolderOpen }, { label: "Clôturés", value: closedClaims, icon: CheckCircle2 }].map(({ label, value, icon: Icon }) => <div className="flex min-h-[92px] min-w-0 items-center gap-3 px-4 py-4 xl:min-h-0" key={label}><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-red"><Icon size={18} /></span><div className="min-w-0"><strong className="block text-xl font-semibold tabular-nums text-slate-950">{value}</strong><span className="block truncate text-xs text-slate-500">{label}</span></div></div>)}
+        </CardContent>
+      </Card>
+    </section>
+
+    <section className="grid gap-4">
+      <div className="flex items-end justify-between gap-4"><div><span className="text-[11px] font-bold uppercase tracking-[.15em] text-brand-red">Vos dossiers</span><h2 className="mt-1 text-xl font-semibold tracking-[-.025em] text-slate-950">Suivi des déclarations</h2></div><Badge variant="outline">{claims.length} dossier{claims.length > 1 ? "s" : ""}</Badge></div>
+      {claims.length > 0 ? <div className="grid gap-3">{claims.map((claim) => {
+        const completedSteps = claim.timeline.filter((step) => step.done).length;
+        const progress = claim.status === "closed" ? 100 : Math.round((completedSteps / Math.max(claim.timeline.length, 1)) * 100);
+        const currentStep = claim.timeline.find((step) => step.active)?.label ?? (claim.status === "closed" ? "Dossier clôturé" : "Déclaration reçue");
+        return <button type="button" onClick={() => navigate(`/espace/sinistres/${claim.reference}`)} className="group grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-[0_8px_28px_rgba(15,35,65,.035)] transition hover:border-red-200 hover:shadow-[0_14px_34px_rgba(94,10,19,.08)] sm:grid-cols-[52px_minmax(0,1fr)_auto] sm:items-center" key={claim.id}>
+          <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand-red"><LifeBuoy size={22} /></span>
+          <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="text-[11px] font-bold uppercase tracking-[.08em] text-slate-500">{claim.reference}</span><StatusBadge status={claim.status}>{claimStatusLabels[claim.status] ?? claim.status}</StatusBadge></div><strong className="mt-2 block text-[15px] font-semibold text-slate-950 group-hover:text-brand-red">{claim.productLabel} · {claim.type}</strong><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500"><span><CalendarDays size={13} className="mr-1 inline" />{formatDate(claim.date)}</span><span><MapPin size={13} className="mr-1 inline" />{claim.location}</span><span>{claim.advisor ? `Suivi par ${claim.advisor.name}` : "Attribution en cours"}</span></div><div className="mt-4 flex items-center gap-3"><Progress value={progress} className="h-1.5 max-w-sm bg-slate-100 [&>div]:bg-brand-orange" /><span className="shrink-0 text-[11px] font-semibold text-slate-500">{currentStep}</span></div></div>
+          <span className="hidden size-9 place-items-center rounded-full border border-slate-200 text-slate-400 transition group-hover:border-brand-red group-hover:text-brand-red sm:grid"><ChevronRight size={17} /></span>
+        </button>;
+      })}</div> : <Card className="overflow-hidden rounded-2xl border-dashed bg-white/80"><CardContent className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[auto_1fr] lg:items-start"><span className="grid size-14 place-items-center rounded-2xl bg-brand-soft text-brand-red"><LifeBuoy size={25} /></span><div><h3 className="text-lg font-semibold text-slate-950">Aucun dossier pour le moment</h3><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Lorsqu’un sinistre sera déclaré, vous retrouverez ici son statut, votre interlocuteur et l’avancement du traitement.</p><div className="mt-6 grid gap-3 sm:grid-cols-3">{[["01", "Déclarez", "Renseignez l’événement"], ["02", "Transmettez", "Ajoutez les justificatifs"], ["03", "Suivez", "Consultez chaque évolution"]].map(([number, title, help]) => <div className="rounded-xl border border-slate-100 bg-slate-50 p-4" key={number}><span className="text-xs font-bold text-brand-red">{number}</span><strong className="mt-2 block text-sm text-slate-900">{title}</strong><small className="mt-1 block text-xs text-slate-500">{help}</small></div>)}</div></div></CardContent></Card>}
+    </section>
+  </div>;
 }
 
 export function ClaimDetailPage({ reference }: { reference: string }) {

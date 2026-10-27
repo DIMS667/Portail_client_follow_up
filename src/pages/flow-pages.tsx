@@ -12,6 +12,7 @@ import {
   type ConfiguredInsuranceProduct,
   type InsuranceFormField,
 } from "../data/insurance-product-forms";
+import { documentsForProduct } from "../data/document-folders";
 import {
   createClaim, createInsuranceRequest, formatDate, formatFcfa, requestRenewal, selectOffer,
 } from "../services/portal-service";
@@ -43,8 +44,14 @@ export function NewRequestPage() {
   const [createdProductLabel, setCreatedProductLabel] = useState("Assurance automobile");
   const [createdVehicleKind, setCreatedVehicleKind] = useState<AutomobileVehicleKind | undefined>();
   const submitRequest = async (data: Partial<InsuranceRequest>) => {
-    if (data.product === "automobile" && isPortalDeployment) {
-      const request = await creerDemandeAutomobile(data);
+    const requestProduct = data.product ?? product ?? "automobile";
+    const dataWithDocuments: Partial<InsuranceRequest> = {
+      ...data,
+      product: requestProduct,
+      documents: documentsForProduct(store.documents, requestProduct),
+    };
+    if (dataWithDocuments.product === "automobile" && isPortalDeployment) {
+      const request = await creerDemandeAutomobile(dataWithDocuments);
       updateStore((current) => ({
         ...current,
         requests: [request, ...current.requests.filter((item) => item.reference !== request.reference)],
@@ -63,7 +70,7 @@ export function NewRequestPage() {
       setCreatedReference(request.reference);
       return;
     }
-    const result = createInsuranceRequest(store, data);
+    const result = createInsuranceRequest(store, dataWithDocuments);
     updateStore(result.store);
     setCreatedProductLabel(result.request.productLabel);
     setCreatedVehicleKind(result.request.vehicleKind);

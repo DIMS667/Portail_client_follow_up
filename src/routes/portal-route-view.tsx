@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { isPortalDeployment } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
+import { PortalPageSkeleton, PortalSessionSkeleton } from "../components/portal-loading";
 
 const ClientShell = lazy(() => import("../components/client-shell").then((module) => ({ default: module.ClientShell })));
 const ClaimDetailPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.ClaimDetailPage })));
@@ -65,11 +66,11 @@ export function PortalRouteView() {
 }
 
 function PortalSessionLoadingFallback() {
-  return <div className="portal-session-loading" role="status" aria-live="polite"><span>Vérification de votre session…</span></div>;
+  return <PortalSessionSkeleton />;
 }
 
 function PortalPageLoadingFallback() {
-  return <div className="page-stack" role="status" aria-live="polite">Chargement de la page…</div>;
+  return <PortalPageSkeleton />;
 }
 
 function PortalLoginRedirect() {

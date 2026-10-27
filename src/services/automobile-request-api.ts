@@ -83,6 +83,27 @@ interface PersonneApi {
   ville: string;
 }
 
+interface DocumentDemandeApi {
+  id: string;
+  titre: string;
+  nom_fichier?: string | null;
+  type: string;
+  dossier: string;
+  statut: "requis" | "recu" | "en_verification" | "valide" | "correction_requise";
+  date?: string | null;
+}
+
+const statutsDocumentsVersApi = {
+  required: "requis",
+  received: "recu",
+  reviewing: "en_verification",
+  validated: "valide",
+  correction_required: "correction_requise",
+} as const;
+const statutsDocumentsDepuisApi = Object.fromEntries(
+  Object.entries(statutsDocumentsVersApi).map(([portail, api]) => [api, portail]),
+) as Record<DocumentDemandeApi["statut"], "required" | "received" | "reviewing" | "validated" | "correction_required">;
+
 interface DemandeAutomobileApi {
   id: string;
   reference: string;
@@ -113,6 +134,7 @@ interface DemandeAutomobileApi {
     garanties: string[];
   } | null;
   possede_vignette?: boolean | null;
+  documents: DocumentDemandeApi[];
   statut: string;
   cree_le: string;
   historique_statuts: Array<{ statut: string; cree_le: string }>;
@@ -195,6 +217,18 @@ function conducteurDepuisApi(conducteur: NonNullable<DemandeAutomobileApi["condu
   };
 }
 
+function documentsVersApi(data: Partial<InsuranceRequest>): DocumentDemandeApi[] {
+  return (data.documents ?? []).map((document) => ({
+    id: document.id,
+    titre: document.title,
+    nom_fichier: document.fileName,
+    type: document.type,
+    dossier: document.folder,
+    statut: statutsDocumentsVersApi[document.status],
+    date: document.date,
+  }));
+}
+
 function construireEntree(data: Partial<InsuranceRequest>) {
   const estMoto = data.vehicleKind === "moto";
   const demande = estMoto ? data.motoRequest : data.automobileRequest;
@@ -204,6 +238,7 @@ function construireEntree(data: Partial<InsuranceRequest>) {
       sous_type_automobile: estMoto ? "moto_deux_trois_roues" : "voiture",
       mode_preparation: "delegation_courtier",
       message_delegation: demande.delegatedMessage,
+      documents: documentsVersApi(data),
     };
   }
   const base = {
@@ -221,6 +256,7 @@ function construireEntree(data: Partial<InsuranceRequest>) {
       garanties: demande.coverage.guarantees.map((garantie) => garantiesVersApi[garantie]),
     },
     possede_vignette: demande.hasVignette,
+    documents: documentsVersApi(data),
   };
   if (estMoto) {
     const moto = demande as Extract<MotoInsuranceRequestData, { completionMode: "self_service" }>;
@@ -358,6 +394,15 @@ function versDemandePortail(api: DemandeAutomobileApi): InsuranceRequest {
     vehicleKind: estMoto ? "moto" : "car",
     automobileRequest,
     motoRequest,
+    documents: (api.documents ?? []).map((document) => ({
+      id: document.id,
+      title: document.titre,
+      fileName: document.nom_fichier ?? undefined,
+      type: document.type,
+      folder: document.dossier,
+      status: statutsDocumentsDepuisApi[document.statut],
+      date: document.date ?? undefined,
+    })),
     ...(vehicule ? {
       vehicle: {
         brand: vehicule.brand,

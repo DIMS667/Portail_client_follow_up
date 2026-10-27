@@ -454,8 +454,10 @@
 .document-card > p { margin: 0; color: var(--muted); font-size: .75rem; }
 .correction-message { margin-top: 13px; padding: 10px; display: flex; gap: 8px; color: #a34646; border-radius: 10px; background: #fff0f0; font-size: .72rem; line-height: 1.4; }
 .correction-message svg { flex: 0 0 auto; }
-.document-footer { margin-top: auto; padding-top: 16px; }
+.document-footer { margin-top: auto; padding-top: 16px; display: grid; gap: 7px; }
 .document-footer .button { width: 100%; }
+.document-delete-button { justify-content: center; color: #b4232c !important; }
+.document-delete-button:hover { background: #fff0f0 !important; color: #921923 !important; }
 .upload-label { cursor: pointer; }
 .upload-label input { display: none; }
 .payment-due-card { padding: 22px; display: grid; grid-template-columns: 52px 1fr auto auto; gap: 16px; align-items: center; color: white; border-radius: 21px 21px 21px 7px; background: linear-gradient(110deg, #6f0912, #cd131d 68%, #e5691c); }

@@ -1,4 +1,4 @@
-import type { Claim, InsuranceRequest, PaymentMethod, PortalStore } from "../types/domain";
+import type { Claim, ClientDocument, InsuranceRequest, PaymentMethod, PortalStore } from "../types/domain";
 
 export type CreateClaimInput = Pick<Claim, "contractId" | "type" | "date" | "location" | "description"> & {
   autoDeclaration?: Claim["autoDeclaration"];
@@ -37,7 +37,7 @@ export function createInsuranceRequest(store: PortalStore, data: Partial<Insuran
   const request: InsuranceRequest = {
     id: `REQ-${Date.now()}`, reference, clientId: store.client.id, product, productLabel: data.productLabel ?? "Assurance automobile",
     date: new Date().toISOString().slice(0, 10), status: "new", advisorId: store.advisor.id, vehicleKind: data.vehicleKind, vehicle: data.vehicle,
-    automobileRequest: data.automobileRequest, motoRequest: data.motoRequest, healthRequest: data.healthRequest, details: data.details, coverage: data.coverage, desiredStartDate: data.desiredStartDate, comments: data.comments,
+    automobileRequest: data.automobileRequest, motoRequest: data.motoRequest, healthRequest: data.healthRequest, documents: data.documents, details: data.details, coverage: data.coverage, desiredStartDate: data.desiredStartDate, comments: data.comments,
     timeline: isVehicleRequest
       ? [{ label: "Demande envoyée", done: true, at: "Aujourd’hui" }, { label: "Analyse par le courtier", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Contrat disponible", done: false }]
       : [{ label: "Demande envoyée", done: true, at: "Aujourd’hui" }, { label: "Analyse du besoin", done: false, active: true }, { label: "Préparation des propositions", done: false }, { label: "Propositions disponibles", done: false }, { label: "Choix de l’offre", done: false }, { label: "Documents", done: false }, { label: "Paiement", done: false }, { label: "Police disponible", done: false }],
@@ -63,6 +63,10 @@ export function selectOffer(store: PortalStore, requestReference: string, offerI
 
 export function replaceDocument(store: PortalStore, documentId: string, file: File): PortalStore {
   return { ...store, documents: store.documents.map((document) => document.id === documentId ? { ...document, fileName: file.name, type: file.type || document.type, date: new Date().toISOString().slice(0, 10), status: "received" as const, correctionMessage: undefined } : document) };
+}
+
+export function removeDocument(store: PortalStore, documentId: string): PortalStore {
+  return { ...store, documents: store.documents.filter((document) => document.id !== documentId) };
 }
 
 export function simulatePayment(store: PortalStore, success: boolean, method: PaymentMethod): PortalStore {
@@ -114,11 +118,22 @@ export function createClaim(store: PortalStore, input: CreateClaimInput): { stor
     ...input,
     attachments: input.attachments ? [...input.attachments] : undefined,
   };
+  const claimDocuments: ClientDocument[] = (input.attachments ?? []).map((fileName, index) => ({
+    id: `DOC-CLAIM-${now.getTime()}-${index}`,
+    title: fileName.replace(/\.[^.]+$/, ""),
+    category: "sinistres",
+    type: fileName.split(".").pop()?.toUpperCase() || "Document",
+    ownerId: store.client.id,
+    status: "received",
+    fileName,
+    date: now.toISOString().slice(0, 10),
+  }));
   return {
     claim,
     store: {
       ...store,
       claims: [claim, ...store.claims],
+      documents: [...claimDocuments, ...store.documents],
       contracts: store.contracts.map((contract) => contract.policyNumber === input.contractId && !contract.claimIds.includes(claimId)
         ? { ...contract, claimIds: [...contract.claimIds, claimId] }
         : contract),
