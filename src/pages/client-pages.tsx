@@ -282,8 +282,9 @@ export function DocumentsPage() {
   const { store, updateStore } = usePortal();
   const [folderId, setFolderId] = useState<DocumentFolderId | null>(null);
   const folder = documentFolders.find((item) => item.id === folderId);
+  const libraryDocuments = store.documents.filter((document) => !document.downloadUrl);
   const documents = folderId
-    ? store.documents.filter((document) => documentFolderId(document) === folderId)
+    ? libraryDocuments.filter((document) => documentFolderId(document) === folderId)
     : [];
   const handleFile = (document: ClientDocument, file?: File) => { if (file) updateStore(replaceDocument(store, document.id, file)); };
   const deleteDocument = (documentId: string) => updateStore((current) => removeDocument(current, documentId));
@@ -313,7 +314,7 @@ export function DocumentsPage() {
       <PageHeader eyebrow="Bibliothèque documentaire" title="Mes documents" description="Chaque dossier isole les pièces utiles au produit d’assurance correspondant." />
       <div className="document-folders-grid">
         {documentFolders.map((item) => {
-          const count = store.documents.filter((document) => documentFolderId(document) === item.id).length;
+          const count = libraryDocuments.filter((document) => documentFolderId(document) === item.id).length;
           return <button className="document-folder-card" type="button" onClick={() => setFolderId(item.id)} key={item.id}><span className="document-folder-icon"><item.icon size={25} /></span><div><h2>{item.label}</h2><p>{item.description}</p><small>{count} document{count > 1 ? "s" : ""}</small></div><ChevronRight size={20} /></button>;
         })}
       </div>

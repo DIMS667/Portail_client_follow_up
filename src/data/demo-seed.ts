@@ -35,11 +35,6 @@ export function createDemoSeed(): PortalStore {
       { id: "OFF-003", reference: "OFF-003", proposalId: "PROP-001", provider: "Compagnie C", product: "Auto Essentiel", premium: 98500, duration: "12 mois", effectiveDate: "2026-10-12", deductible: 100000, guarantees: ["Responsabilité civile", "Vol", "Assistance"], options: ["Incendie"], exclusions: ["Dommages propres", "Accessoires non déclarés"], requiredDocuments: ["CNI", "Carte grise", "Permis de conduire"] },
     ],
     documents: [
-      { id: "DOC-001", title: "Carte nationale d’identité", category: "Identité", type: "CNI", ownerId: "CL-001", status: "validated", fileName: "cni-jean-dupont.pdf", date: "2026-09-27" },
-      { id: "DOC-002", title: "Carte grise", category: "Véhicules", type: "Carte grise", ownerId: "REQ-001", status: "correction_required", fileName: "carte-grise.jpg", date: "2026-09-28", correctionMessage: "Le document transmis est difficilement lisible. Merci d’envoyer une nouvelle copie." },
-      { id: "DOC-003", title: "Permis de conduire", category: "Identité", type: "Permis", ownerId: "REQ-001", status: "validated", fileName: "permis.pdf", date: "2026-09-28" },
-      { id: "DOC-004", title: "Ancienne attestation", category: "Attestations", type: "Attestation", ownerId: "REQ-001", status: "received", fileName: "ancienne-attestation.pdf", date: "2026-09-29" },
-      { id: "DOC-005", title: "Photo du véhicule", category: "Véhicules", type: "Photo", ownerId: "REQ-001", status: "required" },
       { id: "DOC-006", title: "Police automobile", category: "Polices", type: "Police", ownerId: "POL-2026-00325", status: "validated", date: "2026-08-15", downloadUrl: "/documents-demo/police-auto-demo.pdf" },
       { id: "DOC-007", title: "Attestation automobile", category: "Attestations", type: "Attestation", ownerId: "POL-2026-00325", status: "validated", date: "2026-08-15", downloadUrl: "/documents-demo/attestation-auto-demo.pdf" },
       { id: "DOC-008", title: "Reçu PAY-2026-00045", category: "Reçus", type: "Reçu", ownerId: "PAY-2026-00045", status: "validated", date: "2026-08-14", downloadUrl: "/documents-demo/recu-paiement-demo.pdf" },
