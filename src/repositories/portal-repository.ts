@@ -17,7 +17,11 @@ function cloneSeed() {
 function migrateStore(store: PortalStore): PortalStore {
   return {
     ...store,
-    documents: store.documents.filter((document) => !FAKE_DOCUMENT_IDS.has(document.id)),
+    documents: store.documents.filter((document) => !FAKE_DOCUMENT_IDS.has(document.id) && document.title !== "Ancienne attestation"),
+    offers: store.offers.map((offer) => ({
+      ...offer,
+      requiredDocuments: offer.requiredDocuments.filter((document) => document !== "Ancienne attestation"),
+    })),
   };
 }
 

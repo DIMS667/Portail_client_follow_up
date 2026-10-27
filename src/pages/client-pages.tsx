@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Bike, Building2, CalendarDays, Car, Check, CheckCircle2, ChevronRight,
-  CircleAlert, CircleHelp, ClipboardList, Clock3, Download, FileCheck2, FileText, Filter, FolderOpen,
+  CircleAlert, CircleHelp, ClipboardList, Clock3, Download, Eye, FileCheck2, FileText, Filter, FolderOpen,
   HandCoins, HeartHandshake, HeartPulse, Home, LifeBuoy, Mail, MapPin, MessageCircle, Paperclip,
   LogOut, Phone, Plane, Plus, RefreshCcw, Search, Send, ShieldCheck, Smartphone, Upload, UserRound,
   Trash2, WalletCards, XCircle,
@@ -20,14 +20,14 @@ import { Separator } from "@/components/ui/separator";
 import { assetUrl } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
 import { EmptyState, InfoCard, LinkButton, PageHeader, StatusBadge, Timeline, documentLabels, requestLabels } from "../components/portal-ui";
-import { documentFolderId, type DocumentFolderId } from "../data/document-folders";
+import { documentFolderId, documentSlotsByFolder, type DocumentFolderId, type DocumentSlotDefinition } from "../data/document-folders";
 import {
   appliquerCompteAuthentifie,
   deconnecter,
   mettreAJourMonCompte,
 } from "../services/authentication-api";
 import {
-  addMessage, formatDate, formatFcfa, markNotificationRead, removeDocument, replaceDocument,
+  addMessage, formatDate, formatFcfa, markNotificationRead, removeDocument, saveDocumentToSlot,
   signOut, simulatePayment, updateProfile,
 } from "../services/portal-service";
 import type {
@@ -281,41 +281,39 @@ export function ProposalsPage({ requestReference }: { requestReference: string }
 export function DocumentsPage() {
   const { store, updateStore } = usePortal();
   const [folderId, setFolderId] = useState<DocumentFolderId | null>(null);
+  const [previewDocument, setPreviewDocument] = useState<ClientDocument | null>(null);
   const folder = documentFolders.find((item) => item.id === folderId);
   const libraryDocuments = store.documents.filter((document) => !document.downloadUrl);
-  const documents = folderId
-    ? libraryDocuments.filter((document) => documentFolderId(document) === folderId)
-    : [];
-  const handleFile = (document: ClientDocument, file?: File) => { if (file) updateStore(replaceDocument(store, document.id, file)); };
-  const deleteDocument = (documentId: string) => updateStore((current) => removeDocument(current, documentId));
-  const addFiles = (files?: FileList | null) => {
-    if (!folderId || !files?.length) return;
-    const date = new Date().toISOString().slice(0, 10);
-    updateStore((current) => ({
-      ...current,
-      documents: [
-        ...Array.from(files).map((file, index): ClientDocument => ({
-          id: `DOC-UPLOAD-${Date.now()}-${index}`,
-          title: file.name.replace(/\.[^.]+$/, ""),
-          category: folderId,
-          type: file.type || "Document",
-          ownerId: current.client.id,
-          status: "received",
-          fileName: file.name,
-          date,
-        })),
-        ...current.documents,
-      ],
+  const slots = folderId ? documentSlotsByFolder[folderId] : [];
+  const documentForSlot = (slotId: string) => libraryDocuments.find((document) => document.slotId === slotId);
+  const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+  const handleFile = async (slot: DocumentSlotDefinition, file?: File) => {
+    if (!file || !folderId) return;
+    const contentUrl = await fileToDataUrl(file);
+    updateStore((current) => saveDocumentToSlot(current, {
+      slotId: slot.id,
+      title: slot.title,
+      category: folderId,
+      type: slot.type,
+      file,
+      contentUrl,
     }));
   };
+  const deleteDocument = (documentId: string) => updateStore((current) => removeDocument(current, documentId));
 
   if (!folder) return (
     <div className="page-stack">
-      <PageHeader eyebrow="Bibliothèque documentaire" title="Mes documents" description="Chaque dossier isole les pièces utiles au produit d’assurance correspondant." />
+      <PageHeader eyebrow="Pièces justificatives" title="Mes documents" description="Classez chaque pièce dans la rubrique prévue afin qu’elle soit utilisée dans les bonnes démarches." />
       <div className="document-folders-grid">
         {documentFolders.map((item) => {
-          const count = libraryDocuments.filter((document) => documentFolderId(document) === item.id).length;
-          return <button className="document-folder-card" type="button" onClick={() => setFolderId(item.id)} key={item.id}><span className="document-folder-icon"><item.icon size={25} /></span><div><h2>{item.label}</h2><p>{item.description}</p><small>{count} document{count > 1 ? "s" : ""}</small></div><ChevronRight size={20} /></button>;
+          const itemSlots = documentSlotsByFolder[item.id];
+          const count = itemSlots.filter((slot) => Boolean(documentForSlot(slot.id)?.fileName)).length;
+          return <button className="document-folder-card" type="button" onClick={() => setFolderId(item.id)} key={item.id}><span className="document-folder-icon"><item.icon size={25} /></span><div><h2>{item.label}</h2><p>{item.description}</p><small>{count} sur {itemSlots.length} pièce{itemSlots.length > 1 ? "s" : ""} ajoutée{count > 1 ? "s" : ""}</small></div><ChevronRight size={20} /></button>;
         })}
       </div>
     </div>
@@ -325,9 +323,19 @@ export function DocumentsPage() {
     <div className="page-stack">
       <button className="back-link" type="button" onClick={() => setFolderId(null)}><ArrowLeft size={17} /> Retour aux dossiers</button>
       <PageHeader eyebrow="Dossier documentaire" title={folder.label} description={folder.description} />
-      <label className="document-folder-upload"><Upload size={28} /><div><strong>Ajouter des documents dans ce dossier</strong><span>Ces fichiers seront utilisés uniquement pour les démarches « {folder.label} ».</span></div><span className="button button-primary">Choisir des fichiers</span><input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => addFiles(event.target.files)} /></label>
-      {documents.length > 0 ? <div className="documents-grid">{documents.map((document) => <article className={`document-card ${document.status}`} key={document.id}><div className="document-top"><span className="document-icon"><FileText size={22} /></span><StatusBadge status={document.status}>{documentLabels[document.status]}</StatusBadge></div><h3>{document.title}</h3><p>{document.fileName || "Aucun fichier transmis"}</p>{document.correctionMessage && <div className="correction-message"><CircleAlert size={17} /><span>{document.correctionMessage}</span></div>}<div className="document-footer">{document.downloadUrl ? <a className="button button-secondary" href={assetUrl(document.downloadUrl)} download><Download size={17} /> Télécharger</a> : document.status === "correction_required" ? <label className="button button-secondary upload-label"><Upload size={17} /> Remplacer le document<input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => handleFile(document, event.target.files?.[0])} /></label> : <span className="document-stored-label"><FileCheck2 size={17} /> Document classé</span>}{document.fileName && !document.downloadUrl && <AlertDialog><AlertDialogTrigger asChild><Button type="button" variant="ghost" className="document-delete-button"><Trash2 size={16} /> Supprimer</Button></AlertDialogTrigger><AlertDialogContent className="portal-dialog"><AlertDialogHeader><AlertDialogTitle>Supprimer ce document ?</AlertDialogTitle><AlertDialogDescription>« {document.fileName} » sera retiré de votre bibliothèque documentaire. Cette action est définitive.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => deleteDocument(document.id)}>Supprimer le document</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}</div></article>)}</div> : <EmptyState title="Ce dossier est vide" description="Ajoutez les premiers documents liés à cette assurance." />}
-      <p className="simulation-note"><CircleAlert size={16} /> Seuls le nom, le type, la date et le statut du fichier sont mémorisés. Aucun contenu de fichier n’est stocké.</p>
+      <div className="document-guidance"><ShieldCheck size={20} /><div><strong>Ajoutez uniquement les pièces indiquées ci-dessous.</strong><span>Chaque fichier sera automatiquement classé et proposé dans les démarches concernées.</span></div></div>
+      <div className="documents-grid">{slots.map((slot) => {
+        const document = documentForSlot(slot.id);
+        const hasFile = Boolean(document?.fileName);
+        return <article className={`document-card ${document?.status ?? "required"}`} key={slot.id}><div className="document-top"><span className="document-icon"><FileText size={22} /></span><StatusBadge status={document?.status ?? "required"}>{document ? documentLabels[document.status] : "À fournir"}</StatusBadge></div><h3>{slot.title}</h3><p>{document?.fileName || "Aucun fichier transmis"}</p>{document?.correctionMessage && <div className="correction-message"><CircleAlert size={17} /><span>{document.correctionMessage}</span></div>}<div className="document-footer">{hasFile && document?.contentUrl ? <button className="button button-secondary" type="button" onClick={() => setPreviewDocument(document)}><Eye size={17} /> Voir</button> : null}<label className={`button ${hasFile ? "button-secondary" : "button-primary"} upload-label`}><Upload size={17} /> {hasFile ? "Remplacer" : "Ajouter le document"}<input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => { void handleFile(slot, event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>{hasFile && document && <AlertDialog><AlertDialogTrigger asChild><Button type="button" variant="ghost" className="document-delete-button"><Trash2 size={16} /> Supprimer</Button></AlertDialogTrigger><AlertDialogContent className="portal-dialog"><AlertDialogHeader><AlertDialogTitle>Supprimer ce fichier ?</AlertDialogTitle><AlertDialogDescription>« {document.fileName} » sera retiré. La rubrique « {slot.title} » restera disponible pour un nouvel envoi.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => deleteDocument(document.id)}>Supprimer le fichier</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}</div></article>;
+      })}</div>
+      <p className="simulation-note"><CircleAlert size={16} /> Formats acceptés : PDF, JPG et PNG. Les fichiers restent classés dans la rubrique choisie.</p>
+      <Dialog open={Boolean(previewDocument)} onOpenChange={(open) => { if (!open) setPreviewDocument(null); }}>
+        <DialogContent className="portal-dialog document-preview-dialog">
+          <DialogHeader><DialogTitle>{previewDocument?.title}</DialogTitle><DialogDescription>{previewDocument?.fileName}</DialogDescription></DialogHeader>
+          <div className="document-preview-frame">{previewDocument?.contentUrl?.startsWith("data:image/") ? <img src={previewDocument.contentUrl} alt={previewDocument.title} /> : previewDocument?.contentUrl ? <iframe src={previewDocument.contentUrl} title={previewDocument.title} /> : null}</div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

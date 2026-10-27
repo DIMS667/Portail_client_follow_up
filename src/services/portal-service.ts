@@ -61,8 +61,29 @@ export function selectOffer(store: PortalStore, requestReference: string, offerI
   };
 }
 
-export function replaceDocument(store: PortalStore, documentId: string, file: File): PortalStore {
-  return { ...store, documents: store.documents.map((document) => document.id === documentId ? { ...document, fileName: file.name, type: file.type || document.type, date: new Date().toISOString().slice(0, 10), status: "received" as const, correctionMessage: undefined } : document) };
+export function saveDocumentToSlot(
+  store: PortalStore,
+  input: { slotId: string; title: string; category: string; type: string; file: File; contentUrl: string },
+): PortalStore {
+  const existing = store.documents.find((document) => document.slotId === input.slotId);
+  const document: ClientDocument = {
+    id: existing?.id ?? `DOC-SLOT-${input.slotId}`,
+    title: input.title,
+    category: input.category,
+    type: input.type,
+    ownerId: store.client.id,
+    status: "received",
+    slotId: input.slotId,
+    fileName: input.file.name,
+    date: new Date().toISOString().slice(0, 10),
+    contentUrl: input.contentUrl,
+  };
+  return {
+    ...store,
+    documents: existing
+      ? store.documents.map((item) => item.id === existing.id ? document : item)
+      : [document, ...store.documents],
+  };
 }
 
 export function removeDocument(store: PortalStore, documentId: string): PortalStore {
