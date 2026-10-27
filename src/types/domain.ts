@@ -11,7 +11,7 @@ export type RequestStatus = "new" | "under_review" | "proposals_available" | "of
 export type DocumentStatus = "required" | "received" | "reviewing" | "validated" | "correction_required";
 export type PaymentStatus = "pending" | "succeeded" | "failed";
 export type ContractStatus = "preparing" | "active" | "expired";
-export type ClaimStatus = "submitted" | "under_review" | "documents_verified" | "sent_to_insurer" | "expertise" | "decision" | "indemnification" | "closed";
+export type ClaimStatus = "submitted" | "under_review" | "documents_pending" | "documents_verified" | "sent_to_insurer" | "expertise" | "decision" | "indemnification" | "indemnified" | "closed";
 export type PaymentMethod = "mobile_money" | "orange_money" | "bank_card" | "bank_transfer";
 export type AutomobileVehicleKind = "car" | "moto";
 
@@ -321,6 +321,7 @@ export interface Claim {
   scope?: "core" | "scenario";
   autoDeclaration?: AutoClaimDeclaration;
   attachments?: string[];
+  advisor?: Advisor | null;
 }
 export interface Message { id: string; sender: "client" | "advisor"; body: string; sentAt: string; }
 export interface Notification { id: string; title: string; body: string; date: string; route: string; read: boolean; kind: string; }

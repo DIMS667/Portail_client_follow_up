@@ -20,7 +20,8 @@ import {
 } from "lucide-react";
 import { usePortal } from "../app/portal-context";
 import { PageHeader } from "../components/portal-ui";
-import { createClaim, formatDate } from "../services/portal-service";
+import { creerSinistre } from "../services/claims-api";
+import { formatDate } from "../services/portal-service";
 
 type Person = {
   lastName: string;
@@ -140,6 +141,8 @@ export function NewClaimPage() {
   const [step, setStep] = useState(0);
   const [created, setCreated] = useState("");
   const [showErrors, setShowErrors] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [submissionError, setSubmissionError] = useState("");
   const [generic, setGeneric] = useState({ type: "Dégât des eaux", date: "2026-10-08", location: "Douala", description: "", files: [] as string[] });
   const [auto, setAuto] = useState<AutoClaimForm>(() => ({
     clientNumber: store.client.id,
@@ -281,63 +284,70 @@ export function NewClaimPage() {
     setStep((current) => Math.max(0, current - 1));
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!isStepValid() || !selectedContract) {
       setShowErrors(true);
       return;
     }
-
-    if (!isAutomobile) {
-      const result = createClaim(store, {
+    setSaving(true);
+    setSubmissionError("");
+    try {
+      const claim = await creerSinistre({
         contractId,
-        type: generic.type,
-        date: generic.date,
-        location: generic.location,
-        description: generic.description,
+        product: selectedContract.product,
+        productLabel: selectedContract.productLabel,
+        type: isAutomobile ? "Accident automobile" : generic.type,
+        date: isAutomobile ? auto.accidentDate : generic.date,
+        location: isAutomobile ? auto.location : generic.location,
+        description: isAutomobile ? auto.narrative : generic.description,
+        attachments: isAutomobile ? auto.files : generic.files,
+        ...(isAutomobile ? {
+          autoDeclaration: {
+            clientNumber: auto.clientNumber,
+            pointOfSale: auto.pointOfSale,
+            policyEffectiveDate: auto.policyEffectiveDate,
+            policyExpiryDate: auto.policyExpiryDate,
+            accidentTime: auto.accidentTime,
+            insured: auto.insured,
+            insuredDriver: auto.insuredDriver,
+            adversePartyInvolved: auto.adversePartyInvolved,
+            adversary: auto.adversePartyInvolved ? auto.adversary : undefined,
+            adversaryDriver: auto.adversePartyInvolved ? auto.adversaryDriver : undefined,
+            insuredVehicle: auto.insuredVehicle,
+            adverseVehicle: auto.adversePartyInvolved ? auto.adverseVehicle : undefined,
+            circumstances: selectedCircumstances,
+            sketchFileName: auto.sketchFileName || undefined,
+            impactPointA: auto.impactPointA,
+            impactPointB: auto.impactPointB,
+            damageDescriptionA: auto.damageDescriptionA,
+            damageDescriptionB: auto.damageDescriptionB,
+            narrative: auto.narrative,
+            injuriesInVehicle: auto.hasInjuries
+              ? auto.injuriesInVehicle.filter((person) => person.name.trim())
+              : [],
+            otherInjuries: auto.hasInjuries
+              ? auto.otherInjuries.filter((person) => person.name.trim())
+              : [],
+            witnesses: auto.witnesses.filter((witness) => witness.name.trim()),
+            policeReportBy: auto.policeReportBy,
+            gendarmerie: auto.gendarmerie,
+            brigade: auto.brigade,
+            attestedAt: new Date().toISOString(),
+          },
+        } : {}),
       });
-      updateStore(result.store);
-      setCreated(result.claim.reference);
-      return;
+      updateStore((current) => ({
+        ...current,
+        claims: [claim, ...current.claims.filter((item) => item.id !== claim.id)],
+      }));
+      setCreated(claim.reference);
+    } catch (caught) {
+      setSubmissionError(
+        caught instanceof Error ? caught.message : "La déclaration n’a pas pu être transmise.",
+      );
+    } finally {
+      setSaving(false);
     }
-
-    const result = createClaim(store, {
-      contractId,
-      type: "Accident automobile",
-      date: auto.accidentDate,
-      location: auto.location,
-      description: auto.narrative,
-      attachments: auto.files,
-      autoDeclaration: {
-        clientNumber: auto.clientNumber,
-        pointOfSale: auto.pointOfSale,
-        policyEffectiveDate: auto.policyEffectiveDate,
-        policyExpiryDate: auto.policyExpiryDate,
-        accidentTime: auto.accidentTime,
-        insured: auto.insured,
-        insuredDriver: auto.insuredDriver,
-        adversePartyInvolved: auto.adversePartyInvolved,
-        adversary: auto.adversePartyInvolved ? auto.adversary : undefined,
-        adversaryDriver: auto.adversePartyInvolved ? auto.adversaryDriver : undefined,
-        insuredVehicle: auto.insuredVehicle,
-        adverseVehicle: auto.adversePartyInvolved ? auto.adverseVehicle : undefined,
-        circumstances: selectedCircumstances,
-        sketchFileName: auto.sketchFileName || undefined,
-        impactPointA: auto.impactPointA,
-        impactPointB: auto.impactPointB,
-        damageDescriptionA: auto.damageDescriptionA,
-        damageDescriptionB: auto.damageDescriptionB,
-        narrative: auto.narrative,
-        injuriesInVehicle: auto.hasInjuries ? auto.injuriesInVehicle.filter((person) => person.name.trim()) : [],
-        otherInjuries: auto.hasInjuries ? auto.otherInjuries.filter((person) => person.name.trim()) : [],
-        witnesses: auto.witnesses.filter((witness) => witness.name.trim()),
-        policeReportBy: auto.policeReportBy,
-        gendarmerie: auto.gendarmerie,
-        brigade: auto.brigade,
-        attestedAt: new Date().toISOString(),
-      },
-    });
-    updateStore(result.store);
-    setCreated(result.claim.reference);
   };
 
   if (!store.contracts.length) {
@@ -363,9 +373,10 @@ export function NewClaimPage() {
       {isAutomobile && step === 6 && <ReviewStep auto={auto} contractId={contractId} selectedCircumstances={selectedCircumstances} onAutoChange={updateAuto} />}
 
       {showErrors && <div className="form-alert error auto-claim-error" role="alert"><CircleAlert size={18} /> Complétez les champs essentiels de cette étape avant de continuer.</div>}
+      {submissionError && <div className="form-alert error auto-claim-error" role="alert"><CircleAlert size={18} /> {submissionError}</div>}
       <div className="flow-actions">
         {step > 0 && <button className="button button-secondary" type="button" onClick={previous}><ChevronLeft size={18} /> Précédent</button>}
-        <button className="button button-primary" type="button" onClick={step === steps.length - 1 ? submit : next}>{step === steps.length - 1 ? "Envoyer ma déclaration" : "Continuer"}{step < steps.length - 1 && <ChevronRight size={18} />}</button>
+        <button className="button button-primary" type="button" disabled={saving} onClick={step === steps.length - 1 ? () => void submit() : next}>{saving ? "Transmission…" : step === steps.length - 1 ? "Envoyer ma déclaration" : "Continuer"}{!saving && step < steps.length - 1 && <ChevronRight size={18} />}</button>
       </div>
     </section>
   </div>;
@@ -402,15 +413,15 @@ function DamageStep({ auto, onAutoChange, onInjuryChange, onWitnessChange }: { a
 
 function ReviewStep({ auto, contractId, selectedCircumstances, onAutoChange }: { auto: AutoClaimForm; contractId: string; selectedCircumstances: { code: string; label: string; vehicleA: boolean; vehicleB: boolean }[]; onAutoChange: <K extends keyof AutoClaimForm>(key: K, value: AutoClaimForm[K]) => void }) {
   const injuryCount = auto.hasInjuries ? [...auto.injuriesInVehicle, ...auto.otherInjuries].filter((person) => person.name.trim()).length : 0;
-  return <><FlowHeading number="7" icon={<CheckCircle2 size={18} />} title="Vérifier et déclarer" description="Relisez la synthèse avant de transmettre votre déclaration à votre courtier." /><div className="auto-review-grid"><ReviewCard title="Accident" items={[["Contrat", contractId], ["Date", safeDate(auto.accidentDate)], ["Heure", auto.accidentTime], ["Lieu", auto.location]]} /><ReviewCard title="Véhicule A" items={[["Véhicule", auto.insuredVehicle.brand], ["Immatriculation", auto.insuredVehicle.registration], ["Conducteur", `${auto.insuredDriver.firstNames} ${auto.insuredDriver.lastName}`.trim()], ["Permis", auto.insuredDriver.licenceNumber]]} /><ReviewCard title="Tiers" items={auto.adversePartyInvolved ? [["Adversaire", `${auto.adversary.firstNames} ${auto.adversary.lastName}`.trim()], ["Immatriculation", auto.adversary.registration], ["Conducteur B", `${auto.adversaryDriver.firstNames} ${auto.adversaryDriver.lastName}`.trim()], ["Assureur", auto.adversary.insurer || "Non renseigné"]] : [["Véhicule adverse", "Aucun tiers impliqué"]]} /><ReviewCard title="Circonstances" items={[["Cases cochées", selectedCircumstances.length ? selectedCircumstances.map((item) => `${item.code}${item.vehicleA ? "A" : ""}${item.vehicleB ? "B" : ""}`).join(", ") : "Aucune"], ["Point de choc A", auto.impactPointA], ["Croquis", auto.sketchFileName || "Non joint"]]} /><ReviewCard title="Dommages" items={[["Véhicule A", auto.damageDescriptionA], ["Véhicule B", auto.damageDescriptionB || "Non renseigné"], ["Blessés", String(injuryCount)]]} /><ReviewCard title="Pièces" items={[["Documents", auto.files.length ? `${auto.files.length} fichier(s)` : "Aucun fichier"], ["Témoins", String(auto.witnesses.filter((witness) => witness.name.trim()).length)], ["Autorités", auto.policeReportBy || auto.gendarmerie || "Non renseigné"]]} /></div><div className="auto-narrative-review"><strong>Votre récit</strong><p>{auto.narrative}</p></div><div className="form-alert info"><CircleAlert size={18} /> La partie « réservée au rédacteur » du document papier sera complétée par le courtier ou la compagnie. Cette démonstration ne transmet aucune donnée réelle.</div><label className="check-row auto-attestation"><input type="checkbox" checked={auto.attested} onChange={(event) => onAutoChange("attested", event.target.checked)} /><span>Je certifie que les informations fournies sont exactes et j’autorise leur utilisation pour l’instruction de ce sinistre fictif.</span></label></>;
+  return <><FlowHeading number="7" icon={<CheckCircle2 size={18} />} title="Vérifier et déclarer" description="Relisez la synthèse avant de transmettre votre déclaration à votre courtier." /><div className="auto-review-grid"><ReviewCard title="Accident" items={[["Contrat", contractId], ["Date", safeDate(auto.accidentDate)], ["Heure", auto.accidentTime], ["Lieu", auto.location]]} /><ReviewCard title="Véhicule A" items={[["Véhicule", auto.insuredVehicle.brand], ["Immatriculation", auto.insuredVehicle.registration], ["Conducteur", `${auto.insuredDriver.firstNames} ${auto.insuredDriver.lastName}`.trim()], ["Permis", auto.insuredDriver.licenceNumber]]} /><ReviewCard title="Tiers" items={auto.adversePartyInvolved ? [["Adversaire", `${auto.adversary.firstNames} ${auto.adversary.lastName}`.trim()], ["Immatriculation", auto.adversary.registration], ["Conducteur B", `${auto.adversaryDriver.firstNames} ${auto.adversaryDriver.lastName}`.trim()], ["Assureur", auto.adversary.insurer || "Non renseigné"]] : [["Véhicule adverse", "Aucun tiers impliqué"]]} /><ReviewCard title="Circonstances" items={[["Cases cochées", selectedCircumstances.length ? selectedCircumstances.map((item) => `${item.code}${item.vehicleA ? "A" : ""}${item.vehicleB ? "B" : ""}`).join(", ") : "Aucune"], ["Point de choc A", auto.impactPointA], ["Croquis", auto.sketchFileName || "Non joint"]]} /><ReviewCard title="Dommages" items={[["Véhicule A", auto.damageDescriptionA], ["Véhicule B", auto.damageDescriptionB || "Non renseigné"], ["Blessés", String(injuryCount)]]} /><ReviewCard title="Pièces" items={[["Documents", auto.files.length ? `${auto.files.length} fichier(s)` : "Aucun fichier"], ["Témoins", String(auto.witnesses.filter((witness) => witness.name.trim()).length)], ["Autorités", auto.policeReportBy || auto.gendarmerie || "Non renseigné"]]} /></div><div className="auto-narrative-review"><strong>Votre récit</strong><p>{auto.narrative}</p></div><div className="form-alert info"><CircleAlert size={18} /> La partie « réservée au rédacteur » du document papier sera complétée par le courtier ou la compagnie.</div><label className="check-row auto-attestation"><input type="checkbox" checked={auto.attested} onChange={(event) => onAutoChange("attested", event.target.checked)} /><span>Je certifie que les informations fournies sont exactes et j’autorise leur utilisation pour l’instruction de ce sinistre.</span></label></>;
 }
 
 function GenericClaimStep({ step, generic, update }: { step: number; generic: { type: string; date: string; location: string; description: string; files: string[] }; update: (key: string, value: string | string[]) => void }) {
   if (step === 1) return <><FlowHeading number="2" icon={<LifeBuoy size={18} />} title="Type de sinistre" description="Choisissez la situation qui correspond le mieux." /><fieldset className="choice-grid"><legend className="sr-only">Type de sinistre</legend>{["Incendie", "Dégât des eaux", "Vol", "Autre"].map((type) => <label className={generic.type === type ? "selected" : ""} key={type}><input type="radio" name="generic-claim-type" checked={generic.type === type} onChange={() => update("type", type)} /><LifeBuoy size={21} /><strong>{type}</strong></label>)}</fieldset></>;
   if (step === 2) return <><FlowHeading number="3" icon={<MapPin size={18} />} title="Date et lieu" description="Indiquez quand et où l’événement s’est produit." /><div className="form-grid"><TextField label="Date du sinistre" value={generic.date} onChange={(value) => update("date", value)} type="date" required /><TextField label="Lieu" value={generic.location} onChange={(value) => update("location", value)} required /></div></>;
   if (step === 3) return <><FlowHeading number="4" icon={<FileText size={18} />} title="Description" description="Décrivez les circonstances aussi clairement que possible." /><label>Description de l’événement<textarea rows={7} value={generic.description} onChange={(event) => update("description", event.target.value)} placeholder="Que s’est-il passé ? Quels dommages avez-vous constatés ?" /></label></>;
-  if (step === 4) return <><FlowHeading number="5" icon={<Upload size={18} />} title="Photos et documents" description="Les fichiers ne seront pas réellement stockés dans cette démonstration." /><label className="drop-zone"><Upload size={28} /><strong>Sélectionner des fichiers</strong><span>Photos, constat ou justificatifs — métadonnées uniquement</span><input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => update("files", Array.from(event.target.files || []).map((file) => file.name))} /></label>{generic.files.length > 0 && <ul className="selected-files">{generic.files.map((file) => <li key={file}><FileText size={16} /> {file}</li>)}</ul>}</>;
-  return <><FlowHeading number="6" icon={<CheckCircle2 size={18} />} title="Récapitulatif" description="Vérifiez les informations avant d’envoyer votre déclaration." /><div className="auto-review-grid"><ReviewCard title="Sinistre" items={[["Type", generic.type], ["Date", safeDate(generic.date)], ["Lieu", generic.location], ["Description", generic.description]]} /><ReviewCard title="Documents" items={[["Fichiers", generic.files.length ? `${generic.files.length} fichier(s)` : "Aucun fichier"]]} /></div><div className="form-alert info"><CircleAlert size={18} /> Cette déclaration est fictive et ne sera transmise à aucune compagnie.</div></>;
+  if (step === 4) return <><FlowHeading number="5" icon={<Upload size={18} />} title="Photos et documents" description="Sélectionnez les pièces utiles ; elles seront ajoutées dans votre espace Documents." /><label className="drop-zone"><Upload size={28} /><strong>Sélectionner des fichiers</strong><span>Photos, constat ou justificatifs</span><input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => update("files", Array.from(event.target.files || []).map((file) => file.name))} /></label>{generic.files.length > 0 && <ul className="selected-files">{generic.files.map((file) => <li key={file}><FileText size={16} /> {file}</li>)}</ul>}</>;
+  return <><FlowHeading number="6" icon={<CheckCircle2 size={18} />} title="Récapitulatif" description="Vérifiez les informations avant d’envoyer votre déclaration." /><div className="auto-review-grid"><ReviewCard title="Sinistre" items={[["Type", generic.type], ["Date", safeDate(generic.date)], ["Lieu", generic.location], ["Description", generic.description]]} /><ReviewCard title="Documents" items={[["Fichiers", generic.files.length ? `${generic.files.length} fichier(s)` : "Aucun fichier"]]} /></div></>;
 }
 
 type StepProps = {
