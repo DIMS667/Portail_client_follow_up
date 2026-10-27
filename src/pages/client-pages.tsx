@@ -43,6 +43,31 @@ const iconForProduct: Record<InsuranceProduct, typeof Car> = {
   entreprise: Building2,
   caution: ShieldCheck,
 };
+const documentFolders = [
+  { id: "informations_personnelles", label: "Informations personnelles", description: "CNI, passeport et justificatifs personnels", icon: UserRound },
+  { id: "automobile", label: "Assurance automobile", description: "Voiture, moto, permis, carte grise et sinistres", icon: Car },
+  { id: "sante", label: "Assurance santé", description: "Formulaires et justificatifs liés à la santé", icon: HeartPulse },
+  { id: "vie_capitalisation", label: "Vie et capitalisation", description: "Pièces liées à l’épargne et à l’assurance vie", icon: HandCoins },
+  { id: "habitation", label: "Assurance habitation", description: "Logement, inventaires et justificatifs du risque", icon: Home },
+  { id: "voyage", label: "Assurance voyage", description: "Passeport, réservation et justificatifs de voyage", icon: Plane },
+  { id: "entreprise", label: "Assurance entreprise", description: "Documents administratifs et risques professionnels", icon: Building2 },
+  { id: "caution", label: "Assurance caution", description: "Marchés, contrats et pièces de l’entreprise", icon: ShieldCheck },
+] as const;
+type DocumentFolderId = typeof documentFolders[number]["id"];
+
+function documentFolderId(document: ClientDocument): DocumentFolderId {
+  const category = document.category.toLowerCase();
+  const identity = `${document.title} ${document.type}`.toLowerCase();
+  if (documentFolders.some((folder) => folder.id === category)) return category as DocumentFolderId;
+  if (/cni|passeport|identité|domicile/.test(identity) && !/permis/.test(identity)) return "informations_personnelles";
+  if (/santé|medical|médical|maladie/.test(`${category} ${identity}`)) return "sante";
+  if (/vie|capitalisation/.test(`${category} ${identity}`)) return "vie_capitalisation";
+  if (/habitation|logement|maison/.test(`${category} ${identity}`)) return "habitation";
+  if (/voyage|visa|billet/.test(`${category} ${identity}`)) return "voyage";
+  if (/entreprise|commerce|patente/.test(`${category} ${identity}`)) return "entreprise";
+  if (/caution|marché|soumission/.test(`${category} ${identity}`)) return "caution";
+  return "automobile";
+}
 const getRequestVehicleKind = (request: InsuranceRequest) => request.vehicleKind ?? (request.motoRequest || request.product === "moto" ? "moto" : request.automobileRequest || request.product === "automobile" ? "car" : undefined);
 const autoRequestTypeLabels: Record<AutoRequestType, string> = { new_vehicle: "Assurer un nouveau véhicule", renewal: "Renouveler mon assurance", switch_insurer: "Changer d’assureur", advice: "Obtenir un conseil", other: "Autre besoin" };
 const autoEnergyLabels: Record<AutoVehicleEnergy, string> = { petrol: "Essence", diesel: "Diesel" };
@@ -251,15 +276,51 @@ export function ProposalsPage({ requestReference }: { requestReference: string }
 
 export function DocumentsPage() {
   const { store, updateStore } = usePortal();
-  const [filter, setFilter] = useState("Tous");
-  const categories = ["Tous", "Identité", "Véhicules", "Polices", "Attestations", "Factures", "Reçus", "Sinistres"];
-  const documents = filter === "Tous" ? store.documents : store.documents.filter((document) => document.category === filter);
+  const [folderId, setFolderId] = useState<DocumentFolderId | null>(null);
+  const folder = documentFolders.find((item) => item.id === folderId);
+  const documents = folderId
+    ? store.documents.filter((document) => documentFolderId(document) === folderId)
+    : [];
   const handleFile = (document: ClientDocument, file?: File) => { if (file) updateStore(replaceDocument(store, document.id, file)); };
+  const addFiles = (files?: FileList | null) => {
+    if (!folderId || !files?.length) return;
+    const date = new Date().toISOString().slice(0, 10);
+    updateStore((current) => ({
+      ...current,
+      documents: [
+        ...Array.from(files).map((file, index): ClientDocument => ({
+          id: `DOC-${Date.now()}-${index}`,
+          title: file.name.replace(/\.[^.]+$/, ""),
+          category: folderId,
+          type: file.type || "Document",
+          ownerId: current.client.id,
+          status: "received",
+          fileName: file.name,
+          date,
+        })),
+        ...current.documents,
+      ],
+    }));
+  };
+
+  if (!folder) return (
+    <div className="page-stack">
+      <PageHeader eyebrow="Bibliothèque documentaire" title="Mes documents" description="Chaque dossier isole les pièces utiles au produit d’assurance correspondant." />
+      <div className="document-folders-grid">
+        {documentFolders.map((item) => {
+          const count = store.documents.filter((document) => documentFolderId(document) === item.id).length;
+          return <button className="document-folder-card" type="button" onClick={() => setFolderId(item.id)} key={item.id}><span className="document-folder-icon"><item.icon size={25} /></span><div><h2>{item.label}</h2><p>{item.description}</p><small>{count} document{count > 1 ? "s" : ""}</small></div><ChevronRight size={20} /></button>;
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Bibliothèque documentaire" title="Mes documents" description="Retrouvez les pièces transmises, les contrats et les reçus de votre espace." />
-      <div className="filter-tabs" role="tablist" aria-label="Catégories de documents">{categories.map((category) => <button type="button" role="tab" aria-selected={filter === category} className={filter === category ? "active" : ""} onClick={() => setFilter(category)} key={category}>{category}</button>)}</div>
-      <div className="documents-grid">{documents.map((document) => <article className={`document-card ${document.status}`} key={document.id}><div className="document-top"><span className="document-icon"><FileText size={22} /></span><StatusBadge status={document.status}>{documentLabels[document.status]}</StatusBadge></div><h3>{document.title}</h3><p>{document.fileName || "Aucun fichier transmis"}</p>{document.correctionMessage && <div className="correction-message"><CircleAlert size={17} /><span>{document.correctionMessage}</span></div>}<div className="document-footer">{document.downloadUrl ? <a className="button button-secondary" href={assetUrl(document.downloadUrl)} download><Download size={17} /> Télécharger</a> : <label className="button button-secondary upload-label"><Upload size={17} /> {document.status === "correction_required" ? "Remplacer le document" : "Sélectionner un fichier"}<input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => handleFile(document, event.target.files?.[0])} /></label>}</div></article>)}</div>
+      <button className="back-link" type="button" onClick={() => setFolderId(null)}><ArrowLeft size={17} /> Retour aux dossiers</button>
+      <PageHeader eyebrow="Dossier documentaire" title={folder.label} description={folder.description} />
+      <label className="document-folder-upload"><Upload size={28} /><div><strong>Ajouter des documents dans ce dossier</strong><span>Ces fichiers seront utilisés uniquement pour les démarches « {folder.label} ».</span></div><span className="button button-primary">Choisir des fichiers</span><input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => addFiles(event.target.files)} /></label>
+      {documents.length > 0 ? <div className="documents-grid">{documents.map((document) => <article className={`document-card ${document.status}`} key={document.id}><div className="document-top"><span className="document-icon"><FileText size={22} /></span><StatusBadge status={document.status}>{documentLabels[document.status]}</StatusBadge></div><h3>{document.title}</h3><p>{document.fileName || "Aucun fichier transmis"}</p>{document.correctionMessage && <div className="correction-message"><CircleAlert size={17} /><span>{document.correctionMessage}</span></div>}<div className="document-footer">{document.downloadUrl ? <a className="button button-secondary" href={assetUrl(document.downloadUrl)} download><Download size={17} /> Télécharger</a> : document.status === "correction_required" ? <label className="button button-secondary upload-label"><Upload size={17} /> Remplacer le document<input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => handleFile(document, event.target.files?.[0])} /></label> : <span className="document-stored-label"><FileCheck2 size={17} /> Document classé</span>}</div></article>)}</div> : <EmptyState title="Ce dossier est vide" description="Ajoutez les premiers documents liés à cette assurance." />}
       <p className="simulation-note"><CircleAlert size={16} /> Seuls le nom, le type, la date et le statut du fichier sont mémorisés. Aucun contenu de fichier n’est stocké.</p>
     </div>
   );
