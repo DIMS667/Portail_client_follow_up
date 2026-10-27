@@ -4,6 +4,7 @@ import { localStoragePortalRepository } from "../repositories/portal-repository"
 import { appliquerCompteAuthentifie, obtenirMonCompte } from "../services/authentication-api";
 import { fusionnerDemandesAutomobile, obtenirDemandesAutomobile } from "../services/automobile-request-api";
 import { obtenirSinistres } from "../services/claims-api";
+import { fusionnerDocumentsServeur, obtenirDocuments } from "../services/documents-api";
 import type { PortalStore } from "../types/domain";
 
 type StoreUpdater = PortalStore | ((current: PortalStore) => PortalStore);
@@ -35,9 +36,10 @@ export function PortalProvider({ children }: { children: ReactNode }) {
     let active = true;
     void obtenirMonCompte()
       .then(async (compte) => {
-        const [demandes, sinistres] = await Promise.all([
+        const [demandes, sinistres, documents] = await Promise.all([
           obtenirDemandesAutomobile().catch(() => []),
           obtenirSinistres().catch(() => []),
+          obtenirDocuments(compte.id).catch(() => []),
         ]);
         if (active) setStore((current) => {
           const authentifie = appliquerCompteAuthentifie(current, compte);
@@ -45,6 +47,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
             ...authentifie,
             requests: fusionnerDemandesAutomobile(authentifie.requests, demandes),
             claims: sinistres,
+            documents: fusionnerDocumentsServeur(authentifie.documents, documents),
           };
         });
       })

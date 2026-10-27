@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { assetUrl } from "../app/base-path";
+import { assetUrl, isPortalDeployment } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
 import { EmptyState, InfoCard, LinkButton, PageHeader, StatusBadge, Timeline, documentLabels, requestLabels } from "../components/portal-ui";
 import { documentFolderId, documentSlotsByFolder, type DocumentFolderId, type DocumentSlotDefinition } from "../data/document-folders";
@@ -26,6 +26,11 @@ import {
   deconnecter,
   mettreAJourMonCompte,
 } from "../services/authentication-api";
+import {
+  obtenirLienConsultation,
+  supprimerDocument as supprimerDocumentServeur,
+  televerserDocument,
+} from "../services/documents-api";
 import {
   addMessage, formatDate, formatFcfa, markNotificationRead, removeDocument, saveDocumentToSlot,
   signOut, simulatePayment, updateProfile,
@@ -282,6 +287,8 @@ export function DocumentsPage() {
   const { store, updateStore } = usePortal();
   const [folderId, setFolderId] = useState<DocumentFolderId | null>(null);
   const [previewDocument, setPreviewDocument] = useState<ClientDocument | null>(null);
+  const [operationEnCours, setOperationEnCours] = useState<string | null>(null);
+  const [documentError, setDocumentError] = useState("");
   const folder = documentFolders.find((item) => item.id === folderId);
   const libraryDocuments = store.documents.filter((document) => !document.downloadUrl);
   const slots = folderId ? documentSlotsByFolder[folderId] : [];
@@ -294,17 +301,58 @@ export function DocumentsPage() {
   });
   const handleFile = async (slot: DocumentSlotDefinition, file?: File) => {
     if (!file || !folderId) return;
-    const contentUrl = await fileToDataUrl(file);
-    updateStore((current) => saveDocumentToSlot(current, {
-      slotId: slot.id,
-      title: slot.title,
-      category: folderId,
-      type: slot.type,
-      file,
-      contentUrl,
-    }));
+    setOperationEnCours(slot.id);
+    setDocumentError("");
+    try {
+      if (isPortalDeployment) {
+        const document = await televerserDocument(slot.id, file, store.client.id);
+        updateStore((current) => ({
+          ...current,
+          documents: [document, ...current.documents.filter((item) => item.slotId !== slot.id)],
+        }));
+      } else {
+        const contentUrl = await fileToDataUrl(file);
+        updateStore((current) => saveDocumentToSlot(current, {
+          slotId: slot.id,
+          title: slot.title,
+          category: folderId,
+          type: slot.type,
+          file,
+          contentUrl,
+        }));
+      }
+    } catch (caught) {
+      setDocumentError(caught instanceof Error ? caught.message : "Le document n’a pas pu être envoyé.");
+    } finally {
+      setOperationEnCours(null);
+    }
   };
-  const deleteDocument = (documentId: string) => updateStore((current) => removeDocument(current, documentId));
+  const deleteDocument = async (documentId: string) => {
+    setOperationEnCours(documentId);
+    setDocumentError("");
+    try {
+      if (isPortalDeployment) await supprimerDocumentServeur(documentId);
+      updateStore((current) => removeDocument(current, documentId));
+      if (previewDocument?.id === documentId) setPreviewDocument(null);
+    } catch (caught) {
+      setDocumentError(caught instanceof Error ? caught.message : "Le document n’a pas pu être supprimé.");
+    } finally {
+      setOperationEnCours(null);
+    }
+  };
+  const preview = async (document: ClientDocument) => {
+    setDocumentError("");
+    try {
+      if (isPortalDeployment) {
+        const lien = await obtenirLienConsultation(document.id);
+        setPreviewDocument({ ...document, contentUrl: lien.url });
+      } else {
+        setPreviewDocument(document);
+      }
+    } catch (caught) {
+      setDocumentError(caught instanceof Error ? caught.message : "Le document ne peut pas être affiché.");
+    }
+  };
 
   if (!folder) return (
     <div className="page-stack">
@@ -323,11 +371,13 @@ export function DocumentsPage() {
     <div className="page-stack">
       <button className="back-link" type="button" onClick={() => setFolderId(null)}><ArrowLeft size={17} /> Retour aux dossiers</button>
       <PageHeader eyebrow="Dossier documentaire" title={folder.label} description={folder.description} />
+      {documentError && <div className="form-alert error" role="alert"><CircleAlert size={17} /> {documentError}</div>}
       <div className="document-guidance"><ShieldCheck size={20} /><div><strong>Ajoutez uniquement les pièces indiquées ci-dessous.</strong><span>Chaque fichier sera automatiquement classé et proposé dans les démarches concernées.</span></div></div>
       <div className="documents-grid">{slots.map((slot) => {
         const document = documentForSlot(slot.id);
         const hasFile = Boolean(document?.fileName);
-        return <article className={`document-card ${document?.status ?? "required"}`} key={slot.id}><div className="document-top"><span className="document-icon"><FileText size={22} /></span><StatusBadge status={document?.status ?? "required"}>{document ? documentLabels[document.status] : "À fournir"}</StatusBadge></div><h3>{slot.title}</h3><p>{document?.fileName || "Aucun fichier transmis"}</p>{document?.correctionMessage && <div className="correction-message"><CircleAlert size={17} /><span>{document.correctionMessage}</span></div>}<div className="document-footer">{hasFile && document?.contentUrl ? <button className="button button-secondary" type="button" onClick={() => setPreviewDocument(document)}><Eye size={17} /> Voir</button> : null}<label className={`button ${hasFile ? "button-secondary" : "button-primary"} upload-label`}><Upload size={17} /> {hasFile ? "Remplacer" : "Ajouter le document"}<input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => { void handleFile(slot, event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>{hasFile && document && <AlertDialog><AlertDialogTrigger asChild><Button type="button" variant="ghost" className="document-delete-button"><Trash2 size={16} /> Supprimer</Button></AlertDialogTrigger><AlertDialogContent className="portal-dialog"><AlertDialogHeader><AlertDialogTitle>Supprimer ce fichier ?</AlertDialogTitle><AlertDialogDescription>« {document.fileName} » sera retiré. La rubrique « {slot.title} » restera disponible pour un nouvel envoi.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => deleteDocument(document.id)}>Supprimer le fichier</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}</div></article>;
+        const disabled = operationEnCours === slot.id || operationEnCours === document?.id;
+        return <article className={`document-card ${document?.status ?? "required"}`} key={slot.id}><div className="document-top"><span className="document-icon"><FileText size={22} /></span><StatusBadge status={document?.status ?? "required"}>{document ? documentLabels[document.status] : "À fournir"}</StatusBadge></div><h3>{slot.title}</h3><p>{document?.fileName || "Aucun fichier transmis"}</p>{document?.correctionMessage && <div className="correction-message"><CircleAlert size={17} /><span>{document.correctionMessage}</span></div>}<div className="document-footer">{hasFile && document ? <button className="button button-secondary" type="button" disabled={disabled} onClick={() => { void preview(document); }}><Eye size={17} /> Voir</button> : null}<label className={`button ${hasFile ? "button-secondary" : "button-primary"} upload-label ${disabled ? "is-disabled" : ""}`}><Upload size={17} /> {disabled ? "Traitement…" : hasFile ? "Remplacer" : "Ajouter le document"}<input type="file" disabled={disabled} accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => { void handleFile(slot, event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>{hasFile && document && <AlertDialog><AlertDialogTrigger asChild><Button type="button" variant="ghost" disabled={disabled} className="document-delete-button"><Trash2 size={16} /> Supprimer</Button></AlertDialogTrigger><AlertDialogContent className="portal-dialog"><AlertDialogHeader><AlertDialogTitle>Supprimer ce fichier ?</AlertDialogTitle><AlertDialogDescription>« {document.fileName} » sera retiré. La rubrique « {slot.title} » restera disponible pour un nouvel envoi.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => { void deleteDocument(document.id); }}>Supprimer le fichier</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}</div></article>;
       })}</div>
       <p className="simulation-note"><CircleAlert size={16} /> Formats acceptés : PDF, JPG et PNG. Les fichiers restent classés dans la rubrique choisie.</p>
       <Dialog open={Boolean(previewDocument)} onOpenChange={(open) => { if (!open) setPreviewDocument(null); }}>
