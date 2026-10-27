@@ -4,7 +4,7 @@ import { localStoragePortalRepository } from "../repositories/portal-repository"
 import { appliquerCompteAuthentifie, obtenirMonCompte } from "../services/authentication-api";
 import { fusionnerDemandesAutomobile, obtenirDemandesAutomobile } from "../services/automobile-request-api";
 import { obtenirSinistres } from "../services/claims-api";
-import { fusionnerDocumentsServeur, obtenirDocuments } from "../services/documents-api";
+import { creerFluxDocuments, fusionnerDocumentsServeur, obtenirDocuments } from "../services/documents-api";
 import type { PortalStore } from "../types/domain";
 
 type StoreUpdater = PortalStore | ((current: PortalStore) => PortalStore);
@@ -59,6 +59,27 @@ export function PortalProvider({ children }: { children: ReactNode }) {
       });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!isPortalDeployment || !store.session.authenticated || !store.client.id) return;
+    let active = true;
+    const flux = creerFluxDocuments();
+    const actualiser = () => {
+      void obtenirDocuments(store.client.id).then((documents) => {
+        if (!active) return;
+        setStore((current) => ({
+          ...current,
+          documents: fusionnerDocumentsServeur(current.documents, documents),
+        }));
+      }).catch(() => undefined);
+    };
+    flux.addEventListener("document", actualiser);
+    return () => {
+      active = false;
+      flux.removeEventListener("document", actualiser);
+      flux.close();
+    };
+  }, [store.client.id, store.session.authenticated]);
 
   useEffect(() => {
     const handlePopState = () => setRoute(currentRoute());

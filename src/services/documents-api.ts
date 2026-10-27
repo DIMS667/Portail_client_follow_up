@@ -16,6 +16,9 @@ type DocumentApi = {
   type_mime: string;
   taille_octets: number;
   statut: string;
+  motif_correction: string | null;
+  commentaire_correction: string | null;
+  version: number;
   cree_le: string;
   modifie_le: string;
 };
@@ -26,6 +29,15 @@ const statutsDepuisApi: Record<string, DocumentStatus> = {
   en_verification: "reviewing",
   valide: "validated",
   correction_requise: "correction_required",
+};
+
+const motifsCorrection: Record<string, string> = {
+  illisible: "Le document est illisible.",
+  mauvais_document: "Le fichier ne correspond pas au document demandé.",
+  incomplet: "Le document transmis est incomplet.",
+  expire: "Le document transmis est expiré.",
+  informations_non_concordantes: "Certaines informations ne concordent pas.",
+  autre: "Le document doit être remplacé.",
 };
 
 function lireCookie(nom: string) {
@@ -65,6 +77,12 @@ async function appeler<T>(chemin: string, options: RequestInit = {}): Promise<T>
 }
 
 function versDocumentClient(documentApi: DocumentApi, ownerId: string): ClientDocument {
+  const motif = documentApi.motif_correction
+    ? motifsCorrection[documentApi.motif_correction] ?? "Le document doit être remplacé."
+    : "";
+  const correctionMessage = [motif, documentApi.commentaire_correction]
+    .filter(Boolean)
+    .join(" ");
   return {
     id: documentApi.id,
     title: documentApi.titre,
@@ -75,6 +93,7 @@ function versDocumentClient(documentApi: DocumentApi, ownerId: string): ClientDo
     slotId: documentApi.rubrique_id,
     fileName: documentApi.nom_fichier,
     date: documentApi.modifie_le.slice(0, 10),
+    correctionMessage: correctionMessage || undefined,
   };
 }
 
@@ -101,6 +120,10 @@ export function obtenirLienConsultation(documentId: string) {
   return appeler<{ url: string; expire_dans_secondes: number }>(
     `/${encodeURIComponent(documentId)}/consultation`,
   );
+}
+
+export function creerFluxDocuments() {
+  return new EventSource(`${DOCUMENTS_BASE_URL}/flux`, { withCredentials: true });
 }
 
 export function fusionnerDocumentsServeur(
