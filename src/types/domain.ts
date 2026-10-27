@@ -303,9 +303,6 @@ export interface AutoClaimDeclaration {
   injuriesInVehicle: AutoClaimInjuredPerson[];
   otherInjuries: AutoClaimInjuredPerson[];
   witnesses: AutoClaimWitness[];
-  policeReportBy: string;
-  gendarmerie: string;
-  brigade: string;
   attestedAt: string;
 }
 

@@ -491,7 +491,6 @@ export function ClaimDetailPage({ reference }: { reference: string }) {
   const injuredPeople = declaration ? [...declaration.injuriesInVehicle, ...declaration.otherInjuries] : [];
   const circumstancesA = declaration?.circumstances.filter((item) => item.vehicleA).map((item) => item.label).filter(Boolean) ?? [];
   const circumstancesB = declaration?.circumstances.filter((item) => item.vehicleB).map((item) => item.label).filter(Boolean) ?? [];
-  const authority = declaration ? [declaration.policeReportBy, declaration.gendarmerie, declaration.brigade].filter(Boolean).join(" · ") : "";
   const documents = store.documents.filter((document) => documentFolderId(document) === "sinistres" && Boolean(document.fileName || document.downloadUrl));
 
   return <div className="page-stack">
@@ -546,7 +545,6 @@ export function ClaimDetailPage({ reference }: { reference: string }) {
           <Detail label="Dommages véhicule B" value={declaration.damageDescriptionB || "Non renseignés"} />
           <Detail label="Blessés" value={injuredPeople.length ? `${injuredPeople.length} — ${injuredPeople.map((person) => person.name).filter(Boolean).join(", ")}` : "Aucun blessé déclaré"} />
           <Detail label="Témoins" value={declaration.witnesses.length ? `${declaration.witnesses.length} — ${declaration.witnesses.map((witness) => witness.name).filter(Boolean).join(", ")}` : "Aucun témoin déclaré"} />
-          <Detail label="Autorités" value={authority || "Non renseignées"} />
           <Detail label="Attestation" value={formatAutoClaimDate(declaration.attestedAt)} />
         </div>
         {declaration.narrative && <div className="request-comments"><span>Déroulement de l’accident</span><p>{declaration.narrative}</p></div>}

@@ -66,7 +66,9 @@ export const documentSlotsByFolder: Record<DocumentFolderId, readonly DocumentSl
   sinistres: [
     { id: "sinistre_constat", title: "Constat ou déclaration", type: "Constat" },
     { id: "sinistre_photos", title: "Photos du sinistre", type: "Photo" },
-    { id: "sinistre_rapport", title: "Rapport des autorités", type: "Rapport" },
+    { id: "sinistre_rapport", title: "Rapport de police", type: "Rapport de police" },
+    { id: "sinistre_pv_gendarmerie", title: "P.V. / Gendarmerie", type: "Procès-verbal" },
+    { id: "sinistre_brigade", title: "Brigade", type: "Document de brigade" },
     { id: "sinistre_devis", title: "Devis ou factures", type: "Justificatif" },
   ],
 };
