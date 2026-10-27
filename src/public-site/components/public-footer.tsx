@@ -13,7 +13,7 @@ interface PublicFooterProps {
 
 export function PublicFooter({ onClientSpace }: PublicFooterProps) {
   const contactItems = [
-    siteConfig.phone && { label: siteConfig.phone, href: `tel:${siteConfig.phone}` },
+    ...siteConfig.phones,
     siteConfig.email && { label: siteConfig.email, href: `mailto:${siteConfig.email}` },
     siteConfig.address && { label: siteConfig.address },
     siteConfig.openingHours && { label: siteConfig.openingHours },

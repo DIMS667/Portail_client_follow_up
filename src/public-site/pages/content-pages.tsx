@@ -39,6 +39,7 @@ import {
   type SolutionSlug,
 } from "../data/public-pages";
 import { privacyPolicy } from "../data/privacy-policy";
+import { siteConfig } from "../data/site-config";
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return <span className="public-kicker"><span aria-hidden="true" />{children}</span>;
@@ -458,9 +459,21 @@ export function ContactPublicPage() {
   };
 
   const channels = [
-    { icon: Phone, title: "Téléphone", text: "Un échange direct pendant les horaires d’ouverture." },
-    { icon: Mail, title: "E-mail", text: "Une demande générale avec vos coordonnées de rappel." },
-    { icon: MapPin, title: "Rendez-vous", text: "Un temps dédié pour approfondir votre situation." },
+    {
+      icon: Phone,
+      title: "Téléphone",
+      content: <div className="mt-2 grid gap-1">{siteConfig.phones.map((phone) => <a className="w-fit text-slate-600 transition hover:text-brand-red" href={phone.href} key={phone.href}>{phone.label}</a>)}</div>,
+    },
+    {
+      icon: MapPin,
+      title: "Nous trouver",
+      content: <p>{siteConfig.address}</p>,
+    },
+    {
+      icon: Mail,
+      title: "Rendez-vous",
+      content: <p>Contactez-nous pour convenir d’un rendez-vous et approfondir votre situation.</p>,
+    },
   ];
 
   return (
@@ -470,7 +483,7 @@ export function ContactPublicPage() {
         <div className="public-container public-contact-layout">
           <div className="public-contact-details">
             <div className="public-page-heading"><SectionLabel>À votre écoute</SectionLabel><h2>Choisissez le canal qui vous convient.</h2><p>Ne transmettez pas de données médicales ou bancaires dans ce premier message.</p></div>
-            {channels.map(({ icon: Icon, title, text }) => <article key={title}><span><Icon size={21} aria-hidden="true" /></span><h2>{title}</h2><p>{text}</p></article>)}
+            {channels.map(({ icon: Icon, title, content }) => <article key={title}><span><Icon size={21} aria-hidden="true" /></span><h2>{title}</h2>{content}</article>)}
           </div>
           <form className="public-contact-form" onSubmit={submit}>
             <h2>Décrivez votre besoin</h2><p>Les champs marqués d’un astérisque sont obligatoires.</p>

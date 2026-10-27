@@ -444,6 +444,11 @@ export function ClaimsPage() {
   return <div className="grid gap-6 lg:gap-8">
     <PageHeader eyebrow="Assistance et suivi" title="Mes sinistres" description="Déclarez un événement, retrouvez vos pièces et suivez chaque étape du traitement." />
 
+    <aside className="grid gap-4 rounded-2xl border border-amber-200 bg-amber-50/80 p-5 shadow-[0_8px_28px_rgba(120,53,15,.05)] sm:grid-cols-[auto_1fr] sm:items-center sm:p-6" role="note" aria-label="Conseil en cas d’accident">
+      <span className="grid size-12 place-items-center rounded-2xl bg-white text-amber-700 shadow-sm"><HeartHandshake size={23} aria-hidden="true" /></span>
+      <div><span className="text-[11px] font-bold uppercase tracking-[.14em] text-amber-700">Sensibilisation</span><h2 className="mt-1 text-lg font-semibold text-slate-950">En cas d’accident, gardez votre calme</h2><p className="mt-1 text-sm leading-6 text-slate-700">Un accident n’est pas un acte prémédité. N’agressez pas l’autre personne impliquée, quelle que soit sa responsabilité.</p></div>
+    </aside>
+
     <section className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
       <Card className="relative overflow-hidden border-0 bg-[linear-gradient(120deg,#6f0912_0%,#b8141e_64%,#e5691c_135%)] text-white shadow-[0_22px_55px_rgba(108,12,20,.18)]">
         <CardContent className="relative z-10 grid gap-5 p-6 sm:grid-cols-[1fr_auto] sm:items-end sm:p-8">
