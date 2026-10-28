@@ -5,6 +5,7 @@ import { appliquerCompteAuthentifie, obtenirMonCompte } from "../services/authen
 import { fusionnerDemandesAutomobile, obtenirDemandesAutomobile } from "../services/automobile-request-api";
 import { obtenirSinistres } from "../services/claims-api";
 import { creerFluxDocuments, fusionnerDocumentsServeur, obtenirDocuments } from "../services/documents-api";
+import { creerFluxNotifications, obtenirNotifications } from "../services/notifications-api";
 import type { PortalStore } from "../types/domain";
 
 type StoreUpdater = PortalStore | ((current: PortalStore) => PortalStore);
@@ -36,10 +37,11 @@ export function PortalProvider({ children }: { children: ReactNode }) {
     let active = true;
     void obtenirMonCompte()
       .then(async (compte) => {
-        const [demandes, sinistres, documents] = await Promise.all([
+        const [demandes, sinistres, documents, notifications] = await Promise.all([
           obtenirDemandesAutomobile().catch(() => []),
           obtenirSinistres().catch(() => []),
           obtenirDocuments(compte.id).catch(() => []),
+          obtenirNotifications().catch(() => []),
         ]);
         if (active) setStore((current) => {
           const authentifie = appliquerCompteAuthentifie(current, compte);
@@ -48,6 +50,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
             requests: fusionnerDemandesAutomobile(authentifie.requests, demandes),
             claims: sinistres,
             documents: fusionnerDocumentsServeur(authentifie.documents, documents),
+            notifications,
           };
         });
       })
@@ -80,6 +83,23 @@ export function PortalProvider({ children }: { children: ReactNode }) {
       flux.close();
     };
   }, [store.client.id, store.session.authenticated]);
+
+  useEffect(() => {
+    if (!isPortalDeployment || !store.session.authenticated) return;
+    let active = true;
+    const flux = creerFluxNotifications();
+    const actualiser = () => {
+      void obtenirNotifications().then((notifications) => {
+        if (active) setStore((current) => ({ ...current, notifications }));
+      }).catch(() => undefined);
+    };
+    flux.addEventListener("notification", actualiser);
+    return () => {
+      active = false;
+      flux.removeEventListener("notification", actualiser);
+      flux.close();
+    };
+  }, [store.session.authenticated]);
 
   useEffect(() => {
     const handlePopState = () => setRoute(currentRoute());
