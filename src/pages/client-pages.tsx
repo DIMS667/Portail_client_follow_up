@@ -126,32 +126,107 @@ const motoGuaranteeLabels: Record<MotoGuarantee, string> = {
 
 export function DashboardPage() {
   const { store, navigate } = usePortal();
-  const openRequests = store.requests.filter((request) => request.scope === "core" && request.status !== "completed").length;
-  const activeContracts = store.contracts.filter((contract) => contract.status === "active").length;
-  const activeClaims = store.claims.filter((claim) => claim.scope === "core" && claim.status !== "closed").length;
+  const requests = store.requests.filter((request) => request.scope === "core");
+  const claims = store.claims.filter((claim) => claim.scope === "core");
+  const documents = store.documents.filter((document) => Boolean(document.slotId));
+  const openRequests = requests.filter((request) => request.status !== "completed");
+  const activeClaims = claims.filter((claim) => claim.status !== "closed");
+  const correctionDocuments = documents.filter((document) => document.status === "correction_required");
+  const currentRequest = [...openRequests].sort((a, b) => b.date.localeCompare(a.date))[0];
+  const currentClaim = [...activeClaims].sort((a, b) => b.date.localeCompare(a.date))[0];
+  const correctionDocument = correctionDocuments[0];
+  const currentAdvisor = currentRequest?.advisor ?? currentClaim?.advisor ?? null;
+  const requestSteps = currentRequest?.timeline.length ?? 0;
+  const completedRequestSteps = currentRequest?.timeline.filter((item) => item.done).length ?? 0;
+  const requestProgress = requestSteps ? Math.round((completedRequestSteps / requestSteps) * 100) : 0;
+  const recentActivities = [
+    ...requests.map((request) => ({
+      id: `demande-${request.id}`,
+      label: `${request.productLabel} · ${requestLabels[request.status]}`,
+      date: request.date,
+      route: `/espace/demandes/${request.reference}`,
+      kind: "request",
+    })),
+    ...claims.map((claim) => ({
+      id: `sinistre-${claim.id}`,
+      label: `${claim.reference} · ${claimStatusLabels[claim.status] ?? "Sinistre en cours"}`,
+      date: claim.date,
+      route: `/espace/sinistres/${claim.reference}`,
+      kind: "claim",
+    })),
+    ...documents.filter((document) => document.date).map((document) => ({
+      id: `document-${document.id}`,
+      label: `${document.title} · ${documentLabels[document.status]}`,
+      date: document.date!,
+      route: "/espace/documents",
+      kind: "document",
+    })),
+  ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+  const today = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
+
+  const priority = correctionDocument
+    ? {
+        badge: "Action requise",
+        title: `Remplacez le document « ${correctionDocument.title} »`,
+        description: correctionDocument.correctionMessage || "Votre courtier demande une nouvelle version de ce document.",
+        button: "Ouvrir mes documents",
+        route: "/espace/documents",
+        reference: "Document à corriger",
+        progress: 0,
+      }
+    : currentRequest
+      ? {
+          badge: "Demande en cours",
+          title: `${currentRequest.productLabel} : ${requestLabels[currentRequest.status]}`,
+          description: currentRequest.advisor
+            ? `${currentRequest.advisor.name} suit actuellement votre demande.`
+            : "Votre demande est dans la file commune et sera prochainement prise en charge.",
+          button: "Suivre ma demande",
+          route: `/espace/demandes/${currentRequest.reference}`,
+          reference: currentRequest.reference,
+          progress: requestProgress,
+        }
+      : currentClaim
+        ? {
+            badge: "Sinistre en cours",
+            title: `${currentClaim.reference} : ${claimStatusLabels[currentClaim.status]}`,
+            description: currentClaim.advisor
+              ? `${currentClaim.advisor.name} suit actuellement votre déclaration.`
+              : "Votre déclaration est enregistrée et son attribution est en cours.",
+            button: "Suivre mon sinistre",
+            route: `/espace/sinistres/${currentClaim.reference}`,
+            reference: currentClaim.reference,
+            progress: Math.round((currentClaim.timeline.filter((item) => item.done).length / Math.max(1, currentClaim.timeline.length)) * 100),
+          }
+        : {
+            badge: "Espace à jour",
+            title: "Aucune action n’est requise pour le moment.",
+            description: "Vous pouvez créer une demande ou déclarer un sinistre depuis votre espace sécurisé.",
+            button: "Faire une demande",
+            route: "/espace/demandes/nouvelle",
+            reference: "Aucun dossier en attente",
+            progress: 100,
+          };
   return (
     <div className="grid gap-6 lg:gap-8">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div><span className="text-[11px] font-bold uppercase tracking-[.16em] text-brand-red">Vendredi 2 octobre</span><h1 className="mt-1 text-[clamp(2rem,4vw,3.25rem)] font-semibold tracking-[-.045em] text-slate-950">Bonjour {store.client.firstName}</h1><p className="mt-2 text-[15px] text-slate-600">Votre protection est à jour. Une décision vous attend.</p></div>
+        <div><span className="text-[11px] font-bold uppercase tracking-[.16em] text-brand-red">{today}</span><h1 className="mt-1 text-[clamp(2rem,4vw,3.25rem)] font-semibold tracking-[-.045em] text-slate-950">Bonjour {store.client.firstName}</h1><p className="mt-2 text-[15px] text-slate-600">Retrouvez l’état réel de vos démarches et documents.</p></div>
         <LinkButton to="/espace/demandes/nouvelle"><Plus size={18} /> Nouvelle demande</LinkButton>
       </header>
 
       <section className="relative overflow-hidden rounded-2xl bg-[linear-gradient(120deg,#510811_0%,#86101a_60%,#ad151e_100%)] p-5 text-white shadow-[0_22px_60px_rgba(94,10,19,.2)] sm:p-7 lg:grid lg:grid-cols-[1.45fr_.75fr] lg:gap-10">
-        <img className="pointer-events-none absolute inset-y-0 right-0 hidden h-full w-[48%] object-cover object-center opacity-35 mix-blend-luminosity lg:block" src={assetUrl("/images/insurance-auto.webp")} alt="" aria-hidden="true" />
-        <span className="pointer-events-none absolute inset-y-0 right-0 hidden w-[58%] bg-gradient-to-r from-[#86101a] via-[#86101a]/60 to-transparent lg:block" />
-        <div className="relative z-10"><Badge className="border-white/10 bg-white/10 text-orange-100">Prochaine étape</Badge><h2 className="mt-5 max-w-xl text-2xl font-semibold leading-tight tracking-[-.03em] text-white sm:text-3xl">Vos propositions automobile sont prêtes.</h2><p className="mt-3 max-w-xl text-sm leading-6 text-red-50/75">Votre courtier a retenu trois niveaux de protection. Comparez les garanties et choisissez celle qui correspond à votre situation.</p><Button type="button" size="lg" className="mt-6 h-11 rounded-xl bg-white px-5 font-semibold text-brand-ink hover:bg-brand-soft" onClick={() => navigate("/espace/demandes/DEM-2026-00145/propositions")}>Comparer les 3 propositions <ChevronRight size={17} /></Button></div>
-        <div className="relative z-10 mt-7 border-t border-white/10 pt-6 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-1"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-red-100/60">Dossier DEM-2026-00145</span><div className="mt-4 flex items-end justify-between"><div><strong className="text-3xl font-semibold tabular-nums">3/5</strong><p className="mt-1 text-xs text-red-100/60">étapes finalisées</p></div><span className="text-xs font-semibold text-orange-200">60 %</span></div><Progress value={60} className="mt-4 bg-white/10 [&>div]:bg-brand-orange" /><div className="mt-5 flex items-center gap-3"><span className="grid size-9 place-items-center rounded-full bg-white/10 text-xs font-bold">AM</span><div><strong className="block text-xs">Accompagné par Amina</strong><span className="text-[11px] text-red-100/60">Votre conseillère</span></div></div></div>
+        <div className="relative z-10"><Badge className="border-white/10 bg-white/10 text-orange-100">{priority.badge}</Badge><h2 className="mt-5 max-w-xl text-2xl font-semibold leading-tight tracking-[-.03em] text-white sm:text-3xl">{priority.title}</h2><p className="mt-3 max-w-xl text-sm leading-6 text-red-50/75">{priority.description}</p><Button type="button" size="lg" className="mt-6 h-11 rounded-xl bg-white px-5 font-semibold text-brand-ink hover:bg-brand-soft" onClick={() => navigate(priority.route)}>{priority.button} <ChevronRight size={17} /></Button></div>
+        <div className="relative z-10 mt-7 border-t border-white/10 pt-6 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-1"><span className="text-[11px] font-bold uppercase tracking-[.14em] text-red-100/60">{priority.reference}</span><div className="mt-4 flex items-end justify-between"><div><strong className="text-3xl font-semibold tabular-nums">{priority.progress} %</strong><p className="mt-1 text-xs text-red-100/60">progression actuelle</p></div></div><Progress value={priority.progress} className="mt-4 bg-white/10 [&>div]:bg-brand-orange" />{currentAdvisor?<div className="mt-5 flex items-center gap-3"><span className="grid size-9 place-items-center rounded-full bg-white/10 text-xs font-bold">{currentAdvisor.initials}</span><div><strong className="block text-xs">Suivi par {currentAdvisor.name}</strong><span className="text-[11px] text-red-100/60">Responsable du dossier</span></div></div>:<div className="mt-5 flex items-center gap-3"><span className="grid size-9 place-items-center rounded-full bg-white/10"><Clock3 size={16}/></span><div><strong className="block text-xs">Suivi de votre dossier</strong><span className="text-[11px] text-red-100/60">Attribution automatique après prise en charge</span></div></div>}</div>
         <span className="pointer-events-none absolute -right-16 -top-24 size-64 rounded-full bg-brand-orange/25 blur-3xl" />
       </section>
 
       <Card className="overflow-hidden rounded-2xl bg-white shadow-[0_10px_35px_rgba(15,35,65,.05)]" aria-label="Résumé de votre espace">
-        <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 px-5 py-4"><div><CardTitle className="text-base">Mon portefeuille</CardTitle><CardDescription className="mt-1">L’essentiel en un coup d’œil</CardDescription></div><Badge variant="success">À jour</Badge></CardHeader>
-        <CardContent className="grid p-0 sm:grid-cols-2 xl:grid-cols-5">
-          <InfoCard icon={ShieldCheck} label="Assurances" value={`${activeContracts} contrats actifs`} onClick={() => navigate("/espace/contrats")} />
-          <InfoCard icon={ClipboardList} label="Demandes" value={`${openRequests} dossiers en cours`} onClick={() => navigate("/espace/demandes")} />
-          <InfoCard icon={FolderOpen} label="Documents" value={`${store.documents.length} documents`} onClick={() => navigate("/espace/documents")} />
-          <InfoCard icon={WalletCards} label="Paiements" value={`${store.payments.length} paiements`} onClick={() => navigate("/espace/paiements")} />
-          <InfoCard icon={LifeBuoy} label="Sinistres" value={`${activeClaims} dossier en cours`} onClick={() => navigate("/espace/sinistres")} />
+        <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 px-5 py-4"><div><CardTitle className="text-base">Mon espace</CardTitle><CardDescription className="mt-1">Données enregistrées dans votre compte</CardDescription></div><Badge variant="success">Données réelles</Badge></CardHeader>
+        <CardContent className="grid p-0 sm:grid-cols-2 xl:grid-cols-4">
+          <InfoCard icon={ClipboardList} label="Demandes" value={`${openRequests.length} dossier${openRequests.length > 1 ? "s" : ""} en cours`} onClick={() => navigate("/espace/demandes")} />
+          <InfoCard icon={FolderOpen} label="Documents" value={`${documents.length} fichier${documents.length > 1 ? "s" : ""} transmis`} onClick={() => navigate("/espace/documents")} />
+          <InfoCard icon={CircleAlert} label="À corriger" value={`${correctionDocuments.length} document${correctionDocuments.length > 1 ? "s" : ""}`} onClick={() => navigate("/espace/documents")} />
+          <InfoCard icon={LifeBuoy} label="Sinistres" value={`${activeClaims.length} dossier${activeClaims.length > 1 ? "s" : ""} en cours`} onClick={() => navigate("/espace/sinistres")} />
         </CardContent>
       </Card>
 
@@ -161,18 +236,17 @@ export function DashboardPage() {
             { label: "Demander une assurance", help: "Ouvrir un nouveau dossier", icon: Plus, route: "/espace/demandes/nouvelle" },
             { label: "Envoyer un document", help: "Compléter une demande en cours", icon: Upload, route: "/espace/documents" },
             { label: "Déclarer un sinistre", help: "Être accompagné rapidement", icon: LifeBuoy, route: "/espace/sinistres/nouveau" },
-            { label: "Renouveler un contrat", help: "Anticiper votre prochaine échéance", icon: RefreshCcw, route: "/espace/renouvellements/POL-2026-00325" },
           ].map(({ label, help, icon: Icon, route }, index) => <div key={label}>{index > 0 && <Separator />}<button type="button" className="group flex w-full items-center gap-4 py-4 text-left" onClick={() => navigate(route)}><Icon size={19} className="text-slate-400 group-hover:text-brand-red" /><div className="min-w-0 flex-1"><strong className="block text-sm text-slate-900">{label}</strong><small className="mt-1 block text-xs text-slate-500">{help}</small></div><ChevronRight size={17} className="text-slate-300 group-hover:text-brand-orange" /></button></div>)}
         </CardContent></Card>
         <Card className="rounded-2xl bg-white shadow-[0_10px_35px_rgba(15,35,65,.04)]"><CardHeader><CardTitle className="text-lg">Activité récente</CardTitle><CardDescription>Les dernières évolutions de vos dossiers</CardDescription></CardHeader><CardContent className="grid gap-0">
-          {store.activities.map((activity, index) => { const Icon = iconForKind[activity.kind] || Bell; return <div className="relative grid grid-cols-[32px_1fr] gap-3 pb-5 last:pb-0" key={activity.id}>{index < store.activities.length - 1 && <span className="absolute left-[15px] top-8 h-[calc(100%-18px)] w-px bg-slate-200" />}<span className="relative z-10 grid size-8 place-items-center rounded-full border border-slate-200 bg-white text-slate-500"><Icon size={15} /></span><button type="button" className="pt-0.5 text-left" onClick={() => navigate(activity.route)}><strong className="block text-sm leading-5 text-slate-800 hover:text-brand-red">{activity.label}</strong><small className="mt-1 block text-xs text-slate-400">{activity.date}</small></button></div>; })}
+          {recentActivities.length ? recentActivities.map((activity, index) => { const Icon = iconForKind[activity.kind] || Bell; return <div className="relative grid grid-cols-[32px_1fr] gap-3 pb-5 last:pb-0" key={activity.id}>{index < recentActivities.length - 1 && <span className="absolute left-[15px] top-8 h-[calc(100%-18px)] w-px bg-slate-200" />}<span className="relative z-10 grid size-8 place-items-center rounded-full border border-slate-200 bg-white text-slate-500"><Icon size={15} /></span><button type="button" className="pt-0.5 text-left" onClick={() => navigate(activity.route)}><strong className="block text-sm leading-5 text-slate-800 hover:text-brand-red">{activity.label}</strong><small className="mt-1 block text-xs text-slate-400">{formatDate(activity.date)}</small></button></div>; }):<div className="py-8 text-center text-sm text-slate-500">Votre activité apparaîtra ici après votre première démarche.</div>}
         </CardContent></Card>
       </div>
 
-      <details className="group overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      {!isPortalDeployment && <details className="group overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <summary className="flex cursor-pointer list-none items-center gap-4 px-5 py-5 sm:px-6"><span className="grid size-10 place-items-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600">09</span><div className="min-w-0 flex-1"><strong className="block text-sm text-slate-900">Mode présentation</strong><span className="mt-1 block text-xs text-slate-500">Accéder directement aux neuf scénarios de démonstration</span></div><Badge variant="outline">Données fictives</Badge><ChevronRight size={18} className="text-slate-400 transition-transform group-open:rotate-90" /></summary>
         <div className="grid border-t border-slate-200 sm:grid-cols-2 xl:grid-cols-3">{store.scenarios.map((scenario) => <button type="button" className="group flex min-h-[82px] items-center gap-3 border-b border-slate-100 px-5 py-4 text-left last:border-b-0 sm:border-r" key={scenario.id} onClick={() => navigate(scenario.route)}><span className="text-xs font-bold tabular-nums text-brand-red">{String(scenario.number).padStart(2, "0")}</span><div className="min-w-0 flex-1"><strong className="block text-sm text-slate-900 group-hover:text-brand-red">{scenario.title}</strong><small className="mt-1 block text-xs leading-5 text-slate-500">{scenario.description}</small></div></button>)}</div>
-      </details>
+      </details>}
     </div>
   );
 }
