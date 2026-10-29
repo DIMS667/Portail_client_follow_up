@@ -26,7 +26,6 @@ export const documentSlotsByFolder: Record<DocumentFolderId, readonly DocumentSl
   automobile: [
     { id: "automobile_permis", title: "Permis de conduire", type: "Permis" },
     { id: "automobile_carte_grise", title: "Carte grise", type: "Carte grise" },
-    { id: "automobile_photo_vehicule", title: "Photo du véhicule", type: "Photo" },
     { id: "automobile_visite_technique", title: "Visite technique", type: "Visite technique" },
   ],
   sante: [
@@ -107,8 +106,16 @@ export function documentsForProduct(
   product: InsuranceProduct,
 ): RequestDocumentReference[] {
   const productFolder = productFolders[product];
+  const allowedSlotIds = new Set([
+    ...documentSlotsByFolder.informations_personnelles.map((slot) => slot.id),
+    ...documentSlotsByFolder[productFolder].map((slot) => slot.id),
+  ]);
   return documents
-    .filter((document) => Boolean(document.fileName && document.slotId))
+    .filter((document) => Boolean(
+      document.fileName
+      && document.slotId
+      && allowedSlotIds.has(document.slotId),
+    ))
     .filter((document) => {
       const folder = documentFolderId(document);
       return folder === "informations_personnelles" || folder === productFolder;
