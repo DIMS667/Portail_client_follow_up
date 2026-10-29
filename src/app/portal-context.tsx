@@ -89,8 +89,16 @@ export function PortalProvider({ children }: { children: ReactNode }) {
     let active = true;
     const flux = creerFluxNotifications();
     const actualiser = () => {
-      void obtenirNotifications().then((notifications) => {
-        if (active) setStore((current) => ({ ...current, notifications }));
+      void Promise.all([
+        obtenirNotifications(),
+        obtenirDemandesAutomobile(),
+      ]).then(([notifications, demandes]) => {
+        if (!active) return;
+        setStore((current) => ({
+          ...current,
+          notifications,
+          requests: fusionnerDemandesAutomobile(current.requests, demandes),
+        }));
       }).catch(() => undefined);
     };
     flux.addEventListener("notification", actualiser);
