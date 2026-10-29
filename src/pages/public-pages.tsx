@@ -54,8 +54,8 @@ function SeparateurGoogle() {
   return <div className="auth-divider" aria-hidden="true"><span>ou</span></div>;
 }
 
-function BoutonEnvoi({ loading, children }: { loading: boolean; children: React.ReactNode }) {
-  return <button className="button button-primary full" type="submit" disabled={loading}>{loading && <LoaderCircle className="button-spinner" size={18} />}{children}</button>;
+function BoutonEnvoi({ loading, disabled = false, children }: { loading: boolean; disabled?: boolean; children: React.ReactNode }) {
+  return <button className="button button-primary full" type="submit" disabled={loading || disabled}>{loading && <LoaderCircle className="button-spinner" size={18} />}{children}</button>;
 }
 
 function TelephoneGoogle({ jeton, onSuccess, onCancel }: { jeton: string; onSuccess: (compte: CompteClientAuthentifie) => void; onCancel: () => void }) {
@@ -208,10 +208,10 @@ export function RegisterPage() {
           <label>Nom complet<input name="fullName" autoComplete="name" required /></label>
           <label>Adresse email<input name="email" type="email" autoComplete="email" required /></label>
           <label>Numéro de téléphone<input name="phone" type="tel" autoComplete="tel" placeholder="+237 6 90 00 00 00" required /></label>
-          <div className="form-grid"><label>Mot de passe<input name="password" type="password" autoComplete="new-password" minLength={15} required /></label><label>Confirmation<input name="confirm" type="password" autoComplete="new-password" minLength={15} required /></label></div>
-          <p className="field-hint">Utilisez au moins 15 caractères.</p>
+          <div className="form-grid"><label>Mot de passe<input name="password" type="password" autoComplete="new-password" minLength={10} required /></label><label>Confirmation<input name="confirm" type="password" autoComplete="new-password" minLength={10} required /></label></div>
+          <p className="field-hint">Utilisez au moins 10 caractères.</p>
           <label className="check-row"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} /><span>J’accepte les conditions d’utilisation et la politique de confidentialité.</span></label>
-          <BoutonEnvoi loading={loading}>Créer mon compte</BoutonEnvoi>
+          <BoutonEnvoi loading={loading} disabled={!accepted}>Créer mon compte</BoutonEnvoi>
         </form>
         <p className="auth-switch">Déjà inscrit ? <button type="button" onClick={() => navigate("/login")}>Se connecter</button></p>
       </>}
@@ -261,8 +261,8 @@ export function ForgotPasswordPage() {
       {success ? <div className="success-panel"><span><CheckCircle2 size={28} /></span><h3>Mot de passe modifié</h3><p>Votre nouveau mot de passe est actif. Vous pouvez maintenant vous connecter.</p><button className="button button-primary full" type="button" onClick={() => navigate("/login")}>Retour à la connexion</button></div> : otpRequested ? <form className="form-stack" onSubmit={reset}>
         {error && <div className="form-alert error" role="alert">{error}</div>}
         <label>Code de vérification<input className="otp-input" name="otp" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="000000" required /></label>
-        <div className="form-grid"><label>Nouveau mot de passe<input name="password" type="password" autoComplete="new-password" minLength={15} required /></label><label>Confirmation<input name="confirm" type="password" autoComplete="new-password" minLength={15} required /></label></div>
-        <p className="field-hint">Le mot de passe doit contenir au moins 15 caractères.</p>
+        <div className="form-grid"><label>Nouveau mot de passe<input name="password" type="password" autoComplete="new-password" minLength={10} required /></label><label>Confirmation<input name="confirm" type="password" autoComplete="new-password" minLength={10} required /></label></div>
+        <p className="field-hint">Le mot de passe doit contenir au moins 10 caractères.</p>
         <BoutonEnvoi loading={loading}>Modifier mon mot de passe</BoutonEnvoi>
         <button className="link-inline" type="button" onClick={() => { setOtpRequested(false); setError(""); }}>Utiliser une autre adresse</button>
       </form> : <form className="form-stack" onSubmit={requestOtp}>
