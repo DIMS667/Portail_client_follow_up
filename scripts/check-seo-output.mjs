@@ -87,6 +87,11 @@ for (const route of ["/login", "/inscription", "/mot-de-passe-oublie", "/mention
   assert(/name="robots" content="noindex,[^"]+"/.test(html), `${route}: noindex absent`);
 }
 
+const termsHtml = await readFile(routeFile("/conditions-utilisation"), "utf8");
+assert(termsHtml.includes("2. Services proposés"), "/conditions-utilisation: contenu complet absent");
+assert(termsHtml.includes("7. Déclarations de sinistre"), "/conditions-utilisation: règles relatives aux sinistres absentes");
+assert(!termsHtml.includes("Informations en cours de validation"), "/conditions-utilisation: ancien contenu provisoire encore présent");
+
 const notFoundHtml = await readFile(path.join(outputDirectory, "404.html"), "utf8");
 assert(notFoundHtml.includes('name="robots" content="noindex, follow"'), "404.html: noindex absent");
 

@@ -11,6 +11,7 @@ import {
   solutionSummaries,
 } from "../src/public-site/data/public-pages.ts";
 import { privacyPolicy } from "../src/public-site/data/privacy-policy.ts";
+import { termsOfUse } from "../src/public-site/data/terms-of-use.ts";
 import {
   PUBLIC_INDEXABLE_ROUTES,
   PUBLIC_ORIGIN,
@@ -129,6 +130,10 @@ function renderLegal(route) {
   if (route === "/confidentialite") {
     const sections = privacyPolicy.sections.map((section) => `<section><h2>${escapeHtml(section.title)}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}${section.bullets ? renderList(section.bullets) : ""}</section>`).join("");
     return `${renderHeader()}<main><article><h1>${escapeHtml(privacyPolicy.title)}</h1><p>${escapeHtml(privacyPolicy.intro)}</p><p><strong>Dernière mise à jour :</strong> ${escapeHtml(privacyPolicy.updatedAt)}</p>${sections}<section><h2>Nous contacter au sujet de vos données</h2><p>Utilisez la page Contact pour adresser une demande relative à votre compte ou à vos données personnelles.</p>${renderLink("/contact", "Accéder à la page Contact")}</section></article></main>${renderFooter()}`;
+  }
+  if (route === "/conditions-utilisation") {
+    const sections = termsOfUse.sections.map((section) => `<section><h2>${escapeHtml(section.title)}</h2>${(section.paragraphs || []).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}${section.bullets ? renderList(section.bullets) : ""}</section>`).join("");
+    return `${renderHeader()}<main><article><h1>${escapeHtml(termsOfUse.title)}</h1><p>${escapeHtml(termsOfUse.intro)}</p><p><strong>Dernière mise à jour :</strong> ${escapeHtml(termsOfUse.updatedAt)}</p>${sections}<section><h2>Une question sur l’utilisation du site ?</h2><p>Notre équipe peut vous orienter sur le fonctionnement de votre espace et de vos démarches en ligne.</p>${renderLink("/contact", "Accéder à la page Contact")}</section></article></main>${renderFooter()}`;
   }
   const [title, intro] = legalContent[route];
   return `${renderHeader()}<main><article><h1>${escapeHtml(title)}</h1><p>${escapeHtml(intro)}</p><h2>Informations en cours de validation</h2><p>Cette page est en cours de validation. Les informations définitives seront publiées après confirmation des éléments relatifs à l’éditeur, à l’hébergement et, selon la page, au traitement des données.</p>${renderLink("/contact", "Nous contacter")}</article></main>${renderFooter()}`;
