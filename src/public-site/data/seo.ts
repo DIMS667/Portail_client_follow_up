@@ -5,6 +5,7 @@ import {
   type AdviceArticleSlug,
   type SolutionSlug,
 } from "./public-pages.ts";
+import { siteConfig } from "./site-config.ts";
 
 export const PUBLIC_ORIGIN = "https://followupassurance.com";
 export const PUBLIC_SITE_NAME = "Follow-Up Insurance";
@@ -51,9 +52,9 @@ interface ResolveSeoOptions {
 }
 
 const homeRoute: SeoRouteDefinition = {
-  title: "Follow-Up Insurance | Courtier en assurances",
+  title: "Follow-Up Insurance | Courtier en assurances au Cameroun",
   description:
-    "Follow-Up Insurance vous accompagne pour comprendre, comparer et choisir vos assurances automobile, santé, vie, habitation, voyage, entreprise et caution.",
+    "Follow-Up Insurance, courtier en assurances à Yaoundé au Cameroun, vous accompagne pour comparer et choisir vos solutions d’assurance.",
   image: DEFAULT_SOCIAL_IMAGE,
   imageAlt: "Les solutions d’assurance proposées par Follow-Up Insurance",
   breadcrumbs: [{ name: "Accueil", path: "/" }],
@@ -218,21 +219,43 @@ function portalTitle(pathname: string) {
 function buildStructuredData(definition: SeoRouteDefinition, canonical: string, image: string) {
   const graph: Record<string, unknown>[] = [
     {
-      "@type": "Organization",
+      "@type": ["Organization", "InsuranceAgency"],
       "@id": ORGANIZATION_ID,
       name: PUBLIC_SITE_NAME,
+      alternateName: ["Follow Up Insurance", "Followup Insurance", "Follow-Up Assurance"],
       url: `${PUBLIC_ORIGIN}/`,
       logo: {
         "@type": "ImageObject",
         url: `${PUBLIC_ORIGIN}/follow-up-insurance-logo.png`,
       },
       slogan: "Allez en toute quiétude",
+      telephone: siteConfig.phones.map((telephone) => telephone.label),
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: "Odza, entrée Koweït",
+        postalCode: "12830",
+        addressLocality: "Yaoundé",
+        addressRegion: "Centre",
+        addressCountry: "CM",
+      },
+      areaServed: {
+        "@type": "Country",
+        name: "Cameroun",
+      },
+      contactPoint: siteConfig.phones.map((telephone) => ({
+        "@type": "ContactPoint",
+        telephone: telephone.label,
+        contactType: "service client",
+        areaServed: "CM",
+        availableLanguage: ["fr"],
+      })),
     },
     {
       "@type": "WebSite",
       "@id": WEBSITE_ID,
       url: `${PUBLIC_ORIGIN}/`,
       name: PUBLIC_SITE_NAME,
+      alternateName: ["Follow Up Insurance", "Followup Insurance"],
       publisher: { "@id": ORGANIZATION_ID },
       inLanguage: "fr-FR",
     },

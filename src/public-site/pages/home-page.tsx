@@ -79,8 +79,8 @@ export function HomePage() {
           <div className="public-container public-hero__grid">
             <div className="public-hero__copy">
               <SectionLabel>Courtier en assurances</SectionLabel>
-              <h1 id="public-hero-title">Choisir avec confiance.<span>Allez en toute quiétude.</span></h1>
-              <p>Follow-Up Insurance comprend vos besoins, recherche des solutions adaptées et vous accompagne dans vos choix comme dans leur suivi.</p>
+              <h1 id="public-hero-title">Follow-Up Insurance.<span>Allez en toute quiétude.</span></h1>
+              <p>Votre courtier en assurances à Yaoundé, au Cameroun, comprend vos besoins, recherche des solutions adaptées et vous accompagne dans vos choix comme dans leur suivi.</p>
               <div className="public-hero__actions">
                 <Button asChild className="public-button public-button--primary public-button--large">
                   <PublicLink href="/contact?objet=devis">Étudier mon besoin <ArrowRight size={17} /></PublicLink>

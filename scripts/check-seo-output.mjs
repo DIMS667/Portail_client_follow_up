@@ -71,6 +71,12 @@ for (const route of PUBLIC_INDEXABLE_ROUTES) {
   try {
     const jsonLd = JSON.parse(jsonLdText);
     assert(jsonLd["@context"] === "https://schema.org", `${route}: contexte JSON-LD incorrect`);
+    if (route === "/") {
+      const organization = jsonLd["@graph"]?.find((item) => item["@id"] === "https://followupassurance.com/#organization");
+      assert(organization?.["@type"]?.includes("InsuranceAgency"), "/: type InsuranceAgency absent");
+      assert(organization?.alternateName?.includes("Follow Up Insurance"), "/: variante de marque absente");
+      assert(organization?.address?.addressLocality === "Yaoundé", "/: localisation de l’organisation absente");
+    }
   } catch {
     failures.push(`${route}: JSON-LD absent ou invalide`);
   }
