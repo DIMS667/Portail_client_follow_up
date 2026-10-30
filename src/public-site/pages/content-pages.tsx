@@ -542,7 +542,11 @@ export function ContactPublicPage() {
               <label className="full">Objet de la demande *<select name="subject" defaultValue={subject} required>{contactPage.formSubjects.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>
               <label className="full">Votre message *<textarea name="message" rows={6} required placeholder="Indiquez les informations utiles à une première orientation." /></label>
               <label className="public-contact-honeypot" aria-hidden="true">Votre site web<input name="website" tabIndex={-1} autoComplete="off" /></label>
-              <label className="full public-contact-consent"><input name="consent" type="checkbox" checked={consentAccepted} onChange={(event) => setConsentAccepted(event.target.checked)} required /><span>J’accepte que mes informations soient utilisées pour répondre à cette demande. *</span></label>
+              <label className="full public-contact-consent">
+                <input className="public-contact-consent__input" name="consent" type="checkbox" checked={consentAccepted} onChange={(event) => setConsentAccepted(event.target.checked)} required />
+                <span className="public-contact-consent__box" aria-hidden="true">{consentAccepted && <Check size={13} strokeWidth={3} />}</span>
+                <span className="public-contact-consent__text">J’accepte que mes informations soient utilisées pour répondre à cette demande. *</span>
+              </label>
               <div className="full"><Button type="submit" className="public-button public-button--primary" disabled={!consentAccepted || submission === "sending"}>{submission === "sending" ? <><LoaderCircle className="public-contact-spinner" size={16} />Envoi en cours…</> : <>Envoyer ma demande<ArrowRight size={16} /></>}</Button></div>
             </div>
             {submission === "success" && <div className="public-contact-form__success" role="status"><CheckCircle2 size={21} /><div><strong>Votre message a bien été envoyé.</strong><p>Un conseiller Follow-Up Insurance vous recontactera dans les meilleurs délais.</p></div></div>}
