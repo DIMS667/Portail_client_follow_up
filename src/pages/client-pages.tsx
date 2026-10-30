@@ -95,7 +95,7 @@ const iconForProduct: Record<InsuranceProduct, typeof Car> = {
 };
 const documentFolders = [
   { id: "informations_personnelles", label: "Informations personnelles", description: "CNI, passeport et justificatifs personnels", icon: UserRound },
-  { id: "automobile", label: "Assurance automobile", description: "Voiture, moto, permis, carte grise et sinistres", icon: Car },
+  { id: "automobile", label: "Assurance automobile", description: "Permis, carte grise et justificatifs du véhicule", icon: Car },
   { id: "sante", label: "Assurance santé", description: "Formulaires et justificatifs liés à la santé", icon: HeartPulse },
   { id: "vie_capitalisation", label: "Vie et capitalisation", description: "Pièces liées à l’épargne et à l’assurance vie", icon: HandCoins },
   { id: "habitation", label: "Assurance habitation", description: "Logement, inventaires et justificatifs du risque", icon: Home },

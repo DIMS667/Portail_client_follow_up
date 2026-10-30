@@ -27,6 +27,9 @@ export const documentSlotsByFolder: Record<DocumentFolderId, readonly DocumentSl
     { id: "automobile_permis", title: "Permis de conduire", type: "Permis" },
     { id: "automobile_carte_grise", title: "Carte grise", type: "Carte grise" },
     { id: "automobile_visite_technique", title: "Visite technique", type: "Visite technique" },
+    { id: "automobile_certificat_vente", title: "Certificat de vente", type: "Certificat de vente" },
+    { id: "automobile_fiche_identification", title: "Fiche d’identification", type: "Fiche d’identification" },
+    { id: "automobile_licence_transport", title: "Licence de transport", type: "Licence de transport" },
   ],
   sante: [
     { id: "sante_identite_beneficiaires", title: "Pièces d’identité des bénéficiaires", type: "Pièce d’identité" },
