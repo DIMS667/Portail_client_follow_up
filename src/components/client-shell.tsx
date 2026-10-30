@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Bell, ChevronRight, CircleHelp, ClipboardList, FileText, FolderOpen, Home, LifeBuoy,
   LogOut, MessageCircle, RefreshCcw, ShieldCheck, UserRound, WalletCards,
@@ -10,9 +10,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "./brand-logo";
+import { isPortalDeployment } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
-import { signOut } from "../services/portal-service";
+import { marquerNotificationLue } from "../services/notifications-api";
+import { markNotificationRead, signOut } from "../services/portal-service";
 import { deconnecter } from "../services/authentication-api";
+import type { Notification } from "../types/domain";
 
 const primaryNav = [
   { label: "Accueil", route: "/espace", icon: Home },
@@ -30,6 +33,27 @@ const secondaryNav = [
   { label: "Aide", route: "/espace/aide", icon: CircleHelp },
 ];
 
+const notificationIcons: Record<string, typeof Bell> = {
+  proposal: ClipboardList,
+  document: FileText,
+  payment: WalletCards,
+  contract: ShieldCheck,
+  request: ClipboardList,
+  claim: LifeBuoy,
+  message: MessageCircle,
+};
+
+function formatNotificationDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function isActive(pathname: string, route: string) {
   if (route === "/espace") return pathname === route;
   return pathname.startsWith(route);
@@ -37,9 +61,50 @@ function isActive(pathname: string, route: string) {
 
 export function ClientShell({ children }: { children: ReactNode }) {
   const { store, pathname, navigate, updateStore, resetDemo } = usePortal();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
   const unread = store.notifications.filter((notification) => !notification.read).length;
+  const newNotifications = [...store.notifications]
+    .filter((notification) => !notification.read)
+    .sort((first, second) => {
+      const firstDate = new Date(first.date).getTime();
+      const secondDate = new Date(second.date).getTime();
+      return (Number.isNaN(secondDate) ? 0 : secondDate) - (Number.isNaN(firstDate) ? 0 : firstDate);
+    })
+    .slice(0, 5);
   const clientName = `${store.client.firstName} ${store.client.lastName}`.trim();
   const clientInitials = `${store.client.firstName[0] || ""}${store.client.lastName[0] || ""}`.toUpperCase() || "CL";
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!notificationsRef.current?.contains(event.target as Node)) setNotificationsOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setNotificationsOpen(false);
+    };
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [notificationsOpen]);
+
+  useEffect(() => setNotificationsOpen(false), [pathname]);
+
+  const openNotification = (notification: Notification) => {
+    updateStore((current) => markNotificationRead(current, notification.id));
+    setNotificationsOpen(false);
+    if (isPortalDeployment) void marquerNotificationLue(notification.id).catch(() => undefined);
+    navigate(notification.route.startsWith("/espace") ? notification.route : "/espace/notifications");
+  };
+
+  const openAllNotifications = () => {
+    setNotificationsOpen(false);
+    navigate("/espace/notifications");
+  };
+
   const logout = async () => {
     try {
       await deconnecter();
@@ -86,7 +151,71 @@ export function ClientShell({ children }: { children: ReactNode }) {
           <button type="button" className="flex min-w-0 items-center lg:hidden" onClick={() => navigate("/espace")} aria-label="FOLLOW-UP INSURANCE, accueil"><BrandLogo className="w-[150px]" /></button>
           <div className="hidden gap-0.5 lg:grid"><span className="text-[11px] font-semibold uppercase tracking-[.14em] text-slate-400">Espace personnel</span><strong className="text-[15px] text-slate-900">Bonjour {store.client.firstName}</strong></div>
           <div className="flex items-center gap-1.5">
-            <Button type="button" variant="ghost" size="icon" className="relative rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" onClick={() => navigate("/espace/notifications")} aria-label={`${unread} notification${unread > 1 ? "s" : ""} non lue${unread > 1 ? "s" : ""}`}><Bell size={18} />{unread > 0 && <span className="absolute -right-1 -top-1 grid size-[18px] place-items-center rounded-full border-2 border-white bg-rose-500 text-[9px] font-bold text-white">{unread}</span>}</Button>
+            <div className="relative" ref={notificationsRef}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn("relative rounded-xl border bg-white text-slate-600 hover:bg-slate-50", notificationsOpen ? "border-brand-red bg-brand-soft text-brand-red" : "border-slate-200")}
+                onClick={() => setNotificationsOpen((open) => !open)}
+                aria-label={`${unread} notification${unread > 1 ? "s" : ""} non lue${unread > 1 ? "s" : ""}`}
+                aria-haspopup="dialog"
+                aria-expanded={notificationsOpen}
+                aria-controls="notifications-popover"
+              >
+                <Bell size={18} />
+                {unread > 0 && <span className="absolute -right-1 -top-1 grid size-[18px] place-items-center rounded-full border-2 border-white bg-rose-500 text-[9px] font-bold text-white">{unread}</span>}
+              </Button>
+              {notificationsOpen && (
+                <section
+                  id="notifications-popover"
+                  role="dialog"
+                  aria-label="Nouvelles notifications"
+                  className="absolute right-0 top-[calc(100%+10px)] z-50 w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-[0_22px_60px_rgba(15,23,42,.18)]"
+                >
+                  <header className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                    <div>
+                      <strong className="block text-sm text-slate-900">Nouvelles notifications</strong>
+                      <span className="mt-0.5 block text-xs text-slate-400">{unread ? `${unread} non lue${unread > 1 ? "s" : ""}` : "Vous êtes à jour"}</span>
+                    </div>
+                    <span className="grid size-9 place-items-center rounded-xl bg-brand-soft text-brand-red"><Bell size={18} /></span>
+                  </header>
+                  {newNotifications.length ? (
+                    <div className="max-h-[360px] overflow-y-auto p-2">
+                      {newNotifications.map((notification) => {
+                        const Icon = notificationIcons[notification.kind] || Bell;
+                        const date = formatNotificationDate(notification.date);
+                        return (
+                          <button
+                            type="button"
+                            key={notification.id}
+                            className="group grid w-full grid-cols-[42px_minmax(0,1fr)_18px] gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/40"
+                            onClick={() => openNotification(notification)}
+                          >
+                            <span className="grid size-[42px] place-items-center rounded-xl bg-brand-soft text-brand-red"><Icon size={19} /></span>
+                            <span className="min-w-0">
+                              <strong className="block truncate text-sm text-slate-900 group-hover:text-brand-red">{notification.title}</strong>
+                              <span className="mt-1 line-clamp-2 block text-xs leading-5 text-slate-500">{notification.body}</span>
+                              {date && <small className="mt-1.5 block text-[10px] font-medium uppercase tracking-wide text-slate-400">{date}</small>}
+                            </span>
+                            <ChevronRight size={17} className="mt-3 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-red" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="grid justify-items-center px-6 py-10 text-center">
+                      <span className="grid size-12 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Bell size={22} /></span>
+                      <strong className="mt-3 text-sm text-slate-800">Aucune nouvelle notification</strong>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">Les prochaines mises à jour de vos dossiers apparaîtront ici.</p>
+                    </div>
+                  )}
+                  <button type="button" className="flex min-h-12 w-full items-center justify-center gap-2 border-t border-slate-100 px-4 text-sm font-bold text-brand-red transition-colors hover:bg-brand-soft" onClick={openAllNotifications}>
+                    Afficher toutes les notifications<ChevronRight size={17} />
+                  </button>
+                </section>
+              )}
+            </div>
             <Button type="button" variant="ghost" size="icon" className="hidden rounded-xl text-slate-500 hover:bg-slate-100 lg:inline-flex" onClick={logout} aria-label="Se déconnecter"><LogOut size={18} /></Button>
           </div>
         </header>
