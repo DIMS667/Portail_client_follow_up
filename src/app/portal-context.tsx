@@ -6,6 +6,7 @@ import { fusionnerDemandesAutomobile, obtenirDemandesAutomobile } from "../servi
 import { obtenirSinistres } from "../services/claims-api";
 import { creerFluxDocuments, fusionnerDocumentsServeur, obtenirDocuments } from "../services/documents-api";
 import { creerFluxNotifications, obtenirNotifications } from "../services/notifications-api";
+import { initialiserAlerteSonore, jouerAlerteSonore } from "../services/notification-sound";
 import type { PortalStore } from "../types/domain";
 
 type StoreUpdater = PortalStore | ((current: PortalStore) => PortalStore);
@@ -31,6 +32,8 @@ export function PortalProvider({ children }: { children: ReactNode }) {
   const [store, setStore] = useState(() => localStoragePortalRepository.load());
   const [route, setRoute] = useState(currentRoute);
   const [authenticationReady, setAuthenticationReady] = useState(!isPortalDeployment);
+
+  useEffect(() => initialiserAlerteSonore(), []);
 
   useEffect(() => {
     if (!isPortalDeployment) return;
@@ -94,11 +97,17 @@ export function PortalProvider({ children }: { children: ReactNode }) {
         obtenirDemandesAutomobile(),
       ]).then(([notifications, demandes]) => {
         if (!active) return;
-        setStore((current) => ({
-          ...current,
-          notifications,
-          requests: fusionnerDemandesAutomobile(current.requests, demandes),
-        }));
+        setStore((current) => {
+          const notificationsConnues = new Set(current.notifications.map((item) => item.id));
+          if (notifications.some((item) => !notificationsConnues.has(item.id))) {
+            void jouerAlerteSonore();
+          }
+          return {
+            ...current,
+            notifications,
+            requests: fusionnerDemandesAutomobile(current.requests, demandes),
+          };
+        });
       }).catch(() => undefined);
     };
     flux.addEventListener("notification", actualiser);
