@@ -56,6 +56,21 @@ function construireLienWhatsApp(numero: string, message: string) {
   return `https://wa.me/${chiffres}?text=${encodeURIComponent(message)}`;
 }
 
+function WhatsAppIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M12.04 2C6.52 2 2.08 6.48 2.08 12c0 1.77.46 3.45 1.29 4.91L2 22l5.21-1.37A9.9 9.9 0 0 0 12.04 22C17.56 22 22 17.52 22 12S17.56 2 12.04 2Zm5.84 14.05c-.25.71-1.46 1.3-2.02 1.39-.52.08-1.18.11-1.9-.12-.44-.14-1-.33-1.72-.64-3.03-1.31-5-4.56-5.15-4.76-.15-.2-1.23-1.48-1.23-2.97 0-1.49.78-2.22 1.06-2.52.28-.3.6-.38.8-.38h.58c.18.01.43-.07.68.52.25.6.85 2.07.93 2.22.08.15.13.33.03.53-.1.2-.15.33-.3.51-.15.18-.31.4-.45.53-.15.15-.3.31-.13.61.18.3.78 1.28 1.67 2.07 1.15 1.02 2.12 1.34 2.42 1.49.3.15.48.13.65-.08.18-.2.75-.88.95-1.18.2-.3.4-.25.68-.15.28.1 1.78.84 2.08.99.3.15.5.23.58.35.08.13.08.73-.17 1.44Z" />
+    </svg>
+  );
+}
+
 const claimStatusLabels: Record<string, string> = {
   submitted: "Déclaration reçue",
   under_review: "En cours d’analyse",
@@ -320,7 +335,7 @@ export function RequestDetailPage({ reference }: { reference: string }) {
       {request.status === "policy_issuing" && <section className="attention-card success"><span><CheckCircle2 size={23} /></span><div><strong>Paiement reçu. Votre contrat est en cours de finalisation.</strong><p>Vous serez informé dès que la police sera disponible.</p></div></section>}
       <div className="detail-grid">
         <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Progression</span><h2>Suivi du dossier</h2></div></div><Timeline items={request.timeline} /></section>
-        <aside className="panel advisor-card"><span className="page-eyebrow">Gestionnaire du dossier</span>{requestAdvisor?<><span className="large-avatar">{requestAdvisor.initials}</span><h2>{requestAdvisor.name}</h2><p>{advisorRole}. Cette personne suit personnellement l’avancement de cette demande.</p>{requestAdvisor.phone&&<a href={`tel:${requestAdvisor.phone}`}><Phone size={17} /> {requestAdvisor.phone}</a>}<a href={`mailto:${requestAdvisor.email}`}><Mail size={17} /> {requestAdvisor.email}</a>{whatsappHref&&<a className="button button-secondary" href={whatsappHref} target="_blank" rel="noopener noreferrer" aria-label={`Écrire à ${requestAdvisor.name} sur WhatsApp`}><MessageCircle size={17} /> Envoyer un message WhatsApp</a>}</>:<><span className="large-avatar"><Clock3 size={20}/></span><h2>Aucun gestionnaire affecté</h2><p>Votre demande est encore dans la file commune. Les coordonnées du responsable apparaîtront ici dès sa prise en charge.</p></>}</aside>
+        <aside className="panel advisor-card"><span className="page-eyebrow">Gestionnaire du dossier</span>{requestAdvisor?<><span className="large-avatar">{requestAdvisor.initials}</span><h2>{requestAdvisor.name}</h2><p>{advisorRole}. Cette personne suit personnellement l’avancement de cette demande.</p>{requestAdvisor.phone&&<a href={`tel:${requestAdvisor.phone}`}><Phone size={17} /> {requestAdvisor.phone}</a>}<a href={`mailto:${requestAdvisor.email}`}><Mail size={17} /> {requestAdvisor.email}</a>{whatsappHref&&<a className="button advisor-whatsapp-button" href={whatsappHref} target="_blank" rel="noopener noreferrer" aria-label={`Écrire à ${requestAdvisor.name} sur WhatsApp`}><WhatsAppIcon /> Envoyer un message WhatsApp</a>}</>:<><span className="large-avatar"><Clock3 size={20}/></span><h2>Aucun gestionnaire affecté</h2><p>Votre demande est encore dans la file commune. Les coordonnées du responsable apparaîtront ici dès sa prise en charge.</p></>}</aside>
       </div>
       {delegatedAutomobileRequest && <section className="panel auto-request-delegated-detail"><div className="panel-heading"><div><span className="page-eyebrow">Demande déléguée</span><h2>Votre message au courtier</h2></div></div><div className="request-comments"><span>Besoin exprimé librement</span><p>{delegatedAutomobileRequest.delegatedMessage}</p></div><p className="auto-request-detail-note"><CircleHelp size={17} /> Votre courtier vous recontactera pour compléter les informations nécessaires et préparer votre dossier.</p></section>}
       {selfServiceAutomobileRequest && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre demande automobile</h2></div></div><div className="auto-request-detail-groups">
