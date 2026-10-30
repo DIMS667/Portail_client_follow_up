@@ -358,8 +358,9 @@
 .public-contact-form__grid input:not([type="checkbox"]), .public-contact-form__grid select, .public-contact-form__grid textarea { width: 100%; min-height: 48px; padding: 11px 13px; border: 1px solid #cfcfcc; background: #fff; color: var(--public-ink); font: inherit; }
 .public-contact-form__grid textarea { min-height: 145px; resize: vertical; }
 .public-contact-form__grid input:focus, .public-contact-form__grid select:focus, .public-contact-form__grid textarea:focus { border-color: var(--public-red); outline: 2px solid color-mix(in srgb, var(--public-red) 18%, transparent); outline-offset: 1px; }
-.public-contact-consent { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; font-weight: 500 !important; line-height: 1.45; }
-.public-contact-consent input { width: 17px; height: 17px; margin-top: 2px; accent-color: var(--public-red); }
+.public-contact-consent { display: flex; gap: 10px; align-items: flex-start; font-weight: 500 !important; line-height: 1.45; cursor: pointer; }
+.public-contact-consent input { width: 17px; height: 17px; margin: 2px 0 0; flex: 0 0 17px; accent-color: var(--public-red); cursor: pointer; }
+.public-contact-consent span { display: block; min-width: 0; }
 .public-article-aside h2 { margin-top: 12px; font-size: 25px; line-height: 1.15; }
 .public-article-aside .public-check-list { grid-template-columns: 1fr; }
 .public-empty-state { min-height: 600px; display: grid; align-items: center; text-align: center; }

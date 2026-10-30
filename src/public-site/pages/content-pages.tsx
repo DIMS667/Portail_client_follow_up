@@ -457,9 +457,11 @@ function initialSubject() {
 export function ContactPublicPage() {
   const [submission, setSubmission] = useState<"idle" | "sending" | "success" | "error">("idle");
   const [submissionError, setSubmissionError] = useState("");
+  const [consentAccepted, setConsentAccepted] = useState(false);
   const subject = useMemo(initialSubject, []);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!consentAccepted) return;
     const formulaire = event.currentTarget;
     const donnees = new FormData(formulaire);
     setSubmission("sending");
@@ -476,6 +478,7 @@ export function ContactPublicPage() {
         site_web: String(donnees.get("website") || ""),
       });
       formulaire.reset();
+      setConsentAccepted(false);
       setSubmission("success");
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : "Votre message n’a pas pu être envoyé.");
@@ -539,8 +542,8 @@ export function ContactPublicPage() {
               <label className="full">Objet de la demande *<select name="subject" defaultValue={subject} required>{contactPage.formSubjects.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>
               <label className="full">Votre message *<textarea name="message" rows={6} required placeholder="Indiquez les informations utiles à une première orientation." /></label>
               <label className="public-contact-honeypot" aria-hidden="true">Votre site web<input name="website" tabIndex={-1} autoComplete="off" /></label>
-              <label className="full public-contact-consent"><input name="consent" type="checkbox" required /><span>J’accepte que mes informations soient utilisées pour répondre à cette demande. *</span></label>
-              <div className="full"><Button type="submit" className="public-button public-button--primary" disabled={submission === "sending"}>{submission === "sending" ? <><LoaderCircle className="public-contact-spinner" size={16} />Envoi en cours…</> : <>Envoyer ma demande<ArrowRight size={16} /></>}</Button></div>
+              <label className="full public-contact-consent"><input name="consent" type="checkbox" checked={consentAccepted} onChange={(event) => setConsentAccepted(event.target.checked)} required /><span>J’accepte que mes informations soient utilisées pour répondre à cette demande. *</span></label>
+              <div className="full"><Button type="submit" className="public-button public-button--primary" disabled={!consentAccepted || submission === "sending"}>{submission === "sending" ? <><LoaderCircle className="public-contact-spinner" size={16} />Envoi en cours…</> : <>Envoyer ma demande<ArrowRight size={16} /></>}</Button></div>
             </div>
             {submission === "success" && <div className="public-contact-form__success" role="status"><CheckCircle2 size={21} /><div><strong>Votre message a bien été envoyé.</strong><p>Un conseiller Follow-Up Insurance vous recontactera dans les meilleurs délais.</p></div></div>}
             {submission === "error" && <div className="public-contact-form__error" role="alert"><CircleAlert size={21} /><div><strong>Impossible d’envoyer votre message.</strong><p>{submissionError}</p></div></div>}
