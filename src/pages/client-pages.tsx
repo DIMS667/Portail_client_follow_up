@@ -47,6 +47,15 @@ import type {
 
 const iconForKind: Record<string, typeof Bell> = { proposal: ClipboardList, document: FileCheck2, payment: WalletCards, contract: ShieldCheck, request: FileText, renewal: RefreshCcw, claim: LifeBuoy, message: MessageCircle };
 const paymentLabels: Record<PaymentMethod, string> = { mobile_money: "Mobile Money", orange_money: "Orange Money", bank_card: "Carte bancaire", bank_transfer: "Virement" };
+
+function construireLienWhatsApp(numero: string, message: string) {
+  let chiffres = numero.replace(/\D/g, "");
+  if (chiffres.startsWith("00")) chiffres = chiffres.slice(2);
+  if (chiffres.length === 9) chiffres = `237${chiffres}`;
+  if (chiffres.length < 11) return null;
+  return `https://wa.me/${chiffres}?text=${encodeURIComponent(message)}`;
+}
+
 const claimStatusLabels: Record<string, string> = {
   submitted: "Déclaration reçue",
   under_review: "En cours d’analyse",
@@ -296,7 +305,13 @@ export function RequestDetailPage({ reference }: { reference: string }) {
   const selectedMotoGuarantees: MotoGuarantee[] = selfServiceMotoRequest?.coverage.guarantees?.length ? Array.from(new Set(["civil_liability", "defense_and_recours", ...selfServiceMotoRequest.coverage.guarantees])) : ["civil_liability", "defense_and_recours"];
   const healthRequest = request.healthRequest;
   const requestAdvisor = request.advisor;
-  const advisorRole = requestAdvisor?.role === "courtier" ? "Courtier responsable" : requestAdvisor ? "Responsable du dossier" : "En attente d’affectation";
+  const advisorRole = requestAdvisor ? "Gestionnaire responsable" : "En attente d’affectation";
+  const whatsappHref = requestAdvisor?.phone
+    ? construireLienWhatsApp(
+        requestAdvisor.phone,
+        `Bonjour ${requestAdvisor.name}, je vous contacte au sujet de ma demande ${request.reference} – ${request.productLabel}.`,
+      )
+    : null;
   return (
     <div className="page-stack">
       <button className="back-link" type="button" onClick={() => navigate("/espace/demandes")}><ArrowLeft size={17} /> Retour aux demandes</button>
@@ -305,7 +320,7 @@ export function RequestDetailPage({ reference }: { reference: string }) {
       {request.status === "policy_issuing" && <section className="attention-card success"><span><CheckCircle2 size={23} /></span><div><strong>Paiement reçu. Votre contrat est en cours de finalisation.</strong><p>Vous serez informé dès que la police sera disponible.</p></div></section>}
       <div className="detail-grid">
         <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Progression</span><h2>Suivi du dossier</h2></div></div><Timeline items={request.timeline} /></section>
-        <aside className="panel advisor-card"><span className="page-eyebrow">Courtier chargé du dossier</span>{requestAdvisor?<><span className="large-avatar">{requestAdvisor.initials}</span><h2>{requestAdvisor.name}</h2><p>{advisorRole}. Il suit personnellement l’avancement de cette demande.</p>{requestAdvisor.phone&&<a href={`tel:${requestAdvisor.phone}`}><Phone size={17} /> {requestAdvisor.phone}</a>}<a href={`mailto:${requestAdvisor.email}`}><Mail size={17} /> {requestAdvisor.email}</a><LinkButton to="/espace/messagerie" variant="secondary"><MessageCircle size={17} /> Envoyer un message</LinkButton></>:<><span className="large-avatar"><Clock3 size={20}/></span><h2>Aucun courtier affecté</h2><p>Votre demande est encore dans la file commune. Les coordonnées du responsable apparaîtront ici dès sa prise en charge.</p></>}</aside>
+        <aside className="panel advisor-card"><span className="page-eyebrow">Gestionnaire du dossier</span>{requestAdvisor?<><span className="large-avatar">{requestAdvisor.initials}</span><h2>{requestAdvisor.name}</h2><p>{advisorRole}. Cette personne suit personnellement l’avancement de cette demande.</p>{requestAdvisor.phone&&<a href={`tel:${requestAdvisor.phone}`}><Phone size={17} /> {requestAdvisor.phone}</a>}<a href={`mailto:${requestAdvisor.email}`}><Mail size={17} /> {requestAdvisor.email}</a>{whatsappHref&&<a className="button button-secondary" href={whatsappHref} target="_blank" rel="noopener noreferrer" aria-label={`Écrire à ${requestAdvisor.name} sur WhatsApp`}><MessageCircle size={17} /> Envoyer un message WhatsApp</a>}</>:<><span className="large-avatar"><Clock3 size={20}/></span><h2>Aucun gestionnaire affecté</h2><p>Votre demande est encore dans la file commune. Les coordonnées du responsable apparaîtront ici dès sa prise en charge.</p></>}</aside>
       </div>
       {delegatedAutomobileRequest && <section className="panel auto-request-delegated-detail"><div className="panel-heading"><div><span className="page-eyebrow">Demande déléguée</span><h2>Votre message au courtier</h2></div></div><div className="request-comments"><span>Besoin exprimé librement</span><p>{delegatedAutomobileRequest.delegatedMessage}</p></div><p className="auto-request-detail-note"><CircleHelp size={17} /> Votre courtier vous recontactera pour compléter les informations nécessaires et préparer votre dossier.</p></section>}
       {selfServiceAutomobileRequest && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre demande automobile</h2></div></div><div className="auto-request-detail-groups">
