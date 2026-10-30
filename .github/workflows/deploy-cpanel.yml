@@ -55,6 +55,8 @@ jobs:
           test -n "$FTP_PASSWORD" || { echo "Missing secret: CPANEL_FTP_PASSWORD"; exit 1; }
 
       - name: Deploy website and portal to public_html over FTPS
+        id: deploy_primary
+        continue-on-error: true
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.CPANEL_FTP_SERVER }}
@@ -76,6 +78,42 @@ jobs:
             php.ini
           log-level: minimal
           dangerous-clean-slate: false
+
+      - name: Wait before retrying the FTPS transfer
+        if: steps.deploy_primary.outcome == 'failure'
+        run: sleep 45
+
+      - name: Retry website and portal deployment over FTPS
+        id: deploy_retry
+        if: steps.deploy_primary.outcome == 'failure'
+        continue-on-error: true
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.CPANEL_FTP_SERVER }}
+          username: ${{ secrets.CPANEL_FTP_USERNAME }}
+          password: ${{ secrets.CPANEL_FTP_PASSWORD }}
+          protocol: ${{ vars.CPANEL_FTP_PROTOCOL || 'ftps' }}
+          port: ${{ vars.CPANEL_FTP_PORT || '21' }}
+          local-dir: dist/
+          server-dir: /
+          state-name: .followup-deploy-sync-state-v2.json
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .well-known/**
+            api/**
+            cgi-bin/**
+            .user.ini
+            php.ini
+          log-level: minimal
+          dangerous-clean-slate: false
+
+      - name: Fail when every FTPS attempt failed
+        if: steps.deploy_primary.outcome == 'failure' && steps.deploy_retry.outcome == 'failure'
+        run: |
+          echo "Both FTPS deployment attempts failed."
+          exit 1
 
       - name: Verify live website and client portal
         run: |
