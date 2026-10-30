@@ -323,6 +323,11 @@
 .public-contact-details span { color: var(--public-orange); }
 .public-contact-details h2 { margin-top: 12px; font-size: 22px; }
 .public-contact-details p { margin-top: 7px; color: var(--public-muted); line-height: 1.5; }
+.public-contact-location { display: grid; gap: 14px; }
+.public-contact-map { position: relative; min-height: 220px; overflow: hidden; border: 1px solid var(--public-line); background: var(--public-soft); }
+.public-contact-map iframe { width: 100%; height: 220px; display: block; border: 0; }
+.public-contact-map a { position: absolute; right: 10px; bottom: 10px; padding: 9px 12px; display: inline-flex; align-items: center; gap: 6px; color: #fff; background: rgba(20, 24, 34, .9); font-size: 12px; font-weight: 800; text-decoration: none; box-shadow: 0 8px 24px rgba(20, 24, 34, .2); }
+.public-contact-map a:hover { background: var(--public-red); }
 .public-contact-form { padding: 34px; border: 1px solid var(--public-line); }
 .public-contact-form h2 { font-size: 30px; }
 .public-contact-form > p { margin-top: 9px; color: var(--public-muted); }
@@ -331,7 +336,11 @@
 .public-contact-form__grid label { position: relative; color: var(--public-ink); font-size: 14px; font-weight: 700; }
 .public-contact-form__grid input, .public-contact-form__grid select, .public-contact-form__grid textarea { border-color: #cfcfcc; border-radius: 0; }
 .public-contact-form__success { margin-top: 25px; padding: 19px; display: flex; align-items: flex-start; gap: 12px; color: #1e654a; border: 1px solid #b9dfcf; background: #f2faf6; }
-.public-contact-form__success p { margin-top: 4px; font-size: 14px; }
+.public-contact-form__success p, .public-contact-form__error p { margin-top: 4px; font-size: 14px; }
+.public-contact-form__error { margin-top: 25px; padding: 19px; display: flex; align-items: flex-start; gap: 12px; color: #a21b1b; border: 1px solid #efb8b8; background: #fff5f5; }
+.public-contact-honeypot { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.public-contact-spinner { animation: public-contact-spin .8s linear infinite; }
+@keyframes public-contact-spin { to { transform: rotate(360deg); } }
 .public-legal-copy { max-width: 900px; }
 .public-legal-copy h1 { margin-top: 16px; font-size: clamp(44px, 5vw, 70px); line-height: .98; letter-spacing: -.045em; }
 .public-legal-copy h2 { margin: 36px 0 12px; font-size: 28px; }

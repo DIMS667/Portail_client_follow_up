@@ -4,7 +4,10 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  CircleAlert,
   CircleHelp,
+  ExternalLink,
+  LoaderCircle,
   Mail,
   MapPin,
   Phone,
@@ -13,6 +16,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { usePortal } from "../../app/portal-context";
+import { envoyerDemandeContact } from "../../services/contact-api";
 import { PublicLink } from "../components/public-link";
 import { PublicPageShell } from "../components/public-page-shell";
 import { ResponsivePublicImage } from "../components/responsive-public-image";
@@ -451,12 +455,32 @@ function initialSubject() {
 }
 
 export function ContactPublicPage() {
-  const [sent, setSent] = useState(false);
+  const [submission, setSubmission] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [submissionError, setSubmissionError] = useState("");
   const subject = useMemo(initialSubject, []);
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSent(true);
-    event.currentTarget.reset();
+    const formulaire = event.currentTarget;
+    const donnees = new FormData(formulaire);
+    setSubmission("sending");
+    setSubmissionError("");
+
+    try {
+      await envoyerDemandeContact({
+        nom_complet: String(donnees.get("name") || ""),
+        adresse_email: String(donnees.get("email") || ""),
+        numero_telephone: String(donnees.get("phone") || ""),
+        objet: String(donnees.get("subject") || "autre"),
+        message: String(donnees.get("message") || ""),
+        consentement: true,
+        site_web: String(donnees.get("website") || ""),
+      });
+      formulaire.reset();
+      setSubmission("success");
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : "Votre message n’a pas pu être envoyé.");
+      setSubmission("error");
+    }
   };
 
   const channels = [
@@ -468,7 +492,27 @@ export function ContactPublicPage() {
     {
       icon: MapPin,
       title: "Nous trouver",
-      content: <p>{siteConfig.address}</p>,
+      content: (
+        <div className="public-contact-location">
+          <p>{siteConfig.address}</p>
+          <div className="public-contact-map">
+            <iframe
+              title={`Carte de ${siteConfig.address}`}
+              src="https://www.google.com/maps?q=12830%20Yaound%C3%A9%2C%20Odza%2C%20entr%C3%A9e%20Kowe%C3%AFt&output=embed"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+            />
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=12830%20Yaound%C3%A9%2C%20Odza%2C%20entr%C3%A9e%20Kowe%C3%AFt"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Ouvrir l’itinéraire <ExternalLink size={14} aria-hidden="true" />
+            </a>
+          </div>
+        </div>
+      ),
     },
     {
       icon: Mail,
@@ -494,10 +538,12 @@ export function ContactPublicPage() {
               <label className="full">E-mail *<input name="email" type="email" autoComplete="email" required /></label>
               <label className="full">Objet de la demande *<select name="subject" defaultValue={subject} required>{contactPage.formSubjects.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>
               <label className="full">Votre message *<textarea name="message" rows={6} required placeholder="Indiquez les informations utiles à une première orientation." /></label>
+              <label className="public-contact-honeypot" aria-hidden="true">Votre site web<input name="website" tabIndex={-1} autoComplete="off" /></label>
               <label className="full public-contact-consent"><input name="consent" type="checkbox" required /><span>J’accepte que mes informations soient utilisées pour répondre à cette demande. *</span></label>
-              <div className="full"><Button type="submit" className="public-button public-button--primary">Envoyer ma demande<ArrowRight size={16} /></Button></div>
+              <div className="full"><Button type="submit" className="public-button public-button--primary" disabled={submission === "sending"}>{submission === "sending" ? <><LoaderCircle className="public-contact-spinner" size={16} />Envoi en cours…</> : <>Envoyer ma demande<ArrowRight size={16} /></>}</Button></div>
             </div>
-            {sent && <div className="public-contact-form__success" role="status"><CheckCircle2 size={21} /><div><strong>Message non envoyé — mode démonstration.</strong><p>Le formulaire est prêt, mais il n’est pas encore relié à un canal de contact. Aucune donnée n’a été transmise.</p></div></div>}
+            {submission === "success" && <div className="public-contact-form__success" role="status"><CheckCircle2 size={21} /><div><strong>Votre message a bien été envoyé.</strong><p>Un conseiller Follow-Up Insurance vous recontactera dans les meilleurs délais.</p></div></div>}
+            {submission === "error" && <div className="public-contact-form__error" role="alert"><CircleAlert size={21} /><div><strong>Impossible d’envoyer votre message.</strong><p>{submissionError}</p></div></div>}
           </form>
         </div>
       </section>
