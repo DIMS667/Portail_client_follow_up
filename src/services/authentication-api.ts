@@ -198,6 +198,14 @@ export function appliquerCompteAuthentifie(store: PortalStore, compte: CompteCli
   const lastName = morceauxNom.join(" ");
   return {
     ...store,
+    proposals: [],
+    offers: [],
+    payments: [],
+    contracts: [],
+    renewals: [],
+    messages: [],
+    activities: [],
+    scenarios: [],
     session: { authenticated: true, clientId: compte.id },
     client: {
       ...store.client,

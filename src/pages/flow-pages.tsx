@@ -14,9 +14,11 @@ import {
 } from "../data/insurance-product-forms";
 import { documentsForProduct } from "../data/document-folders";
 import {
-  createClaim, createInsuranceRequest, formatDate, formatFcfa, requestRenewal, selectOffer,
+  createClaim, createInsuranceRequest, formatDate, formatFcfa, requestRenewal,
 } from "../services/portal-service";
 import { creerDemandeAutomobile } from "../services/automobile-request-api";
+import { creerDemandeGenerale } from "../services/general-request-api";
+import { selectionnerOffre } from "../services/subscription-api";
 import type { AutomobileVehicleKind, InsuranceProduct, InsuranceRequest } from "../types/domain";
 import { AutoRequestForm, VoiceTextarea } from "./auto-request-form";
 import { CautionRequestForm } from "./caution-request-form";
@@ -50,8 +52,10 @@ export function NewRequestPage() {
       product: requestProduct,
       documents: documentsForProduct(store.documents, requestProduct),
     };
-    if (dataWithDocuments.product === "automobile" && isPortalDeployment) {
-      const request = await creerDemandeAutomobile(dataWithDocuments);
+    if (isPortalDeployment) {
+      const request = dataWithDocuments.product === "automobile"
+        ? await creerDemandeAutomobile(dataWithDocuments)
+        : await creerDemandeGenerale(dataWithDocuments);
       updateStore((current) => ({
         ...current,
         requests: [request, ...current.requests.filter((item) => item.reference !== request.reference)],
@@ -189,7 +193,7 @@ function ProductRequestForm({ product, onBack, onSubmit, backLabel = "Changer d�
         <div><h3>Précisions complémentaires <small>Facultatif</small></h3><p>Ajoutez uniquement une information qui n’apparaît pas déjà dans le formulaire.</p></div>
         <label className="sr-only" htmlFor={`${product.id}-comments`}>Précisions complémentaires</label><textarea id={`${product.id}-comments`} rows={4} value={comments} onChange={(event) => setComments(event.target.value)} placeholder="Une contrainte, une échéance ou une information utile…" />
       </section>
-      <div className="form-alert info"><CircleAlert size={18} /> Cette demande est fictive et ne sera transmise à aucune compagnie d’assurance.</div>
+      <div className="form-alert info"><CircleAlert size={18} /> Votre demande sera transmise à votre gestionnaire pour étude avant toute proposition.</div>
       <div className="flow-actions"><button className="button button-secondary" type="button" onClick={onBack}>{backLabel}</button><button className="button button-primary" type="submit">Envoyer ma demande <ChevronRight size={18} /></button></div>
     </form>
   </div>;
@@ -214,14 +218,38 @@ export function OfferDetailPage({ offerId }: { offerId: string }) {
   const { store, updateStore, navigate, query } = usePortal();
   const offer = store.offers.find((item) => item.id === offerId);
   const proposal = store.proposals.find((item) => item.id === offer?.proposalId);
-  const request = store.requests.find((item) => item.id === proposal?.requestId);
+  const request = store.requests.find((item) => item.id === proposal?.requestId || item.reference === proposal?.requestId);
   const [accepted, setAccepted] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
   if (!offer || !proposal || !request) return null;
   const recommended = proposal.recommendedOfferId === offer.id;
-  const confirm = () => { if (!accepted) return; updateStore(selectOffer(store, request.reference, offer.id)); setConfirmed(true); };
-  if (confirmed) return <div className="confirmation-page"><span className="confirmation-icon"><CheckCircle2 size={38} /></span><span className="page-eyebrow">Choix enregistré</span><h1>Votre offre a été sélectionnée.</h1><p>Vous pouvez maintenant transmettre les documents nécessaires à la finalisation du dossier.</p><div className="confirmation-reference"><small>Offre retenue</small><strong>{offer.provider} · {formatFcfa(offer.premium)}</strong><span>{offer.product}</span></div><button className="button button-primary" type="button" onClick={() => navigate("/espace/documents")}>Continuer vers les documents</button></div>;
-  return <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate(`/espace/demandes/${request.reference}/propositions`)}><ArrowLeft size={17} /> Retour aux propositions</button><PageHeader eyebrow={offer.reference} title={offer.product} description={`${offer.provider} · assurance automobile`} action={recommended ? <StatusBadge status="proposals_available">Recommandée par votre courtier</StatusBadge> : undefined} /><section className="offer-detail-hero"><div><span>Prime annuelle</span><strong>{formatFcfa(offer.premium)}</strong><small>{offer.duration}</small></div><div><span>Franchise</span><strong>{formatFcfa(offer.deductible)}</strong><small>selon les conditions</small></div><div><span>Date d’effet</span><strong>{formatDate(offer.effectiveDate)}</strong><small>durée de 12 mois</small></div></section>{recommended && <section className="broker-advice compact"><span className="large-avatar">{store.advisor.initials}</span><div><span>Conseil de votre courtier</span><p>{proposal.advice}</p></div></section>}<div className="offer-detail-grid"><section className="panel"><h2>Garanties incluses</h2><ul className="guarantee-list large">{offer.guarantees.map((item) => <li key={item}><Check size={17} /> {item}</li>)}</ul></section><section className="panel"><h2>Garanties optionnelles</h2><ul className="guarantee-list large muted">{offer.options.map((item) => <li key={item}><PlusMark /> {item}</li>)}</ul></section><section className="panel"><h2>Exclusions principales</h2><ul className="plain-list">{offer.exclusions.map((item) => <li key={item}><CircleAlert size={16} /> {item}</li>)}</ul></section><section className="panel"><h2>Documents nécessaires</h2><ul className="plain-list">{offer.requiredDocuments.map((item) => <li key={item}><FileText size={16} /> {item}</li>)}</ul></section></div><section className={`acceptance-card ${query.get("choisir") ? "highlight" : ""}`}><div><span className="page-eyebrow">Confirmation</span><h2>Choisir cette proposition</h2><p>Vous pourrez encore échanger avec votre courtier avant le paiement simulé.</p></div><label className="check-row"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} /><span>Je confirme avoir pris connaissance des informations relatives à cette proposition.</span></label><button className="button button-primary" type="button" disabled={!accepted} onClick={confirm}>Confirmer mon choix</button></section></div>;
+  const confirm = async () => {
+    if (!accepted || submitting) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const selectedOffer = await selectionnerOffre(request.reference, offer.id);
+      updateStore((current) => ({
+        ...current,
+        offers: current.offers.map((item) => ({
+          ...item,
+          selected: item.id === selectedOffer.id,
+        })),
+        requests: current.requests.map((item) => item.reference === request.reference
+          ? { ...item, selectedOfferId: selectedOffer.id, status: "payment_pending" }
+          : item),
+      }));
+      setConfirmed(true);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Votre choix n’a pas pu être enregistré.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  if (confirmed) return <div className="confirmation-page"><span className="confirmation-icon"><CheckCircle2 size={38} /></span><span className="page-eyebrow">Choix enregistré</span><h1>Votre offre a été sélectionnée.</h1><p>Vous pouvez maintenant régler la prime de cette offre de façon sécurisée via CamPay.</p><div className="confirmation-reference"><small>Offre retenue</small><strong>{offer.provider} · {formatFcfa(offer.premium)}</strong><span>{offer.product}</span></div><button className="button button-primary" type="button" onClick={() => navigate("/espace/paiements")}>Continuer vers le paiement</button></div>;
+  return <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate(`/espace/demandes/${request.reference}/propositions`)}><ArrowLeft size={17} /> Retour aux propositions</button><PageHeader eyebrow={offer.reference} title={offer.product} description={offer.provider} action={recommended ? <StatusBadge status="proposals_available">Recommandée par votre gestionnaire</StatusBadge> : undefined} /><section className="offer-detail-hero"><div><span>Prime</span><strong>{formatFcfa(offer.premium)}</strong><small>{offer.duration}</small></div><div><span>Franchise</span><strong>{formatFcfa(offer.deductible)}</strong><small>selon les conditions</small></div><div><span>Date d’effet</span><strong>{formatDate(offer.effectiveDate)}</strong><small>{offer.duration}</small></div></section>{recommended && <section className="broker-advice compact"><span className="large-avatar">{store.advisor.initials}</span><div><span>Conseil de votre gestionnaire</span><p>{proposal.advice}</p></div></section>}<div className="offer-detail-grid"><section className="panel"><h2>Garanties incluses</h2><ul className="guarantee-list large">{offer.guarantees.map((item) => <li key={item}><Check size={17} /> {item}</li>)}</ul></section><section className="panel"><h2>Garanties optionnelles</h2><ul className="guarantee-list large muted">{offer.options.length ? offer.options.map((item) => <li key={item}><PlusMark /> {item}</li>) : <li>Aucune option supplémentaire.</li>}</ul></section><section className="panel"><h2>Exclusions principales</h2><ul className="plain-list">{offer.exclusions.length ? offer.exclusions.map((item) => <li key={item}><CircleAlert size={16} /> {item}</li>) : <li>Aucune exclusion communiquée.</li>}</ul></section><section className="panel"><h2>Documents nécessaires</h2><ul className="plain-list">{offer.requiredDocuments.length ? offer.requiredDocuments.map((item) => <li key={item}><FileText size={16} /> {item}</li>) : <li>Aucune pièce supplémentaire demandée.</li>}</ul></section></div><section className={`acceptance-card ${query.get("choisir") ? "highlight" : ""}`}><div><span className="page-eyebrow">Confirmation</span><h2>Choisir cette proposition</h2><p>Ce choix ouvre le règlement réel de la prime via CamPay.</p></div>{error && <div className="form-alert error" role="alert"><CircleAlert size={17} /> {error}</div>}<label className="check-row"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} /><span>Je confirme avoir pris connaissance des informations relatives à cette proposition.</span></label><button className="button button-primary" type="button" disabled={!accepted || submitting} onClick={() => { void confirm(); }}>{submitting ? "Enregistrement…" : "Confirmer mon choix"}</button></section></div>;
 }
 
 export function RenewalPage({ policyNumber }: { policyNumber: string }) {

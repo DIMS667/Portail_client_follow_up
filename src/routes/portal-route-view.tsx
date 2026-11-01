@@ -21,7 +21,6 @@ const RequestDetailPage = lazy(() => import("../pages/client-pages").then((modul
 const RequestsPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.RequestsPage })));
 const NewRequestPage = lazy(() => import("../pages/flow-pages").then((module) => ({ default: module.NewRequestPage })));
 const OfferDetailPage = lazy(() => import("../pages/flow-pages").then((module) => ({ default: module.OfferDetailPage })));
-const RenewalPage = lazy(() => import("../pages/flow-pages").then((module) => ({ default: module.RenewalPage })));
 const NewClaimPage = lazy(() => import("../pages/new-claim-page").then((module) => ({ default: module.NewClaimPage })));
 const LoginPage = lazy(() => import("../pages/public-pages").then((module) => ({ default: module.LoginPage })));
 
@@ -46,7 +45,6 @@ export function PortalRouteView() {
   else if (pathname === "/espace/paiements") page = <PaymentsPage />;
   else if (pathname === "/espace/contrats") page = <ContractsPage />;
   else if (/^\/espace\/contrats\/[^/]+$/.test(pathname)) page = <ContractDetailPage policyNumber={decodeURIComponent(pathname.split("/")[3])} />;
-  else if (/^\/espace\/renouvellements\/[^/]+$/.test(pathname)) page = <RenewalPage policyNumber={decodeURIComponent(pathname.split("/")[3])} />;
   else if (pathname === "/espace/sinistres") page = <ClaimsPage />;
   else if (pathname === "/espace/sinistres/nouveau") page = <NewClaimPage />;
   else if (/^\/espace\/sinistres\/[^/]+$/.test(pathname)) page = <ClaimDetailPage reference={decodeURIComponent(pathname.split("/")[3])} />;

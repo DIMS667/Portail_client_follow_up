@@ -1,10 +1,10 @@
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Bike, Building2, CalendarDays, Car, Check, CheckCircle2, ChevronRight,
   CircleAlert, CircleHelp, ClipboardList, Clock3, Download, Eye, FileCheck2, FileText, Filter, FolderOpen,
   HandCoins, HeartHandshake, HeartPulse, Home, LifeBuoy, Mail, MapPin, MessageCircle, Paperclip,
   LogOut, Phone, Plane, Plus, RefreshCcw, Search, Send, ShieldCheck, Smartphone, Upload, UserRound,
-  Trash2, WalletCards, XCircle,
+  Trash2, WalletCards,
 } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -37,8 +37,14 @@ import {
 } from "../services/notifications-api";
 import {
   addMessage, formatDate, formatFcfa, markNotificationRead, removeDocument, saveDocumentToSlot,
-  signOut, simulatePayment, updateProfile,
+  signOut, updateProfile,
 } from "../services/portal-service";
+import {
+  appliquerSouscriptions,
+  initialiserPaiement,
+  obtenirSouscriptions,
+  verifierPaiement,
+} from "../services/subscription-api";
 import type {
   AutoClaimPerson, AutoClaimVehicle, AutoGuarantee, AutoRequestType, AutoVehicleEnergy, AutoVehicleUsage,
   ClientDocument, InsuranceProduct, InsuranceRequest, MotoGuarantee, MotoVehicleEnergy, MotoVehicleUsage, PaymentMethod,
@@ -374,7 +380,7 @@ export function ProposalsPage({ requestReference }: { requestReference: string }
   return (
     <div className="grid gap-6 lg:gap-8">
       <Button variant="ghost" className="h-9 w-fit rounded-lg px-2 text-slate-600" type="button" onClick={() => navigate(`/espace/demandes/${requestReference}`)}><ArrowLeft size={17} /> Retour au dossier</Button>
-      <PageHeader eyebrow={proposal.reference} title="Comparez vos propositions" description="Trois solutions sélectionnées par votre courtier selon votre besoin automobile." />
+      <PageHeader eyebrow={proposal.reference} title="Comparez vos propositions" description={`${offers.length} offre${offers.length > 1 ? "s" : ""} préparée${offers.length > 1 ? "s" : ""} pour votre demande.`} />
       <section className="flex items-start gap-3 rounded-2xl border border-orange-200 bg-brand-soft/80 p-4 sm:items-center sm:p-5"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-red text-xs font-bold text-white">{store.advisor.initials}</span><div className="min-w-0 flex-1"><span className="text-[10px] font-bold uppercase tracking-[.16em] text-brand-red-dark">L’avis de votre courtier</span><p className="mt-1 text-sm leading-6 text-brand-ink">{proposal.advice}</p></div></section>
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
@@ -386,7 +392,7 @@ export function ProposalsPage({ requestReference }: { requestReference: string }
 
         <div className="grid gap-4">{alternatives.map((offer) => <Card className="rounded-2xl bg-white shadow-[0_8px_30px_rgba(15,35,65,.04)]" key={offer.id}><CardContent className="grid gap-5 p-5"><div className="flex items-start justify-between gap-4"><div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600">{offer.provider.slice(-1)}</span><div><strong className="block text-sm text-slate-900">{offer.provider}</strong><span className="text-xs text-slate-500">{offer.product}</span></div></div><div className="text-right"><strong className="block whitespace-nowrap text-xl font-semibold tracking-[-.03em] tabular-nums text-slate-950">{formatFcfa(offer.premium)}</strong><span className="text-[11px] text-slate-500">par an</span></div></div><Separator /><div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600"><span>Franchise <strong className="ml-1 text-slate-900">{formatFcfa(offer.deductible)}</strong></span><span>{offer.guarantees.length} garanties incluses</span></div><ul className="grid gap-1.5">{offer.guarantees.slice(0, 3).map((guarantee) => <li className="flex items-center gap-2 text-xs text-slate-600" key={guarantee}><Check size={13} className="text-emerald-600" />{guarantee}</li>)}</ul><div className="grid grid-cols-2 gap-2"><Button variant="outline" className="rounded-xl" type="button" onClick={() => navigate(`/espace/offres/${offer.id}`)}>Détails</Button><Button variant="secondary" className="rounded-xl" type="button" onClick={() => navigate(`/espace/offres/${offer.id}?choisir=1`)}>Choisir</Button></div></CardContent></Card>)}</div>
       </div>
-      <p className="flex items-center gap-2 text-xs text-slate-500"><CircleAlert size={15} /> Ces propositions sont entièrement fictives et servent uniquement à la démonstration.</p>
+      <p className="flex items-center gap-2 text-xs text-slate-500"><ShieldCheck size={15} /> Les montants et garanties affichés proviennent des offres enregistrées par votre gestionnaire.</p>
     </div>
   );
 }
@@ -502,16 +508,77 @@ export function DocumentsPage() {
 
 export function PaymentsPage() {
   const { store, updateStore } = usePortal();
-  const [method, setMethod] = useState<PaymentMethod>("mobile_money");
-  const [result, setResult] = useState<"success" | "failed" | null>(null);
-  const pay = (success: boolean) => { updateStore(simulatePayment(store, success, method)); setResult(success ? "success" : "failed"); };
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [phone, setPhone] = useState(store.client.phone);
+  const [operation, setOperation] = useState(false);
+  const [error, setError] = useState("");
+  const [currentPaymentId, setCurrentPaymentId] = useState<string | null>(null);
+  const selectedOffer = store.offers.find((offer) => offer.selected
+    && !store.payments.some((payment) => payment.requestId === offer.requestReference && payment.status === "succeeded"));
+  const currentPayment = store.payments.find((payment) => payment.id === currentPaymentId);
+
+  const replacePayment = (payment: PortalStore["payments"][number]) => {
+    updateStore((current) => ({
+      ...current,
+      payments: [payment, ...current.payments.filter((item) => item.id !== payment.id)],
+      requests: payment.status === "succeeded"
+        ? current.requests.map((item) => item.reference === payment.requestId
+          ? { ...item, status: "policy_issuing" }
+          : item)
+        : current.requests,
+    }));
+  };
+
+  const checkPayment = async (paymentId: string, quiet = false) => {
+    if (!quiet) setOperation(true);
+    setError("");
+    try {
+      const payment = await verifierPaiement(paymentId);
+      replacePayment(payment);
+      if (payment.status === "succeeded") {
+        const subscriptions = await obtenirSouscriptions();
+        updateStore((current) => appliquerSouscriptions(current, subscriptions));
+      }
+    } catch (caught) {
+      if (!quiet) setError(caught instanceof Error ? caught.message : "Le statut n’a pas pu être vérifié.");
+    } finally {
+      if (!quiet) setOperation(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!dialogOpen || !currentPaymentId) return;
+    const payment = store.payments.find((item) => item.id === currentPaymentId);
+    if (!payment || payment.status !== "pending" || payment.providerStatus === "a_verifier") return;
+    const timer = window.setInterval(() => { void checkPayment(currentPaymentId, true); }, 6000);
+    return () => window.clearInterval(timer);
+  }, [currentPaymentId, dialogOpen, store.payments]);
+
+  const startPayment = async () => {
+    if (!selectedOffer?.requestReference) return;
+    setOperation(true);
+    setError("");
+    try {
+      const payment = await initialiserPaiement(selectedOffer.requestReference, phone);
+      replacePayment(payment);
+      setCurrentPaymentId(payment.id);
+      if (payment.status === "failed") {
+        setError("CamPay a refusé l’initialisation. Vérifiez le numéro puis réessayez.");
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Le paiement n’a pas pu être lancé.");
+    } finally {
+      setOperation(false);
+    }
+  };
+
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Historique financier" title="Mes paiements" description="Consultez les règlements simulés associés à vos demandes et contrats." />
-      <section className="payment-due-card"><span className="payment-due-icon"><HandCoins size={26} /></span><div><span className="page-eyebrow">Dossier prêt</span><h2>Votre dossier est prêt pour le paiement.</h2><p>Assurance automobile · Compagnie A</p></div><strong>{formatFcfa(105000)}</strong>
-        <Dialog onOpenChange={(open) => { if (open) setResult(null); }}><DialogTrigger asChild><button className="button button-primary" type="button">Payer maintenant</button></DialogTrigger><DialogContent className="portal-dialog payment-dialog"><DialogHeader><DialogTitle>Simulation de paiement</DialogTitle><DialogDescription>Aucune transaction réelle ne sera effectuée.</DialogDescription></DialogHeader>{result ? <div className={`payment-result ${result}`}><span>{result === "success" ? <CheckCircle2 size={30} /> : <XCircle size={30} />}</span><h3>{result === "success" ? "Paiement effectué avec succès." : "Le paiement simulé a échoué."}</h3><p>{result === "success" ? "Référence PAY-2026-00046 · votre contrat est en préparation." : "Vous pouvez choisir un autre mode et réessayer."}</p></div> : <><div className="payment-summary"><span>Montant à régler</span><strong>{formatFcfa(105000)}</strong><small>Assurance automobile · Compagnie A</small></div><fieldset className="method-grid"><legend>Mode de paiement fictif</legend>{(Object.entries(paymentLabels) as [PaymentMethod, string][]).map(([value, label]) => <label className={method === value ? "selected" : ""} key={value}><input type="radio" name="paymentMethod" checked={method === value} onChange={() => setMethod(value)} /><Smartphone size={19} /><span>{label}</span></label>)}</fieldset><div className="dialog-actions stacked"><button className="button button-primary" type="button" onClick={() => pay(true)}>Simuler un paiement réussi</button><button className="button button-secondary" type="button" onClick={() => pay(false)}>Simuler un paiement échoué</button></div></>}</DialogContent></Dialog>
-      </section>
-      {result === "success" && <section className="post-payment"><Timeline items={[{ label: "Paiement confirmé", done: true }, { label: "Traitement du dossier", done: false, active: true }, { label: "Police disponible", done: false }]} /></section>}
+      <PageHeader eyebrow="Historique financier" title="Mes paiements" description="Réglez une offre sélectionnée et suivez les confirmations CamPay." />
+      {selectedOffer ? <section className="payment-due-card"><span className="payment-due-icon"><HandCoins size={26} /></span><div><span className="page-eyebrow">Offre sélectionnée</span><h2>Votre dossier est prêt pour le paiement.</h2><p>{selectedOffer.product} · {selectedOffer.provider}</p></div><strong>{formatFcfa(selectedOffer.premium)}</strong>
+        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (open) { setError(""); setCurrentPaymentId(store.payments.find((payment) => payment.requestId === selectedOffer.requestReference && payment.status === "pending")?.id ?? null); } }}><DialogTrigger asChild><button className="button button-primary" type="button">Payer avec CamPay</button></DialogTrigger><DialogContent className="portal-dialog payment-dialog"><DialogHeader><DialogTitle>Paiement Mobile Money sécurisé</DialogTitle><DialogDescription>CamPay enverra une demande de confirmation sur votre téléphone MTN ou Orange.</DialogDescription></DialogHeader><div className="payment-summary"><span>Montant exact à régler</span><strong>{formatFcfa(selectedOffer.premium)}</strong><small>{selectedOffer.product} · {selectedOffer.provider}</small></div>{error && <div className="form-alert error" role="alert"><CircleAlert size={17} /> {error}</div>}{currentPayment ? <div className={`payment-result ${currentPayment.status === "succeeded" ? "success" : currentPayment.status === "failed" ? "failed" : "pending"}`}><span>{currentPayment.status === "succeeded" ? <CheckCircle2 size={30} /> : <Smartphone size={30} />}</span><h3>{currentPayment.status === "succeeded" ? "Paiement confirmé par CamPay." : currentPayment.providerStatus === "a_verifier" ? "Paiement en cours de rapprochement." : currentPayment.status === "failed" ? "Le paiement a échoué." : "Confirmez la demande sur votre téléphone."}</h3><p>{currentPayment.status === "succeeded" ? `${currentPayment.reference} · votre contrat est maintenant en préparation.` : currentPayment.providerStatus === "a_verifier" ? "Ne relancez pas le paiement. Notre équipe doit d’abord vérifier la transaction auprès de CamPay." : currentPayment.ussdCode ? `Si nécessaire, utilisez le code ${currentPayment.ussdCode}.` : `Référence ${currentPayment.reference}. Le statut se met à jour automatiquement.`}</p>{currentPayment.status === "pending" && currentPayment.providerStatus !== "a_verifier" && <button className="button button-secondary" type="button" disabled={operation} onClick={() => { void checkPayment(currentPayment.id); }}>{operation ? "Vérification…" : "Vérifier maintenant"}</button>}</div> : <><label className="form-field"><span>Numéro Mobile Money</span><input type="tel" inputMode="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="6 99 00 00 00" autoComplete="tel" /></label><div className="form-alert info"><ShieldCheck size={18} /> Aucun contrat ne sera créé tant que CamPay n’aura pas confirmé le paiement au serveur.</div><button className="button button-primary" type="button" disabled={operation || phone.trim().length < 9} onClick={() => { void startPayment(); }}>{operation ? "Connexion à CamPay…" : `Payer ${formatFcfa(selectedOffer.premium)}`}</button></>}</DialogContent></Dialog>
+      </section> : <EmptyState title="Aucun paiement à effectuer" description="Un paiement apparaîtra ici après la sélection d’une offre réelle." />}
+      {currentPayment?.status === "succeeded" && <section className="post-payment"><Timeline items={[{ label: "Paiement confirmé", done: true }, { label: "Contrat en préparation", done: false, active: true }, { label: "Police disponible", done: false }]} /></section>}
       <section className="panel table-panel"><div className="panel-heading"><div><span className="page-eyebrow">Toutes les opérations</span><h2>Historique</h2></div></div><div className="responsive-table"><table><thead><tr><th>Référence</th><th>Contrat ou dossier</th><th>Montant</th><th>Date</th><th>Mode</th><th>Statut</th></tr></thead><tbody>{store.payments.map((payment) => <tr key={payment.id}><td><strong>{payment.reference}</strong></td><td>{payment.contractId || payment.requestId}</td><td>{formatFcfa(payment.amount)}</td><td>{formatDate(payment.date)}</td><td>{paymentLabels[payment.method]}</td><td><StatusBadge status={payment.status}>{payment.status === "succeeded" ? "Confirmé" : payment.status === "failed" ? "Échoué" : "En attente"}</StatusBadge></td></tr>)}</tbody></table></div></section>
     </div>
   );
@@ -519,9 +586,8 @@ export function PaymentsPage() {
 
 export function ContractsPage() {
   const { store, navigate } = usePortal();
-  return <div className="page-stack"><PageHeader eyebrow="Vos protections" title="Mes assurances" description="Consultez vos contrats actifs, leurs garanties et leurs prochaines échéances." />
-    <section className="renewal-alert"><span><CalendarDays size={22} /></span><div><strong>Votre assurance automobile arrive à échéance dans 30 jours.</strong><p>Anticipez son renouvellement depuis votre espace.</p></div><LinkButton to="/espace/renouvellements/POL-2026-00325" variant="secondary">Voir le renouvellement</LinkButton></section>
-    <div className="contracts-grid">{store.contracts.map((contract) => <article className="contract-card" key={contract.id}><div className="contract-visual"><span>{contract.product === "automobile" ? <Car size={29} /> : <Home size={29} />}</span><StatusBadge status={contract.status}>{contract.status === "active" ? "Actif" : "En préparation"}</StatusBadge></div><span className="reference">{contract.policyNumber}</span><h2>{contract.productLabel}</h2><p>{contract.provider}</p><div className="contract-date"><CalendarDays size={18} /><div><small>Expiration</small><strong>{formatDate(contract.expirationDate)}</strong></div></div><div className="contract-actions"><button className="button button-primary" type="button" onClick={() => navigate(`/espace/contrats/${contract.policyNumber}`)}>Voir le contrat</button><button className="button button-secondary" type="button" onClick={() => navigate(`/espace/renouvellements/${contract.policyNumber}`)}>Renouveler</button></div></article>)}</div>
+  return <div className="page-stack"><PageHeader eyebrow="Vos protections" title="Mes assurances" description="Consultez les contrats créés après confirmation de vos paiements." />
+    {store.contracts.length ? <div className="contracts-grid">{store.contracts.map((contract) => <article className="contract-card" key={contract.id}><div className="contract-visual"><span>{contract.product === "automobile" ? <Car size={29} /> : <ShieldCheck size={29} />}</span><StatusBadge status={contract.status}>{contract.status === "active" ? "Actif" : contract.status === "expired" ? "Expiré" : "En préparation"}</StatusBadge></div><span className="reference">{contract.policyNumber}</span><h2>{contract.productLabel}</h2><p>{contract.provider}</p><div className="contract-date"><CalendarDays size={18} /><div><small>Expiration prévue</small><strong>{formatDate(contract.expirationDate)}</strong></div></div><div className="contract-actions"><button className="button button-primary" type="button" onClick={() => navigate(`/espace/contrats/${contract.policyNumber}`)}>Voir le contrat</button></div></article>)}</div> : <EmptyState title="Aucun contrat pour le moment" description="Un contrat sera créé uniquement après la confirmation d’un paiement CamPay." />}
   </div>;
 }
 
@@ -532,12 +598,12 @@ export function ContractDetailPage({ policyNumber }: { policyNumber: string }) {
   const documents = store.documents.filter((document) => contract.documentIds.includes(document.id));
   const payments = store.payments.filter((payment) => contract.paymentIds.includes(payment.id));
   const claims = store.claims.filter((claim) => contract.claimIds.includes(claim.id));
-  return <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate("/espace/contrats")}><ArrowLeft size={17} /> Retour aux contrats</button><PageHeader eyebrow={contract.policyNumber} title={contract.productLabel} description={contract.provider} action={<StatusBadge status={contract.status}>Actif</StatusBadge>} />
-    <section className="policy-hero"><div><span className="policy-icon"><ShieldCheck size={28} /></span><div><small>Votre police d’assurance est disponible.</small><h2>{contract.policyNumber}</h2></div></div><div className="policy-downloads">{documents.slice(0, 3).map((document) => <a className="button button-secondary" href={assetUrl(document.downloadUrl || "")} download key={document.id}><Download size={17} /> {document.type}</a>)}</div></section>
+  return <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate("/espace/contrats")}><ArrowLeft size={17} /> Retour aux contrats</button><PageHeader eyebrow={contract.policyNumber} title={contract.productLabel} description={contract.provider} action={<StatusBadge status={contract.status}>{contract.status === "active" ? "Actif" : contract.status === "expired" ? "Expiré" : "En préparation"}</StatusBadge>} />
+    <section className="policy-hero"><div><span className="policy-icon"><ShieldCheck size={28} /></span><div><small>{contract.status === "active" ? "Votre police d’assurance est disponible." : "Le paiement est confirmé. La police est en cours de finalisation."}</small><h2>{contract.policyNumber}</h2></div></div><div className="policy-downloads">{documents.slice(0, 3).map((document) => <a className="button button-secondary" href={assetUrl(document.downloadUrl || "")} download key={document.id}><Download size={17} /> {document.type}</a>)}</div></section>
     <Tabs defaultValue="resume" className="contract-tabs"><TabsList className="contract-tabs-list"><TabsTrigger value="resume">Résumé</TabsTrigger><TabsTrigger value="garanties">Garanties</TabsTrigger><TabsTrigger value="documents">Documents</TabsTrigger><TabsTrigger value="paiements">Paiements</TabsTrigger><TabsTrigger value="sinistres">Sinistres</TabsTrigger></TabsList>
       <TabsContent value="resume"><section className="panel"><div className="details-grid"><Detail label="Numéro de police" value={contract.policyNumber} /><Detail label="Produit" value={contract.productLabel} /><Detail label="Compagnie" value={contract.provider} /><Detail label="Date d’effet" value={formatDate(contract.effectiveDate)} /><Detail label="Expiration" value={formatDate(contract.expirationDate)} /><Detail label="Prime annuelle" value={formatFcfa(contract.premium)} /></div></section></TabsContent>
       <TabsContent value="garanties"><section className="panel"><h2>Garanties incluses</h2><ul className="guarantee-list large">{contract.guarantees.map((item) => <li key={item}><Check size={17} /> {item}</li>)}</ul></section></TabsContent>
-      <TabsContent value="documents"><section className="panel mini-list">{documents.map((document) => <a href={assetUrl(document.downloadUrl || "")} download key={document.id}><FileText size={20} /><div><strong>{document.title}</strong><small>{document.fileName || "Document de démonstration"}</small></div><Download size={18} /></a>)}</section></TabsContent>
+      <TabsContent value="documents"><section className="panel mini-list">{documents.length ? documents.map((document) => <a href={assetUrl(document.downloadUrl || "")} download key={document.id}><FileText size={20} /><div><strong>{document.title}</strong><small>{document.fileName || document.type}</small></div><Download size={18} /></a>) : <p>La police sera disponible ici après sa finalisation.</p>}</section></TabsContent>
       <TabsContent value="paiements"><section className="panel mini-list">{payments.map((payment) => <div key={payment.id}><WalletCards size={20} /><div><strong>{payment.reference}</strong><small>{formatDate(payment.date)}</small></div><strong>{formatFcfa(payment.amount)}</strong></div>)}</section></TabsContent>
       <TabsContent value="sinistres"><section className="panel mini-list">{claims.map((claim) => <button type="button" onClick={() => navigate(`/espace/sinistres/${claim.reference}`)} key={claim.id}><LifeBuoy size={20} /><div><strong>{claim.reference}</strong><small>{claim.type}</small></div><ChevronRight size={18} /></button>)}</section></TabsContent>
     </Tabs>

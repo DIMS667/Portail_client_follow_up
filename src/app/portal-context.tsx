@@ -3,9 +3,11 @@ import { fromBrowserPath, isPortalDeployment, toBrowserPath } from "./base-path"
 import { localStoragePortalRepository } from "../repositories/portal-repository";
 import { appliquerCompteAuthentifie, obtenirMonCompte } from "../services/authentication-api";
 import { fusionnerDemandesAutomobile, obtenirDemandesAutomobile } from "../services/automobile-request-api";
+import { obtenirDemandesGenerales } from "../services/general-request-api";
 import { obtenirSinistres } from "../services/claims-api";
 import { creerFluxDocuments, fusionnerDocumentsServeur, obtenirDocuments } from "../services/documents-api";
 import { creerFluxNotifications, obtenirNotifications } from "../services/notifications-api";
+import { appliquerSouscriptions, obtenirSouscriptions } from "../services/subscription-api";
 import { initialiserAlerteSonore, jouerAlerteSonore } from "../services/notification-sound";
 import type { PortalStore } from "../types/domain";
 
@@ -40,21 +42,24 @@ export function PortalProvider({ children }: { children: ReactNode }) {
     let active = true;
     void obtenirMonCompte()
       .then(async (compte) => {
-        const [demandes, sinistres, documents, notifications] = await Promise.all([
+        const [demandesAutomobile, demandesGenerales, sinistres, documents, notifications, souscriptions] = await Promise.all([
           obtenirDemandesAutomobile().catch(() => []),
+          obtenirDemandesGenerales().catch(() => []),
           obtenirSinistres().catch(() => []),
           obtenirDocuments(compte.id).catch(() => []),
           obtenirNotifications().catch(() => []),
+          obtenirSouscriptions().catch(() => ({ offers: [], proposals: [], payments: [], contracts: [] })),
         ]);
         if (active) setStore((current) => {
           const authentifie = appliquerCompteAuthentifie(current, compte);
-          return {
+          const donneesMetier = {
             ...authentifie,
-            requests: fusionnerDemandesAutomobile(authentifie.requests, demandes),
+            requests: fusionnerDemandesAutomobile(authentifie.requests, [...demandesAutomobile, ...demandesGenerales]),
             claims: sinistres,
             documents: fusionnerDocumentsServeur(authentifie.documents, documents),
             notifications,
           };
+          return appliquerSouscriptions(donneesMetier, souscriptions);
         });
       })
       .catch(() => {
@@ -95,18 +100,20 @@ export function PortalProvider({ children }: { children: ReactNode }) {
       void Promise.all([
         obtenirNotifications(),
         obtenirDemandesAutomobile(),
-      ]).then(([notifications, demandes]) => {
+        obtenirDemandesGenerales(),
+        obtenirSouscriptions(),
+      ]).then(([notifications, demandesAutomobile, demandesGenerales, souscriptions]) => {
         if (!active) return;
         setStore((current) => {
           const notificationsConnues = new Set(current.notifications.map((item) => item.id));
           if (notifications.some((item) => !notificationsConnues.has(item.id))) {
             void jouerAlerteSonore();
           }
-          return {
+          return appliquerSouscriptions({
             ...current,
             notifications,
-            requests: fusionnerDemandesAutomobile(current.requests, demandes),
-          };
+            requests: fusionnerDemandesAutomobile(current.requests, [...demandesAutomobile, ...demandesGenerales]),
+          }, souscriptions);
         });
       }).catch(() => undefined);
     };

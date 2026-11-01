@@ -45,7 +45,7 @@ interface SinistreApi {
     nom_complet: string;
     adresse_email: string;
     numero_telephone: string;
-    role: "courtier" | "admin" | "super_admin";
+    role: "gestionnaire" | "admin" | "super_admin";
   } | null;
 }
 

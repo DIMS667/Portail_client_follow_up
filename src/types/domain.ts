@@ -199,7 +199,7 @@ export interface HealthInsuranceRequestData {
 
 export interface StatusEvent { label: string; at?: string; done: boolean; active?: boolean; }
 export interface Client { id: string; firstName: string; lastName: string; phone: string; email: string; address: string; city: string; preferences: { email: boolean; whatsapp: boolean; inApp: boolean }; }
-export interface Advisor { id: string; name: string; phone: string; email: string; initials: string; role?: "courtier" | "admin" | "super_admin"; }
+export interface Advisor { id: string; name: string; phone: string; email: string; initials: string; role?: "gestionnaire" | "admin" | "super_admin"; }
 export interface RequestDocumentReference { id: string; title: string; fileName?: string; type: string; folder: string; status: DocumentStatus; date?: string; }
 export interface InsuranceRequest {
   id: string; reference: string; clientId: string; product: InsuranceProduct; productLabel: string; date: string; status: RequestStatus; advisorId: string;
@@ -214,10 +214,10 @@ export interface InsuranceRequest {
   coverage?: string; desiredStartDate?: string; comments?: string; proposalId?: string; selectedOfferId?: string; timeline: StatusEvent[]; scope?: "core" | "scenario";
 }
 export interface Proposal { id: string; reference: string; requestId: string; offerIds: string[]; recommendedOfferId: string; advice: string; }
-export interface Offer { id: string; reference: string; proposalId: string; provider: string; product: string; premium: number; duration: string; effectiveDate: string; deductible: number; guarantees: string[]; options: string[]; exclusions: string[]; requiredDocuments: string[]; }
+export interface Offer { id: string; reference: string; proposalId: string; provider: string; product: string; premium: number; duration: string; effectiveDate: string; deductible: number; guarantees: string[]; options: string[]; exclusions: string[]; requiredDocuments: string[]; requestReference?: string; recommended?: boolean; selected?: boolean; advice?: string; }
 export interface ClientDocument { id: string; title: string; category: string; type: string; ownerId: string; status: DocumentStatus; slotId?: string; fileName?: string; date?: string; correctionMessage?: string; downloadUrl?: string; contentUrl?: string; }
-export interface Payment { id: string; reference: string; contractId?: string; requestId?: string; amount: number; date: string; method: PaymentMethod; status: PaymentStatus; }
-export interface Contract { id: string; policyNumber: string; clientId: string; product: InsuranceProduct; productLabel: string; provider: string; effectiveDate: string; expirationDate: string; premium: number; status: ContractStatus; guarantees: string[]; documentIds: string[]; paymentIds: string[]; claimIds: string[]; }
+export interface Payment { id: string; reference: string; contractId?: string; requestId?: string; amount: number; date: string; method: PaymentMethod; status: PaymentStatus; providerStatus?: "initialisation" | "en_attente" | "reussi" | "echoue" | "a_verifier"; phone?: string; operator?: string; ussdCode?: string; }
+export interface Contract { id: string; policyNumber: string; clientId: string; product: InsuranceProduct; productLabel: string; provider: string; effectiveDate: string; expirationDate: string; premium: number; status: ContractStatus; guarantees: string[]; documentIds: string[]; paymentIds: string[]; claimIds: string[]; requestId?: string; }
 export interface Renewal { id: string; reference: string; contractId: string; expirationDate: string; currentPremium: number; status: "eligible" | "requested"; choice?: "same" | "change" | "new_offers"; }
 
 export interface AutoClaimPerson {
