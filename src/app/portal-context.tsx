@@ -21,7 +21,6 @@ interface PortalContextValue {
   authenticationReady: boolean;
   updateStore: (updater: StoreUpdater) => void;
   navigate: (path: string) => void;
-  resetDemo: () => void;
 }
 
 const PortalContext = createContext<PortalContextValue | null>(null);
@@ -149,7 +148,6 @@ export function PortalProvider({ children }: { children: ReactNode }) {
         setRoute(currentRoute());
         window.scrollTo({ top: 0, behavior: "smooth" });
       },
-      resetDemo: () => setStore(localStoragePortalRepository.reset()),
     };
   }, [authenticationReady, route, store]);
 

@@ -7,7 +7,6 @@ const FAKE_DOCUMENT_IDS = new Set(["DOC-001", "DOC-002", "DOC-003", "DOC-004", "
 export interface PortalRepository {
   load(): PortalStore;
   save(store: PortalStore): void;
-  reset(): PortalStore;
 }
 
 function cloneSeed() {
@@ -38,10 +37,6 @@ export const localStoragePortalRepository: PortalRepository = {
   },
   save(store) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  },
-  reset() {
-    localStorage.removeItem(STORAGE_KEY);
-    return cloneSeed();
   },
 };
 

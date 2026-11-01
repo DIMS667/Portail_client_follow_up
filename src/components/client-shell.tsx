@@ -1,12 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Bell, ChevronRight, CircleHelp, ClipboardList, FileText, FolderOpen, Home, LifeBuoy,
-  LogOut, MessageCircle, RefreshCcw, ShieldCheck, UserRound, WalletCards,
+  LogOut, MessageCircle, ShieldCheck, UserRound, WalletCards,
 } from "lucide-react";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "./brand-logo";
@@ -60,7 +56,7 @@ function isActive(pathname: string, route: string) {
 }
 
 export function ClientShell({ children }: { children: ReactNode }) {
-  const { store, pathname, navigate, updateStore, resetDemo } = usePortal();
+  const { store, pathname, navigate, updateStore } = usePortal();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const unread = store.notifications.filter((notification) => !notification.read).length;
@@ -74,6 +70,13 @@ export function ClientShell({ children }: { children: ReactNode }) {
     .slice(0, 5);
   const clientName = `${store.client.firstName} ${store.client.lastName}`.trim();
   const clientInitials = `${store.client.firstName[0] || ""}${store.client.lastName[0] || ""}`.toUpperCase() || "CL";
+  const assignedAdvisor = [...store.requests]
+    .filter((request) => request.advisor)
+    .sort((first, second) => {
+      const firstDate = new Date(first.date).getTime();
+      const secondDate = new Date(second.date).getTime();
+      return (Number.isNaN(secondDate) ? 0 : secondDate) - (Number.isNaN(firstDate) ? 0 : firstDate);
+    })[0]?.advisor;
 
   useEffect(() => {
     if (!notificationsOpen) return;
@@ -133,15 +136,8 @@ export function ClientShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="mt-auto grid gap-3">
           <div className="rounded-2xl border border-white/[.08] bg-white/[.05] p-3">
-            <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-brand-orange/20 text-sm font-bold text-orange-100">AM</span><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">Votre conseillère</strong><span className="block text-[11px] text-red-100/55">Disponible aujourd’hui</span></div><ChevronRight size={16} className="text-red-100/40" /></div>
+            <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-brand-orange/20 text-sm font-bold text-orange-100">{assignedAdvisor?.initials || "FU"}</span><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">{assignedAdvisor?.name || "Équipe Follow-Up"}</strong><span className="block text-[11px] text-red-100/55">{assignedAdvisor ? "Votre gestionnaire" : "Accompagnement client"}</span></div><ChevronRight size={16} className="text-red-100/40" /></div>
           </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild><Button type="button" variant="ghost" className="h-9 justify-start px-2 text-xs text-red-100/55 hover:bg-white/[.08] hover:text-white"><RefreshCcw size={15} /> Réinitialiser la démonstration</Button></AlertDialogTrigger>
-            <AlertDialogContent className="portal-dialog">
-              <AlertDialogHeader><AlertDialogTitle>Réinitialiser la démonstration ?</AlertDialogTitle><AlertDialogDescription>Les modifications effectuées dans ce portail seront supprimées. Le back-office et ses données ne seront jamais touchés.</AlertDialogDescription></AlertDialogHeader>
-              <AlertDialogFooter><AlertDialogCancel className="dialog-cancel">Annuler</AlertDialogCancel><AlertDialogAction className="dialog-confirm" onClick={() => { resetDemo(); navigate("/"); }}>Réinitialiser</AlertDialogAction></AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
           <button type="button" className="flex items-center gap-3 rounded-2xl border border-white/[.1] bg-white/[.06] p-2.5 text-left transition-colors hover:bg-white/[.1]" onClick={() => navigate("/espace/profil")}><span className="grid size-9 place-items-center rounded-xl bg-brand-orange text-xs font-bold text-white">{clientInitials}</span><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">{clientName}</strong><small className="text-[10px] text-red-100/55">Client · {store.client.id}</small></div><ChevronRight size={15} className="text-red-100/40" /></button>
         </div>
       </aside>
