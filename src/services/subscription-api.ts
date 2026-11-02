@@ -192,13 +192,14 @@ export async function selectionnerOffre(referenceDemande: string, offreId: strin
   }));
 }
 
-export async function initialiserPaiement(referenceDemande: string, numeroTelephone: string) {
+export async function initialiserPaiement(referenceDemande: string, numeroTelephone: string, operateur: "MTN" | "ORANGE") {
   return mapPayment(await request<PaiementApi>("/paiements", {
     method: "POST",
     headers: csrfHeader(),
     body: JSON.stringify({
       demande_reference: referenceDemande,
       numero_telephone: numeroTelephone,
+      operateur,
     }),
   }));
 }

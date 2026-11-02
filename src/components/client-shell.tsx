@@ -135,10 +135,10 @@ export function ClientShell({ children }: { children: ReactNode }) {
           })}
         </nav>
         <div className="mt-auto grid gap-3">
-          <div className="rounded-2xl border border-white/[.08] bg-white/[.05] p-3">
+          <div className="rounded-2xl border border-white/20 bg-[#5b0912]/90 p-3 shadow-[0_10px_28px_rgba(42,3,9,.28)]">
             <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-brand-orange/20 text-sm font-bold text-orange-100">{assignedAdvisor?.initials || "FU"}</span><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">{assignedAdvisor?.name || "Équipe Follow-Up"}</strong><span className="block text-[11px] text-red-100/55">{assignedAdvisor ? "Votre gestionnaire" : "Accompagnement client"}</span></div><ChevronRight size={16} className="text-red-100/40" /></div>
           </div>
-          <button type="button" className="flex items-center gap-3 rounded-2xl border border-white/[.1] bg-white/[.06] p-2.5 text-left transition-colors hover:bg-white/[.1]" onClick={() => navigate("/espace/profil")}><span className="grid size-9 place-items-center rounded-xl bg-brand-orange text-xs font-bold text-white">{clientInitials}</span><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">{clientName}</strong><small className="text-[10px] text-red-100/55">Client · {store.client.id}</small></div><ChevronRight size={15} className="text-red-100/40" /></button>
+          <button type="button" className="flex items-center gap-3 rounded-2xl border border-white/20 bg-[#5b0912]/90 p-2.5 text-left shadow-[0_10px_28px_rgba(42,3,9,.28)] transition-colors hover:bg-[#690c16]" onClick={() => navigate("/espace/profil")}><span className="grid size-9 place-items-center rounded-xl bg-brand-orange text-xs font-bold text-white">{clientInitials}</span><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">{clientName}</strong><small className="text-[10px] text-red-100/75">Client · {store.client.id}</small></div><ChevronRight size={15} className="text-red-100/65" /></button>
         </div>
       </aside>
 
