@@ -25,7 +25,7 @@ const template = await readFile(templatePath, "utf8");
 
 const legalRoutes = ["/mentions-legales", "/confidentialite", "/conditions-utilisation"];
 const authRoutes = ["/login", "/inscription", "/mot-de-passe-oublie"];
-const generatedRoutes = [...PUBLIC_INDEXABLE_ROUTES, ...legalRoutes, ...authRoutes];
+const generatedRoutes = [...new Set([...PUBLIC_INDEXABLE_ROUTES, ...legalRoutes, ...authRoutes])];
 
 function escapeHtml(value) {
   return String(value)

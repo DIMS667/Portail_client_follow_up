@@ -82,10 +82,18 @@ for (const route of PUBLIC_INDEXABLE_ROUTES) {
   }
 }
 
-for (const route of ["/login", "/inscription", "/mot-de-passe-oublie", "/mentions-legales", "/confidentialite", "/conditions-utilisation"]) {
+for (const route of ["/login", "/inscription", "/mot-de-passe-oublie", "/mentions-legales"]) {
   const html = await readFile(routeFile(route), "utf8");
   assert(/name="robots" content="noindex,[^"]+"/.test(html), `${route}: noindex absent`);
 }
+
+for (const route of ["/confidentialite", "/conditions-utilisation"]) {
+  const html = await readFile(routeFile(route), "utf8");
+  assert(html.includes('name="robots" content="index, follow"'), `${route}: indexation absente`);
+}
+
+const mentionsHtml = await readFile(routeFile("/mentions-legales"), "utf8");
+assert(mentionsHtml.includes("Informations en cours de validation"), "/mentions-legales: le contenu provisoire attendu a changé ; réévaluer son noindex");
 
 const termsHtml = await readFile(routeFile("/conditions-utilisation"), "utf8");
 assert(termsHtml.includes("2. Services proposés"), "/conditions-utilisation: contenu complet absent");
@@ -127,6 +135,15 @@ const expectedUrls = PUBLIC_INDEXABLE_ROUTES.map((route) => resolveSeo(route).ca
 assert(JSON.stringify(sitemapUrls) === JSON.stringify(expectedUrls), "sitemap.xml ne correspond pas au manifeste indexable");
 assert(!sitemap.includes("/login/"), "sitemap.xml contient une page de connexion");
 assert(!sitemap.includes("/portail-client/"), "sitemap.xml contient le portail privé");
+assert(sitemap.includes("/confidentialite/"), "sitemap.xml ne contient pas la Politique de confidentialité");
+assert(sitemap.includes("/conditions-utilisation/"), "sitemap.xml ne contient pas les Conditions d’utilisation");
+assert(!sitemap.includes("/mentions-legales/"), "sitemap.xml contient les Mentions légales encore provisoires");
+
+const homeHtml = await readFile(routeFile("/"), "utf8");
+const solutionsHtml = await readFile(routeFile("/solutions"), "utf8");
+for (const [route, html] of [["/", homeHtml], ["/solutions", solutionsHtml]]) {
+  assert(html.includes('href="/solutions/entreprise/"'), `${route}: lien interne vers l’assurance entreprise absent`);
+}
 
 for (const requiredFile of ["robots.txt", "sitemap.xml", ".htaccess"]) {
   try {
@@ -135,6 +152,11 @@ for (const requiredFile of ["robots.txt", "sitemap.xml", ".htaccess"]) {
     failures.push(`${requiredFile}: fichier absent`);
   }
 }
+
+const publicHtaccess = await readFile(path.join(outputDirectory, ".htaccess"), "utf8");
+assert(publicHtaccess.includes("RewriteCond %{HTTPS} !=on [OR]"), ".htaccess: redirection HTTPS absente");
+assert(publicHtaccess.includes("RewriteCond %{HTTP_HOST} !^followupassurance\\.com$ [NC]"), ".htaccess: redirection du domaine canonique absente");
+assert(publicHtaccess.includes("https://followupassurance.com%{REQUEST_URI}"), ".htaccess: cible canonique absente");
 
 if (failures.length) {
   console.error(`SEO output check failed (${failures.length}):`);

@@ -113,7 +113,11 @@ export const PUBLIC_SEO_ROUTE_MANIFEST: Readonly<Record<string, SeoRouteDefiniti
 };
 
 export const PUBLIC_INDEXABLE_ROUTES: readonly string[] = Object.freeze(
-  Object.keys(PUBLIC_SEO_ROUTE_MANIFEST),
+  [
+    ...Object.keys(PUBLIC_SEO_ROUTE_MANIFEST),
+    "/confidentialite",
+    "/conditions-utilisation",
+  ],
 );
 
 const legalRoutes: Readonly<Record<string, SeoRouteDefinition>> = {
@@ -129,14 +133,14 @@ const legalRoutes: Readonly<Record<string, SeoRouteDefinition>> = {
     description: "Découvrez comment Follow-Up Insurance collecte, utilise, protège, conserve et supprime les données personnelles, y compris lors de la connexion Google.",
     image: DEFAULT_SOCIAL_IMAGE,
     imageAlt: "Follow-Up Insurance",
-    indexable: false,
+    indexable: true,
   },
   "/conditions-utilisation": {
     title: "Conditions d’utilisation | Follow-Up Insurance",
     description: "Règles générales applicables à la consultation du site Follow-Up Insurance.",
     image: DEFAULT_SOCIAL_IMAGE,
     imageAlt: "Follow-Up Insurance",
-    indexable: false,
+    indexable: true,
   },
 };
 
