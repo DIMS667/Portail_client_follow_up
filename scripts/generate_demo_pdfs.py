@@ -78,7 +78,6 @@ create_document(
     [
         ("Assure", "Jean Dupont"),
         ("Produit", "Assurance automobile"),
-        ("Compagnie", "Compagnie A"),
         ("Date d'effet", "12 octobre 2026"),
         ("Date d'expiration", "12 octobre 2027"),
         ("Prime annuelle", "105 000 FCFA"),
@@ -96,7 +95,6 @@ create_document(
         ("Vehicule", "Toyota RAV4 - LT 458 AA"),
         ("Usage", "Personnel"),
         ("Validite", "12/10/2026 au 12/10/2027"),
-        ("Compagnie", "Compagnie A"),
     ],
 )
 

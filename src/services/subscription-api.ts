@@ -12,7 +12,6 @@ interface OffreApi {
   demande_reference: string;
   produit: InsuranceProduct;
   libelle_produit: string;
-  assureur: string;
   prime_xaf: number;
   duree_mois: number;
   date_effet: string;
@@ -48,7 +47,6 @@ interface ContratApi {
   paiement_id: string;
   produit: InsuranceProduct;
   libelle_produit: string;
-  assureur: string;
   prime_xaf: number;
   statut: "en_preparation" | "actif" | "expire";
   date_effet: string;
@@ -100,7 +98,6 @@ function mapOffer(item: OffreApi): Offer {
     id: item.id,
     reference: item.reference,
     proposalId: `PROP-${item.demande_reference}`,
-    provider: item.assureur,
     product: item.libelle_produit,
     premium: item.prime_xaf,
     duration: `${item.duree_mois} mois`,
@@ -141,7 +138,6 @@ function mapContract(item: ContratApi): Contract {
     clientId: "",
     product: item.produit,
     productLabel: item.libelle_produit,
-    provider: item.assureur,
     effectiveDate: item.date_effet,
     expirationDate: item.date_expiration,
     premium: item.prime_xaf,
