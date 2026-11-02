@@ -707,12 +707,6 @@ export function ClaimDetailPage({ reference }: { reference: string }) {
   </div>;
 }
 
-export function MessagesPage() {
-  const { store } = usePortal();
-  const whatsappHref = construireLienWhatsApp(store.advisor.phone, "Bonjour, je souhaite échanger au sujet de mon dossier d’assurance.");
-  return <div className="page-stack"><PageHeader eyebrow="Conversation" title="Ma messagerie" description="La messagerie interne sera disponible après sa connexion au serveur." /><section className="panel"><EmptyState title="Messagerie temporairement indisponible" description="Aucun message local n’est simulé. Contactez l’équipe Follow-Up par téléphone ou WhatsApp en attendant l’activation de la messagerie persistante." /><div className="help-actions"><a className="button button-secondary" href={`tel:${store.advisor.phone}`}><Phone size={18} /> Appeler</a>{whatsappHref&&<a className="button button-primary" href={whatsappHref} target="_blank" rel="noopener noreferrer"><WhatsAppIcon /> Écrire sur WhatsApp</a>}</div></section></div>;
-}
-
 export function NotificationsPage() {
   const { store, updateStore, navigate } = usePortal();
   const open = (id: string, route: string) => { updateStore(markNotificationRead(store, id)); void marquerNotificationLue(id); navigate(route); };
@@ -807,11 +801,6 @@ export function ProfilePage() {
       </form>
     </div>
   );
-}
-
-export function HelpPage() {
-  const { store, navigate } = usePortal();
-  return <div className="page-stack"><PageHeader eyebrow="Nous sommes là" title="Besoin d’aide ?" description="L’équipe Follow-Up reste disponible pour répondre à vos questions." /><section className="help-hero"><span className="large-avatar">{store.advisor.initials}</span><div><span className="page-eyebrow">Votre interlocuteur</span><h2>{store.advisor.name}</h2><p>Une question sur une offre, un document ou un sinistre ? Contactez l’équipe chargée de votre dossier.</p></div><div className="help-actions"><a className="button button-secondary" href={`tel:${store.advisor.phone}`}><Phone size={18} /> Appeler</a><button className="button button-primary" type="button" onClick={() => navigate("/espace/messagerie")}><MessageCircle size={18} /> Nous contacter</button></div></section><div className="help-grid"><article className="panel"><Phone size={22} /><h3>Téléphone</h3><p>{store.advisor.phone}</p><small>Numéro public Follow-Up Insurance</small></article>{store.advisor.email?<article className="panel"><Mail size={22} /><h3>Email</h3><p>{store.advisor.email}</p><small>Adresse du responsable de votre dossier</small></article>:<article className="panel"><MessageCircle size={22} /><h3>Formulaire de contact</h3><p><a href="https://followupassurance.com/contact">Écrire à Follow-Up Insurance</a></p><small>Votre demande sera transmise à l’équipe.</small></article>}<article className="panel"><MapPin size={22} /><h3>Adresse</h3><p>Yaoundé, Odza, entrée Koweït</p><small>12830 Yaoundé</small></article></div></div>;
 }
 
 export function NotFoundPage() {

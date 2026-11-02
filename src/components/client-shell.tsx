@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  Bell, ChevronRight, CircleHelp, ClipboardList, FileText, FolderOpen, Home, LifeBuoy,
+  Bell, ChevronRight, ClipboardList, FileText, FolderOpen, Home, LifeBuoy,
   LogOut, MessageCircle, ShieldCheck, UserRound, WalletCards,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,8 @@ const primaryNav = [
 ];
 
 const secondaryNav = [
-  { label: "Messagerie", route: "/espace/messagerie", icon: MessageCircle },
   { label: "Notifications", route: "/espace/notifications", icon: Bell },
   { label: "Mon profil", route: "/espace/profil", icon: UserRound },
-  { label: "Aide", route: "/espace/aide", icon: CircleHelp },
 ];
 
 const notificationIcons: Record<string, typeof Bell> = {
@@ -67,16 +65,6 @@ export function ClientShell({ children }: { children: ReactNode }) {
       return (Number.isNaN(secondDate) ? 0 : secondDate) - (Number.isNaN(firstDate) ? 0 : firstDate);
     })
     .slice(0, 5);
-  const clientName = `${store.client.firstName} ${store.client.lastName}`.trim();
-  const clientInitials = `${store.client.firstName[0] || ""}${store.client.lastName[0] || ""}`.toUpperCase() || "CL";
-  const assignedAdvisor = [...store.requests]
-    .filter((request) => request.advisor)
-    .sort((first, second) => {
-      const firstDate = new Date(first.date).getTime();
-      const secondDate = new Date(second.date).getTime();
-      return (Number.isNaN(secondDate) ? 0 : secondDate) - (Number.isNaN(firstDate) ? 0 : firstDate);
-    })[0]?.advisor;
-
   useEffect(() => {
     if (!notificationsOpen) return;
     const closeOnOutsideClick = (event: MouseEvent) => {
@@ -127,18 +115,12 @@ export function ClientShell({ children }: { children: ReactNode }) {
             const active = isActive(pathname, route);
             return <button type="button" onClick={() => navigate(route)} className={cn("group flex min-h-11 items-center gap-3 rounded-xl px-3 text-left text-sm font-medium transition-colors", active ? "bg-white text-slate-950 shadow-sm" : "text-red-100/70 hover:bg-white/[.08] hover:text-white")} key={route} aria-current={active ? "page" : undefined}><Icon size={18} className={active ? "text-brand-red" : "text-red-200/60 group-hover:text-white"} /><span className="flex-1">{label}</span>{active && <span className="size-1.5 rounded-full bg-brand-orange" />}</button>;
           })}
-          <span className="mt-5 px-3 pb-2 text-[10px] font-bold uppercase tracking-[.18em] text-orange-200/70">Communication</span>
+          <span className="mt-5 px-3 pb-2 text-[10px] font-bold uppercase tracking-[.18em] text-orange-200/70">Compte</span>
           {secondaryNav.map(({ label, route, icon: Icon }) => {
             const active = isActive(pathname, route);
             return <button type="button" onClick={() => navigate(route)} className={cn("group flex min-h-11 items-center gap-3 rounded-xl px-3 text-left text-sm font-medium transition-colors", active ? "bg-white text-slate-950 shadow-sm" : "text-red-100/70 hover:bg-white/[.08] hover:text-white")} key={route} aria-current={active ? "page" : undefined}><Icon size={18} className={active ? "text-brand-red" : "text-red-200/60 group-hover:text-white"} /><span className="flex-1">{label}</span>{route.includes("notifications") && unread > 0 && <span className={cn("grid min-w-5 place-items-center rounded-full px-1 text-[10px] font-bold", active ? "bg-brand-red text-white" : "bg-brand-orange/25 text-orange-100")}>{unread}</span>}</button>;
           })}
         </nav>
-        <div className="mt-auto grid gap-3">
-          <div className="rounded-2xl border border-white/20 bg-[#5b0912]/90 p-3 shadow-[0_10px_28px_rgba(42,3,9,.28)]">
-            <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-brand-orange/20 text-sm font-bold text-orange-100">{assignedAdvisor?.initials || "FU"}</span><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">{assignedAdvisor?.name || "Équipe Follow-Up"}</strong><span className="block text-[11px] text-red-100/55">{assignedAdvisor ? "Votre gestionnaire" : "Accompagnement client"}</span></div><ChevronRight size={16} className="text-red-100/40" /></div>
-          </div>
-          <button type="button" className="flex items-center gap-3 rounded-2xl border border-white/20 bg-[#5b0912]/90 p-2.5 text-left shadow-[0_10px_28px_rgba(42,3,9,.28)] transition-colors hover:bg-[#690c16]" onClick={() => navigate("/espace/profil")}><span className="grid size-9 place-items-center rounded-xl bg-brand-orange text-xs font-bold text-white">{clientInitials}</span><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-white">{clientName}</strong><small className="text-[10px] text-red-100/75">Client · {store.client.id}</small></div><ChevronRight size={15} className="text-red-100/65" /></button>
-        </div>
       </aside>
 
       <div className="min-h-screen pb-20 lg:ml-[248px] lg:pb-0">

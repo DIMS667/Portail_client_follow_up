@@ -209,10 +209,8 @@ function portalTitle(pathname: string) {
   if (pathname.includes("contrats")) return "Mes assurances";
   if (pathname.includes("renouvellements")) return "Renouvellement";
   if (pathname.includes("sinistres")) return "Mes sinistres";
-  if (pathname.includes("messagerie")) return "Messagerie";
   if (pathname.includes("notifications")) return "Notifications";
   if (pathname.includes("profil")) return "Mon profil";
-  if (pathname.includes("aide")) return "Aide";
   return "Page introuvable";
 }
 

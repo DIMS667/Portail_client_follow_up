@@ -336,7 +336,7 @@ export function NewClaimPage() {
   };
 
   if (!store.contracts.length) {
-    return <div className="page-stack"><PageHeader eyebrow="Nouvelle déclaration" title="Déclarer un sinistre" description="Aucun contrat actif n’est disponible pour cette déclaration." /><section className="panel auto-claim-empty"><ShieldCheck size={28} /><h2>Aucun contrat à sélectionner</h2><p>Contactez votre courtier afin de vérifier vos contrats.</p><button type="button" className="button button-secondary" onClick={() => navigate("/espace/messagerie")}>Contacter mon courtier</button></section></div>;
+    return <div className="page-stack"><PageHeader eyebrow="Nouvelle déclaration" title="Déclarer un sinistre" description="Aucun contrat actif n’est disponible pour cette déclaration." /><section className="panel auto-claim-empty"><ShieldCheck size={28} /><h2>Aucun contrat à sélectionner</h2><p>Vérifiez vos contrats avant de poursuivre la déclaration.</p><button type="button" className="button button-secondary" onClick={() => navigate("/espace/contrats")}>Voir mes contrats</button></section></div>;
   }
 
   if (created) {
