@@ -16,15 +16,15 @@ concurrency:
 jobs:
   build-and-deploy:
     name: Build and deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -148,13 +148,35 @@ jobs:
           moto_status="$(curl --silent --output /dev/null --write-out '%{http_code}' "https://followupassurance.com/solutions/moto")"
           login_headers="$(curl --silent --show-error --head "https://followupassurance.com/login/")"
           portal_headers="$(curl --silent --show-error --head "https://followupassurance.com/portail-client/")"
-          http_redirect="$(curl --silent --output /dev/null --write-out '%{http_code} %{redirect_url}' --max-redirs 0 "http://followupassurance.com/")"
-          https_www_redirect="$(curl --silent --output /dev/null --write-out '%{http_code} %{redirect_url}' --max-redirs 0 "https://www.followupassurance.com/")"
-          http_www_redirect="$(curl --silent --output /dev/null --write-out '%{http_code} %{redirect_url}' --max-redirs 0 "http://www.followupassurance.com/")"
           test "$not_found_status" = "404" || { echo "Unknown public URLs do not return HTTP 404"; exit 1; }
           test "$moto_status" = "301" || { echo "The legacy motorcycle URL is not permanently redirected"; exit 1; }
           echo "$login_headers" | grep -qi 'x-robots-tag: noindex, nofollow, noarchive' || { echo "The login X-Robots-Tag is missing"; exit 1; }
           echo "$portal_headers" | grep -qi 'x-robots-tag: noindex, nofollow, noarchive' || { echo "The portal X-Robots-Tag is missing"; exit 1; }
-          test "$http_redirect" = "301 https://followupassurance.com/" || { echo "HTTP root is not redirected to the canonical origin: $http_redirect"; exit 1; }
-          test "$https_www_redirect" = "301 https://followupassurance.com/" || { echo "HTTPS www is not redirected to the canonical origin: $https_www_redirect"; exit 1; }
-          test "$http_www_redirect" = "301 https://followupassurance.com/" || { echo "HTTP www is not redirected to the canonical origin: $http_www_redirect"; exit 1; }
+
+          wait_for_canonical_redirect() {
+            source_url="$1"
+            label="$2"
+            attempt=1
+            while [ "$attempt" -le 8 ]; do
+              separator="?"
+              case "$source_url" in
+                *\?*) separator="&" ;;
+              esac
+              result="$(curl --silent --show-error --output /dev/null --write-out '%{http_code} %{redirect_url}' --max-redirs 0 --header 'Cache-Control: no-cache' "${source_url}${separator}deployment=${{ github.sha }}&attempt=${attempt}")"
+              case "$result" in
+                "301 https://followupassurance.com/"*)
+                  echo "$label redirects to the canonical origin."
+                  return 0
+                  ;;
+              esac
+              echo "$label is not propagated yet (attempt $attempt/8): $result"
+              attempt=$((attempt + 1))
+              sleep 10
+            done
+            echo "$label is not redirected to the canonical origin after propagation retries."
+            return 1
+          }
+
+          wait_for_canonical_redirect "http://followupassurance.com/" "HTTP root"
+          wait_for_canonical_redirect "https://www.followupassurance.com/" "HTTPS www"
+          wait_for_canonical_redirect "http://www.followupassurance.com/" "HTTP www"
