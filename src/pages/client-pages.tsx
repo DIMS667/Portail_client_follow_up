@@ -3,7 +3,7 @@ import {
   ArrowLeft, Bell, Bike, Building2, CalendarDays, Car, Check, CheckCircle2, ChevronRight,
   CircleAlert, CircleHelp, ClipboardList, Clock3, Download, Eye, FileCheck2, FileText, Filter, FolderOpen,
   HandCoins, HeartHandshake, HeartPulse, Home, LifeBuoy, Mail, MapPin, MessageCircle,
-  LogOut, Phone, Plane, Plus, RefreshCcw, Search, ShieldCheck, Smartphone, Upload, UserRound,
+  LogOut, Phone, Plane, Plus, RefreshCcw, Search, ShieldCheck, Upload, UserRound,
   Trash2, WalletCards,
 } from "lucide-react";
 import {
@@ -19,6 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { assetUrl } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
+import { PaymentDialog } from "../components/payment-dialog";
 import { EmptyState, InfoCard, LinkButton, PageHeader, StatusBadge, Timeline, documentLabels, requestLabels } from "../components/portal-ui";
 import { documentFolderId, documentSlotsByFolder, type DocumentFolderId, type DocumentSlotDefinition } from "../data/document-folders";
 import {
@@ -39,16 +40,10 @@ import {
   formatDate, formatFcfa, markNotificationRead, removeDocument,
   signOut, updateProfile,
 } from "../services/portal-service";
-import {
-  appliquerSouscriptions,
-  initialiserPaiement,
-  obtenirSouscriptions,
-  verifierPaiement,
-} from "../services/subscription-api";
 import type {
   AutoClaimPerson, AutoClaimVehicle, AutoGuarantee, AutoRequestType, AutoVehicleEnergy, AutoVehicleUsage,
   ClientDocument, InsuranceProduct, InsuranceRequest, MotoGuarantee, MotoVehicleEnergy, MotoVehicleUsage, PaymentMethod,
-  PortalStore, SelfServiceAutomobileInsuranceRequestData, SelfServiceMotoInsuranceRequestData,
+  SelfServiceAutomobileInsuranceRequestData, SelfServiceMotoInsuranceRequestData,
 } from "../types/domain";
 
 const iconForKind: Record<string, typeof Bell> = { proposal: ClipboardList, document: FileCheck2, payment: WalletCards, contract: ShieldCheck, request: FileText, renewal: RefreshCcw, claim: LifeBuoy, message: MessageCircle };
@@ -294,7 +289,7 @@ export function RequestsPage() {
   return (
     <div className="page-stack">
       <PageHeader eyebrow="Mes dossiers" title="Mes demandes" description="Suivez l’avancement de chaque demande transmise à votre courtier." action={<LinkButton to="/espace/demandes/nouvelle"><Plus size={18} /> Nouvelle demande</LinkButton>} />
-      <div className="list-toolbar"><div className="search-box"><Search size={18} /><input aria-label="Rechercher une demande" placeholder="Rechercher par référence ou produit" value={search} onChange={(event) => setSearch(event.target.value)} /></div><label className="filter-select"><Filter size={17} /><span className="sr-only">Filtrer les demandes par statut</span><select aria-label="Filtrer les demandes par statut" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Tous les statuts</option><option value="proposals_available">Propositions disponibles</option><option value="under_review">En cours d’analyse</option><option value="completed">Terminée</option></select></label></div>
+      <div className="list-toolbar"><div className="search-box"><Search size={18} /><input aria-label="Rechercher une demande" placeholder="Rechercher par référence ou produit" value={search} onChange={(event) => setSearch(event.target.value)} /></div><label className="filter-select"><Filter size={17} /><span className="sr-only">Filtrer les demandes par statut</span><select aria-label="Filtrer les demandes par statut" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Tous les statuts</option><option value="proposals_available">Propositions disponibles</option><option value="payment_pending">Paiement à effectuer</option><option value="under_review">En cours d’analyse</option><option value="completed">Terminée</option></select></label></div>
       {visibleRequests.length > 0 ? <div className="request-list">
         {visibleRequests.map((request) => { const ProductIcon = iconForProduct[request.product]; const vehicleKind = getRequestVehicleKind(request); return <button type="button" className="request-card" key={request.id} onClick={() => navigate(`/espace/demandes/${request.reference}`)}><span className="product-icon"><ProductIcon size={22} /></span><div className="request-main"><span className="reference">{request.reference}</span><strong>{request.productLabel}</strong>{vehicleKind && <em className="vehicle-kind-tag">{vehicleKind === "moto" ? "Moto / 2–3 roues" : "Voiture"}</em>}<small>Créée le {formatDate(request.date)}</small><small>{request.advisor?`Gérée par ${request.advisor.name}`:"En attente d’affectation"}</small></div><StatusBadge status={request.status} /><ChevronRight size={19} /></button>; })}
       </div> : <EmptyState title="Aucune demande trouvée" description="Modifiez votre recherche ou choisissez un autre statut." />}
@@ -308,6 +303,11 @@ export function RequestDetailPage({ reference }: { reference: string }) {
   if (!request) return <NotFoundPage />;
   const vehicleKind = getRequestVehicleKind(request);
   const proposalAvailable = request.status === "proposals_available";
+  const selectedOffer = store.offers.find((offer) => offer.id === request.selectedOfferId
+    || (offer.requestReference === request.reference && offer.selected));
+  const paymentDue = request.status === "payment_pending"
+    && selectedOffer
+    && !store.payments.some((payment) => payment.requestId === request.reference && payment.status === "succeeded");
   const automobileRequest = request.automobileRequest;
   const delegatedAutomobileRequest = automobileRequest?.completionMode === "broker_delegation" ? automobileRequest : null;
   const selfServiceAutomobileRequest = automobileRequest && automobileRequest.completionMode !== "broker_delegation"
@@ -334,6 +334,7 @@ export function RequestDetailPage({ reference }: { reference: string }) {
       <button className="back-link" type="button" onClick={() => navigate("/espace/demandes")}><ArrowLeft size={17} /> Retour aux demandes</button>
       <PageHeader eyebrow={request.reference} title={request.productLabel} description={`Demande transmise le ${formatDate(request.date)}`} action={<div className="request-header-tags">{vehicleKind && <em className="vehicle-kind-tag">{vehicleKind === "moto" ? "Moto / 2–3 roues" : "Voiture"}</em>}<StatusBadge status={request.status} /></div>} />
       {proposalAvailable && <section className="attention-card blue"><span><ClipboardList size={23} /></span><div><strong>3 propositions sont disponibles</strong><p>Votre courtier a comparé plusieurs solutions pour votre assurance automobile.</p></div><LinkButton to={`/espace/demandes/${reference}/propositions`}>Consulter les propositions</LinkButton></section>}
+      {paymentDue && <section className="attention-card payment"><span><WalletCards size={23} /></span><div><strong>Paiement à effectuer</strong><p>{selectedOffer.product} · {formatFcfa(selectedOffer.premium)}</p></div><PaymentDialog offer={selectedOffer} /> </section>}
       {request.status === "policy_issuing" && <section className="attention-card success"><span><CheckCircle2 size={23} /></span><div><strong>Paiement reçu. Votre contrat est en cours de finalisation.</strong><p>Vous serez informé dès que la police sera disponible.</p></div></section>}
       <div className="detail-grid">
         <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Progression</span><h2>Suivi du dossier</h2></div></div><Timeline items={request.timeline} /></section>
@@ -481,80 +482,11 @@ export function DocumentsPage() {
 }
 
 export function PaymentsPage() {
-  const { store, updateStore } = usePortal();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [phone, setPhone] = useState(store.client.phone);
-  const [operator, setOperator] = useState<"MTN" | "ORANGE">("MTN");
-  const [operation, setOperation] = useState(false);
-  const [error, setError] = useState("");
-  const [currentPaymentId, setCurrentPaymentId] = useState<string | null>(null);
-  const selectedOffer = store.offers.find((offer) => offer.selected
-    && !store.payments.some((payment) => payment.requestId === offer.requestReference && payment.status === "succeeded"));
-  const currentPayment = store.payments.find((payment) => payment.id === currentPaymentId);
-
-  const replacePayment = (payment: PortalStore["payments"][number]) => {
-    updateStore((current) => ({
-      ...current,
-      payments: [payment, ...current.payments.filter((item) => item.id !== payment.id)],
-      requests: payment.status === "succeeded"
-        ? current.requests.map((item) => item.reference === payment.requestId
-          ? { ...item, status: "policy_issuing" }
-          : item)
-        : current.requests,
-    }));
-  };
-
-  const checkPayment = async (paymentId: string, quiet = false) => {
-    if (!quiet) setOperation(true);
-    setError("");
-    try {
-      const payment = await verifierPaiement(paymentId);
-      replacePayment(payment);
-      if (payment.status === "succeeded") {
-        const subscriptions = await obtenirSouscriptions();
-        updateStore((current) => appliquerSouscriptions(current, subscriptions));
-      }
-    } catch (caught) {
-      if (!quiet) setError(caught instanceof Error ? caught.message : "Le statut n’a pas pu être vérifié.");
-    } finally {
-      if (!quiet) setOperation(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!dialogOpen || !currentPaymentId) return;
-    const payment = store.payments.find((item) => item.id === currentPaymentId);
-    if (!payment || payment.status !== "pending" || payment.providerStatus === "a_verifier") return;
-    const timer = window.setInterval(() => { void checkPayment(currentPaymentId, true); }, 6000);
-    return () => window.clearInterval(timer);
-  }, [currentPaymentId, dialogOpen, store.payments]);
-
-  const startPayment = async () => {
-    if (!selectedOffer?.requestReference) return;
-    setOperation(true);
-    setError("");
-    try {
-      const payment = await initialiserPaiement(selectedOffer.requestReference, phone, operator);
-      replacePayment(payment);
-      setCurrentPaymentId(payment.id);
-      if (payment.status === "failed") {
-        setError("CamPay a refusé l’initialisation. Vérifiez le numéro puis réessayez.");
-      }
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Le paiement n’a pas pu être lancé.");
-    } finally {
-      setOperation(false);
-    }
-  };
-
+  const { store } = usePortal();
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Historique financier" title="Mes paiements" description="Réglez une offre sélectionnée et suivez les confirmations CamPay." />
-      {selectedOffer ? <section className="payment-due-card"><span className="payment-due-icon"><HandCoins size={26} /></span><div><span className="page-eyebrow">Offre sélectionnée</span><h2>Votre dossier est prêt pour le paiement.</h2><p>{selectedOffer.product}</p></div><strong>{formatFcfa(selectedOffer.premium)}</strong>
-        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (open) { setError(""); setCurrentPaymentId(store.payments.find((payment) => payment.requestId === selectedOffer.requestReference && payment.status === "pending")?.id ?? null); } }}><DialogTrigger asChild><button className="button button-primary" type="button">Payer avec CamPay</button></DialogTrigger><DialogContent className="portal-dialog payment-dialog"><DialogHeader><DialogTitle>Paiement Mobile Money sécurisé</DialogTitle><DialogDescription>Choisissez votre opérateur. CamPay enverra ensuite une demande de confirmation sur votre téléphone.</DialogDescription></DialogHeader><div className="payment-summary"><span>Montant exact à régler</span><strong>{formatFcfa(selectedOffer.premium)}</strong><small>{selectedOffer.product}</small></div>{error && <div className="form-alert error" role="alert"><CircleAlert size={17} /> {error}</div>}{currentPayment ? <div className={`payment-result ${currentPayment.status === "succeeded" ? "success" : currentPayment.status === "failed" ? "failed" : "pending"}`}><span>{currentPayment.status === "succeeded" ? <CheckCircle2 size={30} /> : <Smartphone size={30} />}</span><h3>{currentPayment.status === "succeeded" ? "Paiement confirmé par CamPay." : currentPayment.providerStatus === "a_verifier" ? "Paiement en cours de rapprochement." : currentPayment.status === "failed" ? "Le paiement a échoué." : "Confirmez la demande sur votre téléphone."}</h3><p>{currentPayment.status === "succeeded" ? `${currentPayment.reference} · votre contrat est maintenant en préparation.` : currentPayment.providerStatus === "a_verifier" ? "Ne relancez pas le paiement. Notre équipe doit d’abord vérifier la transaction auprès de CamPay." : currentPayment.ussdCode ? `Si nécessaire, utilisez le code ${currentPayment.ussdCode}.` : `Référence ${currentPayment.reference}. Le statut se met à jour automatiquement.`}</p>{currentPayment.status === "pending" && currentPayment.providerStatus !== "a_verifier" && <button className="button button-secondary" type="button" disabled={operation} onClick={() => { void checkPayment(currentPayment.id); }}>{operation ? "Vérification…" : "Vérifier maintenant"}</button>}</div> : <><fieldset className="payment-operator-grid"><legend>Opérateur Mobile Money</legend><label className={operator === "MTN" ? "selected mtn" : "mtn"}><input type="radio" name="payment-operator" value="MTN" checked={operator === "MTN"} onChange={() => setOperator("MTN")} /><span>MTN</span><strong>Mobile Money</strong>{operator === "MTN" && <CheckCircle2 size={18} />}</label><label className={operator === "ORANGE" ? "selected orange" : "orange"}><input type="radio" name="payment-operator" value="ORANGE" checked={operator === "ORANGE"} onChange={() => setOperator("ORANGE")} /><span>Orange</span><strong>Money</strong>{operator === "ORANGE" && <CheckCircle2 size={18} />}</label></fieldset><label className="form-field"><span>Numéro {operator === "MTN" ? "MTN Mobile Money" : "Orange Money"}</span><input type="tel" inputMode="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="6 99 00 00 00" autoComplete="tel" /></label><div className="form-alert info"><ShieldCheck size={18} /> Aucun contrat ne sera créé tant que CamPay n’aura pas confirmé le paiement au serveur.</div><button className="button button-primary" type="button" disabled={operation || phone.trim().length < 9} onClick={() => { void startPayment(); }}>{operation ? "Connexion à CamPay…" : `Payer ${formatFcfa(selectedOffer.premium)}`}</button></>}</DialogContent></Dialog>
-      </section> : <EmptyState title="Aucun paiement à effectuer" description="Un paiement apparaîtra ici après la sélection d’une offre réelle." />}
-      {currentPayment?.status === "succeeded" && <section className="post-payment"><Timeline items={[{ label: "Paiement confirmé", done: true }, { label: "Contrat en préparation", done: false, active: true }, { label: "Police disponible", done: false }]} /></section>}
-      <section className="panel table-panel"><div className="panel-heading"><div><span className="page-eyebrow">Toutes les opérations</span><h2>Historique</h2></div></div><div className="responsive-table"><table><thead><tr><th>Référence</th><th>Contrat ou dossier</th><th>Montant</th><th>Date</th><th>Mode</th><th>Statut</th></tr></thead><tbody>{store.payments.map((payment) => <tr key={payment.id}><td><strong>{payment.reference}</strong></td><td>{payment.contractId || payment.requestId}</td><td>{formatFcfa(payment.amount)}</td><td>{formatDate(payment.date)}</td><td>{paymentLabels[payment.method]}</td><td><StatusBadge status={payment.status}>{payment.status === "succeeded" ? "Confirmé" : payment.status === "failed" ? "Échoué" : "En attente"}</StatusBadge></td></tr>)}</tbody></table></div></section>
+      <PageHeader eyebrow="Historique financier" title="Mes paiements" description="Consultez les règlements déjà initiés pour vos dossiers." />
+      {store.payments.length ? <section className="panel table-panel"><div className="panel-heading"><div><span className="page-eyebrow">Toutes les opérations</span><h2>Historique</h2></div></div><div className="responsive-table"><table><thead><tr><th>Référence</th><th>Contrat ou dossier</th><th>Montant</th><th>Date</th><th>Mode</th><th>Statut</th></tr></thead><tbody>{store.payments.map((payment) => <tr key={payment.id}><td><strong>{payment.reference}</strong></td><td>{payment.contractId || payment.requestId}</td><td>{formatFcfa(payment.amount)}</td><td>{formatDate(payment.date)}</td><td>{paymentLabels[payment.method]}</td><td><StatusBadge status={payment.status}>{payment.status === "succeeded" ? "Confirmé" : payment.status === "failed" ? "Échoué" : "En attente"}</StatusBadge></td></tr>)}</tbody></table></div></section> : <EmptyState title="Aucun paiement enregistré" description="Les règlements initiés depuis vos dossiers apparaîtront ici." />}
     </div>
   );
 }
@@ -562,7 +494,7 @@ export function PaymentsPage() {
 export function ContractsPage() {
   const { store, navigate } = usePortal();
   return <div className="page-stack"><PageHeader eyebrow="Vos protections" title="Mes assurances" description="Consultez les contrats créés après confirmation de vos paiements." />
-    {store.contracts.length ? <div className="contracts-grid">{store.contracts.map((contract) => <article className="contract-card" key={contract.id}><div className="contract-visual"><span>{contract.product === "automobile" ? <Car size={29} /> : <ShieldCheck size={29} />}</span><StatusBadge status={contract.status}>{contract.status === "active" ? "Actif" : contract.status === "expired" ? "Expiré" : "En préparation"}</StatusBadge></div><span className="reference">{contract.policyNumber}</span><h2>{contract.productLabel}</h2><p>Accompagnement Follow-Up Insurance</p><div className="contract-date"><CalendarDays size={18} /><div><small>Expiration prévue</small><strong>{formatDate(contract.expirationDate)}</strong></div></div><div className="contract-actions"><button className="button button-primary" type="button" onClick={() => navigate(`/espace/contrats/${contract.policyNumber}`)}>Voir le contrat</button></div></article>)}</div> : <EmptyState title="Aucun contrat pour le moment" description="Un contrat sera créé uniquement après la confirmation d’un paiement CamPay." />}
+    {store.contracts.length ? <div className="contracts-grid">{store.contracts.map((contract) => <article className="contract-card" key={contract.id}><div className="contract-visual"><span>{contract.product === "automobile" ? <Car size={29} /> : <ShieldCheck size={29} />}</span><StatusBadge status={contract.status}>{contract.status === "active" ? "Actif" : contract.status === "expired" ? "Expiré" : "En préparation"}</StatusBadge></div><span className="reference">{contract.policyNumber}</span><h2>{contract.productLabel}</h2><p>Accompagnement Follow-Up Insurance</p><div className="contract-date"><CalendarDays size={18} /><div><small>Expiration prévue</small><strong>{formatDate(contract.expirationDate)}</strong></div></div><div className="contract-actions"><button className="button button-primary" type="button" onClick={() => navigate(`/espace/contrats/${contract.policyNumber}`)}>Voir le contrat</button></div></article>)}</div> : <EmptyState title="Aucun contrat pour le moment" description="Vos contrats apparaîtront ici après la confirmation de vos paiements." />}
   </div>;
 }
 

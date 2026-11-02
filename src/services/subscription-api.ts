@@ -221,10 +221,26 @@ export function appliquerSouscriptions(
     proposals: data.proposals,
     payments: data.payments,
     contracts: data.contracts,
-    requests: store.requests.map((item) => ({
-      ...item,
-      proposalId: proposalByRequest.get(item.reference),
-      selectedOfferId: selectedByRequest.get(item.reference),
-    })),
+    requests: store.requests.map((item) => {
+      const selectedOfferId = selectedByRequest.get(item.reference);
+      const paymentSucceeded = data.payments.some((payment) => (
+        payment.requestId === item.reference && payment.status === "succeeded"
+      ));
+      const contractExists = data.contracts.some((contract) => contract.requestId === item.reference);
+      const statusBeforeContract = selectedOfferId
+        && (item.status === "proposals_available" || item.status === "offer_selected")
+        ? "payment_pending"
+        : item.status;
+      const status = (contractExists || paymentSucceeded)
+        && ["proposals_available", "offer_selected", "documents_required", "payment_pending"].includes(statusBeforeContract)
+        ? "policy_issuing"
+        : statusBeforeContract;
+      return {
+        ...item,
+        status,
+        proposalId: proposalByRequest.get(item.reference),
+        selectedOfferId,
+      };
+    }),
   };
 }
