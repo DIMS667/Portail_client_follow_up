@@ -92,37 +92,78 @@ export function PortalProvider({ children }: { children: ReactNode }) {
   }, [store.client.id, store.session.authenticated]);
 
   useEffect(() => {
-    if (!isPortalDeployment || !store.session.authenticated) return;
+    if (!isPortalDeployment || !store.session.authenticated || !store.client.id) return;
     let active = true;
+    let synchronisationEnCours = false;
     const flux = creerFluxNotifications();
-    const actualiser = () => {
-      void Promise.all([
-        obtenirNotifications(),
-        obtenirDemandesAutomobile(),
-        obtenirDemandesGenerales(),
-        obtenirSouscriptions(),
-      ]).then(([notifications, demandesAutomobile, demandesGenerales, souscriptions]) => {
+    const actualiser = async () => {
+      if (synchronisationEnCours) return;
+      synchronisationEnCours = true;
+      try {
+        const [notifications, demandesAutomobile, demandesGenerales, souscriptions, sinistres, documents] = await Promise.all([
+          obtenirNotifications().catch(() => null),
+          obtenirDemandesAutomobile().catch(() => null),
+          obtenirDemandesGenerales().catch(() => null),
+          obtenirSouscriptions().catch(() => null),
+          obtenirSinistres().catch(() => null),
+          obtenirDocuments(store.client.id).catch(() => null),
+        ]);
         if (!active) return;
         setStore((current) => {
           const notificationsConnues = new Set(current.notifications.map((item) => item.id));
-          if (notifications.some((item) => !notificationsConnues.has(item.id))) {
+          if (notifications?.some((item) => !notificationsConnues.has(item.id))) {
             void jouerAlerteSonore();
           }
-          return appliquerSouscriptions({
+          const demandesVehiculesActuelles = current.requests.filter((item) => (
+            item.product === "automobile" || item.product === "moto"
+          ));
+          const demandesGeneralesActuelles = current.requests.filter((item) => (
+            item.product !== "automobile" && item.product !== "moto"
+          ));
+          const donneesActualisees = {
             ...current,
-            notifications,
-            requests: fusionnerDemandesAutomobile(current.requests, [...demandesAutomobile, ...demandesGenerales]),
-          }, souscriptions);
+            notifications: notifications ?? current.notifications,
+            requests: fusionnerDemandesAutomobile(current.requests, [
+              ...(demandesAutomobile ?? demandesVehiculesActuelles),
+              ...(demandesGenerales ?? demandesGeneralesActuelles),
+            ]),
+            claims: sinistres ?? current.claims,
+            documents: documents
+              ? fusionnerDocumentsServeur(current.documents, documents)
+              : current.documents,
+          };
+          return souscriptions
+            ? appliquerSouscriptions(donneesActualisees, souscriptions)
+            : donneesActualisees;
         });
-      }).catch(() => undefined);
+      } finally {
+        synchronisationEnCours = false;
+      }
     };
-    flux.addEventListener("notification", actualiser);
+    const demanderActualisation = () => { void actualiser(); };
+    const actualiserSiVisible = () => {
+      if (document.visibilityState === "visible") demanderActualisation();
+    };
+    flux.addEventListener("notification", demanderActualisation);
+    flux.addEventListener("open", demanderActualisation);
+    flux.addEventListener("error", demanderActualisation);
+    document.addEventListener("visibilitychange", actualiserSiVisible);
+    window.addEventListener("focus", demanderActualisation);
+    window.addEventListener("online", demanderActualisation);
+    const controlePeriodique = window.setInterval(actualiserSiVisible, 15_000);
+    demanderActualisation();
     return () => {
       active = false;
-      flux.removeEventListener("notification", actualiser);
+      window.clearInterval(controlePeriodique);
+      flux.removeEventListener("notification", demanderActualisation);
+      flux.removeEventListener("open", demanderActualisation);
+      flux.removeEventListener("error", demanderActualisation);
+      document.removeEventListener("visibilitychange", actualiserSiVisible);
+      window.removeEventListener("focus", demanderActualisation);
+      window.removeEventListener("online", demanderActualisation);
       flux.close();
     };
-  }, [store.session.authenticated]);
+  }, [store.client.id, store.session.authenticated]);
 
   useEffect(() => {
     const handlePopState = () => setRoute(currentRoute());

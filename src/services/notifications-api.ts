@@ -46,10 +46,15 @@ async function appeler<T>(chemin: string, options: RequestInit = {}): Promise<T>
 }
 
 function versNotification(item: NotificationApi): Notification {
+  const referenceDossier = item.type_notification === "proposition"
+    ? item.route.match(/\/demandes\/([^/]+)/)?.[1]
+    : undefined;
   return {
     id: item.id,
     title: item.titre,
-    body: item.message,
+    body: item.type_notification === "proposition"
+      ? `Une nouvelle offre est disponible${referenceDossier ? ` pour le dossier ${referenceDossier}` : ""}.`
+      : item.message,
     date: item.cree_le,
     route: item.route,
     read: item.lue,
