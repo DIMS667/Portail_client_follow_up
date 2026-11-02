@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from "react";
 import {
   ArrowLeft, Bike, Building2, Car, Check, CheckCircle2, ChevronLeft, ChevronRight,
-  CircleAlert, CircleHelp, FileText, HeartPulse, Home, Landmark, LifeBuoy, PiggyBank, Plane, Save, ShieldCheck, Upload,
+  CircleAlert, CircleHelp, FileText, HeartPulse, Home, Landmark, PiggyBank, Plane, Save, ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { assetUrl, isPortalDeployment } from "../app/base-path";
+import { assetUrl } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
 import { PageHeader, StatusBadge, Timeline } from "../components/portal-ui";
 import {
@@ -13,9 +13,7 @@ import {
   type InsuranceFormField,
 } from "../data/insurance-product-forms";
 import { documentsForProduct } from "../data/document-folders";
-import {
-  createClaim, createInsuranceRequest, formatDate, formatFcfa, requestRenewal,
-} from "../services/portal-service";
+import { formatDate, formatFcfa } from "../services/portal-service";
 import { creerDemandeAutomobile } from "../services/automobile-request-api";
 import { creerDemandeGenerale } from "../services/general-request-api";
 import { selectionnerOffre } from "../services/subscription-api";
@@ -30,7 +28,7 @@ interface ProductChoice { id: InsuranceProduct; label: string; help: string; ima
 const productChoices: ProductChoice[] = [
   { id: "automobile", label: "Automobile", help: "Voiture, moto et véhicules à 2 ou 3 roues", image: assetUrl("/images/insurance-auto.webp"), imageWidth: 1200, imageHeight: 1800, icon: Car },
   { id: "sante", label: "Santé", help: "Protection individuelle ou familiale", image: assetUrl("/images/insurance-health.webp"), imageWidth: 1200, imageHeight: 800, icon: HeartPulse },
-  { id: "vie_capitalisation", label: "Vie & capitalisation", help: "Protection, épargne et préparation de l’avenir", image: assetUrl("/images/advisor-amina.webp"), imageWidth: 900, imageHeight: 601, icon: PiggyBank },
+  { id: "vie_capitalisation", label: "Vie & capitalisation", help: "Protection, épargne et préparation de l’avenir", image: assetUrl("/images/public-role-advisor.webp"), imageWidth: 900, imageHeight: 601, icon: PiggyBank },
   { id: "voyage", label: "Voyage", help: "Déplacements et séjours", image: assetUrl("/images/insurance-travel.webp"), imageWidth: 1200, imageHeight: 1800, icon: Plane },
   { id: "habitation", label: "Habitation", help: "Maison, appartement et biens", image: assetUrl("/images/insurance-home.webp"), imageWidth: 1200, imageHeight: 675, icon: Home },
   { id: "entreprise", label: "Entreprise", help: "Activité et responsabilité", image: assetUrl("/images/insurance-business.webp"), imageWidth: 1200, imageHeight: 800, icon: Building2 },
@@ -52,33 +50,25 @@ export function NewRequestPage() {
       product: requestProduct,
       documents: documentsForProduct(store.documents, requestProduct),
     };
-    if (isPortalDeployment) {
-      const request = dataWithDocuments.product === "automobile"
-        ? await creerDemandeAutomobile(dataWithDocuments)
-        : await creerDemandeGenerale(dataWithDocuments);
-      updateStore((current) => ({
-        ...current,
-        requests: [request, ...current.requests.filter((item) => item.reference !== request.reference)],
-        notifications: [{
-          id: `NOT-${Date.now()}`,
-          title: "Demande transmise",
-          body: `Votre demande ${request.reference} a bien été transmise.`,
-          date: new Date().toISOString(),
-          route: `/espace/demandes/${request.reference}`,
-          read: false,
-          kind: "request",
-        }, ...current.notifications],
-      }));
-      setCreatedProductLabel(request.productLabel);
-      setCreatedVehicleKind(request.vehicleKind);
-      setCreatedReference(request.reference);
-      return;
-    }
-    const result = createInsuranceRequest(store, dataWithDocuments);
-    updateStore(result.store);
-    setCreatedProductLabel(result.request.productLabel);
-    setCreatedVehicleKind(result.request.vehicleKind);
-    setCreatedReference(result.request.reference);
+    const request = dataWithDocuments.product === "automobile"
+      ? await creerDemandeAutomobile(dataWithDocuments)
+      : await creerDemandeGenerale(dataWithDocuments);
+    updateStore((current) => ({
+      ...current,
+      requests: [request, ...current.requests.filter((item) => item.reference !== request.reference)],
+      notifications: [{
+        id: `NOT-${Date.now()}`,
+        title: "Demande transmise",
+        body: `Votre demande ${request.reference} a bien été transmise.`,
+        date: new Date().toISOString(),
+        route: `/espace/demandes/${request.reference}`,
+        read: false,
+        kind: "request",
+      }, ...current.notifications],
+    }));
+    setCreatedProductLabel(request.productLabel);
+    setCreatedVehicleKind(request.vehicleKind);
+    setCreatedReference(request.reference);
   };
   if (createdReference) return <RequestConfirmation reference={createdReference} productLabel={createdProductLabel} vehicleKind={createdVehicleKind} onOpen={() => navigate(`/espace/demandes/${createdReference}`)} />;
   if (!product) return (
@@ -252,42 +242,7 @@ export function OfferDetailPage({ offerId }: { offerId: string }) {
   return <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate(`/espace/demandes/${request.reference}/propositions`)}><ArrowLeft size={17} /> Retour aux propositions</button><PageHeader eyebrow={offer.reference} title={offer.product} description={offer.provider} action={recommended ? <StatusBadge status="proposals_available">Recommandée par votre gestionnaire</StatusBadge> : undefined} /><section className="offer-detail-hero"><div><span>Prime</span><strong>{formatFcfa(offer.premium)}</strong><small>{offer.duration}</small></div><div><span>Franchise</span><strong>{formatFcfa(offer.deductible)}</strong><small>selon les conditions</small></div><div><span>Date d’effet</span><strong>{formatDate(offer.effectiveDate)}</strong><small>{offer.duration}</small></div></section>{recommended && <section className="broker-advice compact"><span className="large-avatar">{store.advisor.initials}</span><div><span>Conseil de votre gestionnaire</span><p>{proposal.advice}</p></div></section>}<div className="offer-detail-grid"><section className="panel"><h2>Garanties incluses</h2><ul className="guarantee-list large">{offer.guarantees.map((item) => <li key={item}><Check size={17} /> {item}</li>)}</ul></section><section className="panel"><h2>Garanties optionnelles</h2><ul className="guarantee-list large muted">{offer.options.length ? offer.options.map((item) => <li key={item}><PlusMark /> {item}</li>) : <li>Aucune option supplémentaire.</li>}</ul></section><section className="panel"><h2>Exclusions principales</h2><ul className="plain-list">{offer.exclusions.length ? offer.exclusions.map((item) => <li key={item}><CircleAlert size={16} /> {item}</li>) : <li>Aucune exclusion communiquée.</li>}</ul></section><section className="panel"><h2>Documents nécessaires</h2><ul className="plain-list">{offer.requiredDocuments.length ? offer.requiredDocuments.map((item) => <li key={item}><FileText size={16} /> {item}</li>) : <li>Aucune pièce supplémentaire demandée.</li>}</ul></section></div><section className={`acceptance-card ${query.get("choisir") ? "highlight" : ""}`}><div><span className="page-eyebrow">Confirmation</span><h2>Choisir cette proposition</h2><p>Ce choix ouvre le règlement réel de la prime via CamPay.</p></div>{error && <div className="form-alert error" role="alert"><CircleAlert size={17} /> {error}</div>}<label className="check-row"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} /><span>Je confirme avoir pris connaissance des informations relatives à cette proposition.</span></label><button className="button button-primary" type="button" disabled={!accepted || submitting} onClick={() => { void confirm(); }}>{submitting ? "Enregistrement…" : "Confirmer mon choix"}</button></section></div>;
 }
 
-export function RenewalPage({ policyNumber }: { policyNumber: string }) {
-  const { store, updateStore, navigate } = usePortal();
-  const contract = store.contracts.find((item) => item.policyNumber === policyNumber);
-  const renewal = store.renewals.find((item) => item.contractId === policyNumber);
-  const [choice, setChoice] = useState<"same" | "change" | "new_offers">(renewal?.choice || "same");
-  const [submitted, setSubmitted] = useState(renewal?.status === "requested");
-  if (!contract || !renewal) return null;
-  const submit = () => { updateStore(requestRenewal(store, policyNumber, choice)); setSubmitted(true); };
-  if (submitted) return <div className="confirmation-page"><span className="confirmation-icon"><CheckCircle2 size={38} /></span><span className="page-eyebrow">Renouvellement</span><h1>Votre demande de renouvellement a bien été enregistrée.</h1><p>Votre courtier reviendra vers vous avec la prochaine étape.</p><button className="button button-primary" type="button" onClick={() => navigate(`/espace/contrats/${policyNumber}`)}>Retour au contrat</button></div>;
-  return <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate(`/espace/contrats/${policyNumber}`)}><ArrowLeft size={17} /> Retour au contrat</button><PageHeader eyebrow="Échéance dans 30 jours" title="Renouveler mon assurance automobile" description={`${policyNumber} · expiration le ${formatDate(contract.expirationDate)}`} /><section className="renewal-summary"><span><RefreshIcon /></span><div><small>Prime actuelle</small><strong>{formatFcfa(contract.premium)}</strong><p>{contract.provider} · {contract.guarantees.length} garanties</p></div></section><section className="flow-card"><FlowHeading number="1" title="Comment souhaitez-vous continuer ?" description="Votre courtier analysera votre choix avant de finaliser le renouvellement." /><fieldset className="choice-list renewal-choices"><legend className="sr-only">Choix de renouvellement</legend>{[
-    { id: "same", title: "Conserver les mêmes garanties", help: "Renouveler sur une base identique" }, { id: "change", title: "Modifier mes garanties", help: "Adapter le niveau de protection" }, { id: "new_offers", title: "Recevoir de nouvelles propositions", help: "Comparer de nouvelles solutions" },
-  ].map((item) => <label className={choice === item.id ? "selected" : ""} key={item.id}><input type="radio" name="renewal" checked={choice === item.id} onChange={() => setChoice(item.id as typeof choice)} /><span><ShieldCheck size={20} /></span><div><strong>{item.title}</strong><small>{item.help}</small></div>{choice === item.id && <CheckCircle2 size={19} />}</label>)}</fieldset><div className="flow-actions"><button className="button button-secondary" type="button" onClick={() => navigate("/espace/messagerie")}>Contacter mon courtier</button><button className="button button-primary" type="button" onClick={submit}>Valider mon choix</button></div></section></div>;
-}
-
-export function NewClaimPage() {
-  const { store, updateStore, navigate } = usePortal();
-  const [step, setStep] = useState(0);
-  const [created, setCreated] = useState("");
-  const [form, setForm] = useState({ contractId: store.contracts[0].policyNumber, type: "Accident", date: "2026-10-01", location: "Douala", description: "", files: [] as string[] });
-  const names = ["Contrat", "Type", "Date et lieu", "Description", "Documents", "Récapitulatif"];
-  const update = (key: string, value: string | string[]) => setForm((current) => ({ ...current, [key]: value }));
-  const submit = () => { const result = createClaim(store, { contractId: form.contractId, type: form.type, date: form.date, location: form.location, description: form.description || "Description fournie dans la démonstration." }); updateStore(result.store); setCreated(result.claim.reference); };
-  if (created) return <div className="confirmation-page"><span className="confirmation-icon"><CheckCircle2 size={38} /></span><span className="page-eyebrow">Déclaration transmise</span><h1>Votre déclaration a bien été enregistrée.</h1><p>Votre courtier analysera le dossier et vous informera de chaque évolution.</p><div className="confirmation-reference"><small>Référence du sinistre</small><strong>{created}</strong><span>{form.type} · {form.contractId}</span></div><button className="button button-primary" type="button" onClick={() => navigate(`/espace/sinistres/${created}`)}>Suivre mon sinistre</button></div>;
-  return <div className="page-stack request-flow-page"><button className="back-link" type="button" onClick={() => step === 0 ? navigate("/espace/sinistres") : setStep(step - 1)}><ArrowLeft size={17} /> {step === 0 ? "Retour aux sinistres" : "Étape précédente"}</button><PageHeader eyebrow="Nouvelle déclaration" title="Déclarer un sinistre" description="Transmettez les premières informations. Votre courtier vous accompagnera ensuite." /><ol className="stepper six">{names.map((name, index) => <li className={index < step ? "done" : index === step ? "active" : ""} key={name}><span>{index < step ? <Check size={15} /> : index + 1}</span><small>{name}</small></li>)}</ol><section className="flow-card">
-    {step === 0 && <><FlowHeading number="1" title="Choisir le contrat" description="Sélectionnez le contrat concerné par l’événement." /><fieldset className="choice-list"><legend className="sr-only">Contrat</legend>{store.contracts.map((contract) => <label className={form.contractId === contract.policyNumber ? "selected" : ""} key={contract.id}><input type="radio" checked={form.contractId === contract.policyNumber} onChange={() => update("contractId", contract.policyNumber)} /><span>{contract.product === "automobile" ? <Car size={20} /> : <Home size={20} />}</span><div><strong>{contract.productLabel}</strong><small>{contract.policyNumber}</small></div>{form.contractId === contract.policyNumber && <CheckCircle2 size={19} />}</label>)}</fieldset></>}
-    {step === 1 && <><FlowHeading number="2" title="Type de sinistre" description="Choisissez la situation qui correspond le mieux." /><fieldset className="choice-grid"><legend className="sr-only">Type de sinistre</legend>{["Accident", "Vol", "Incendie", "Bris de glace", "Dégât des eaux", "Autre"].map((type) => <label className={form.type === type ? "selected" : ""} key={type}><input type="radio" checked={form.type === type} onChange={() => update("type", type)} /><LifeBuoy size={21} /><strong>{type}</strong></label>)}</fieldset></>}
-    {step === 2 && <><FlowHeading number="3" title="Date et lieu" description="Indiquez quand et où l’événement s’est produit." /><div className="form-grid"><Field label="Date du sinistre" value={form.date} onChange={(value) => update("date", value)} type="date" /><Field label="Lieu" value={form.location} onChange={(value) => update("location", value)} /></div></>}
-    {step === 3 && <><FlowHeading number="4" title="Description" description="Décrivez les circonstances aussi clairement que possible." /><label>Description de l’événement<textarea rows={7} value={form.description} onChange={(event) => update("description", event.target.value)} placeholder="Que s’est-il passé ? Quels dommages avez-vous constatés ?" /></label></>}
-    {step === 4 && <><FlowHeading number="5" title="Photos et documents" description="Les fichiers ne seront pas réellement stockés dans cette démonstration." /><label className="drop-zone"><Upload size={28} /><strong>Sélectionner des fichiers</strong><span>Photos, constat ou justificatifs — métadonnées uniquement</span><input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => update("files", Array.from(event.target.files || []).map((file) => file.name))} /></label>{form.files.length > 0 && <ul className="selected-files">{form.files.map((file) => <li key={file}><FileText size={16} /> {file}</li>)}</ul>}</>}
-    {step === 5 && <><FlowHeading number="6" title="Récapitulatif" description="Vérifiez les informations avant d’envoyer votre déclaration." /><div className="summary-sections"><SummarySection title="Sinistre" items={[["Contrat", form.contractId], ["Type", form.type], ["Date", formatDate(form.date)], ["Lieu", form.location]]} /><SummarySection title="Informations" items={[["Description", form.description || "Non renseignée"], ["Documents", form.files.length ? `${form.files.length} fichier(s)` : "Aucun fichier"]]} /></div><div className="form-alert info"><CircleAlert size={18} /> Cette déclaration est fictive et ne sera transmise à aucune compagnie.</div></>}
-    <div className="flow-actions">{step > 0 && <button className="button button-secondary" type="button" onClick={() => setStep(step - 1)}><ChevronLeft size={18} /> Précédent</button>}<button className="button button-primary" type="button" onClick={() => step === 5 ? submit() : setStep(step + 1)}>{step === 5 ? "Envoyer ma déclaration" : "Continuer"}{step < 5 && <ChevronRight size={18} />}</button></div>
-  </section></div>;
-}
-
 function FlowHeading({ number, title, description }: { number: string; title: string; description: string }) { return <div className="flow-heading"><span>{number}</span><div><h2>{title}</h2><p>{description}</p></div></div>; }
 function Field({ label, value, onChange, type = "text", placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string }) { return <label>{label}<input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required /></label>; }
 function SummarySection({ title, items }: { title: string; items: string[][] }) { return <section><h3>{title}</h3>{items.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</section>; }
 function PlusMark() { return <span className="plus-mark">+</span>; }
-function RefreshIcon() { return <ShieldCheck size={28} />; }

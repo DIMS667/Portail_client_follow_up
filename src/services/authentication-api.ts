@@ -205,7 +205,6 @@ export function appliquerCompteAuthentifie(store: PortalStore, compte: CompteCli
     renewals: [],
     messages: [],
     activities: [],
-    scenarios: [],
     session: { authenticated: true, clientId: compte.id },
     client: {
       ...store.client,

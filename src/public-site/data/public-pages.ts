@@ -193,7 +193,7 @@ export const solutionSummaries: readonly SolutionSummary[] = [
     description:
       "Des solutions pour protéger vos proches, constituer un capital et préparer vos projets dans la durée.",
     image: {
-      src: "/images/advisor-amina.webp",
+      src: "/images/public-role-advisor.webp",
       alt: "Conseillère échangeant avec un client sur ses projets de long terme",
     },
     ctaLabel: "Découvrir la vie & capitalisation",
@@ -937,7 +937,7 @@ export const aboutPage: PublicLandingPage = {
         "Réactivité à chaque étape",
       ],
       image: {
-        src: "/images/advisor-amina.webp",
+        src: "/images/public-role-advisor.webp",
         alt: "Portrait d’une conseillère en assurance",
       },
     },
@@ -1438,7 +1438,7 @@ export const contactPage: PublicLandingPage & {
     intro:
       "Expliquez-nous votre situation en quelques lignes. Un conseiller pourra vous orienter vers la prochaine étape.",
     image: {
-      src: "/images/advisor-amina.webp",
+      src: "/images/public-role-advisor.webp",
       alt: "Conseillère Follow-Up Insurance disponible pour un échange",
     },
   },

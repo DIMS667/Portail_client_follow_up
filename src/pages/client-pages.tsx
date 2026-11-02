@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Bike, Building2, CalendarDays, Car, Check, CheckCircle2, ChevronRight,
   CircleAlert, CircleHelp, ClipboardList, Clock3, Download, Eye, FileCheck2, FileText, Filter, FolderOpen,
-  HandCoins, HeartHandshake, HeartPulse, Home, LifeBuoy, Mail, MapPin, MessageCircle, Paperclip,
-  LogOut, Phone, Plane, Plus, RefreshCcw, Search, Send, ShieldCheck, Smartphone, Upload, UserRound,
+  HandCoins, HeartHandshake, HeartPulse, Home, LifeBuoy, Mail, MapPin, MessageCircle,
+  LogOut, Phone, Plane, Plus, RefreshCcw, Search, ShieldCheck, Smartphone, Upload, UserRound,
   Trash2, WalletCards,
 } from "lucide-react";
 import {
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { assetUrl, isPortalDeployment } from "../app/base-path";
+import { assetUrl } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
 import { EmptyState, InfoCard, LinkButton, PageHeader, StatusBadge, Timeline, documentLabels, requestLabels } from "../components/portal-ui";
 import { documentFolderId, documentSlotsByFolder, type DocumentFolderId, type DocumentSlotDefinition } from "../data/document-folders";
@@ -36,7 +36,7 @@ import {
   marquerToutesNotificationsLues,
 } from "../services/notifications-api";
 import {
-  addMessage, formatDate, formatFcfa, markNotificationRead, removeDocument, saveDocumentToSlot,
+  formatDate, formatFcfa, markNotificationRead, removeDocument,
   signOut, updateProfile,
 } from "../services/portal-service";
 import {
@@ -277,10 +277,6 @@ export function DashboardPage() {
         </CardContent></Card>
       </div>
 
-      {!isPortalDeployment && <details className="group overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <summary className="flex cursor-pointer list-none items-center gap-4 px-5 py-5 sm:px-6"><span className="grid size-10 place-items-center rounded-xl bg-slate-100 text-sm font-bold text-slate-600">09</span><div className="min-w-0 flex-1"><strong className="block text-sm text-slate-900">Mode présentation</strong><span className="mt-1 block text-xs text-slate-500">Accéder directement aux neuf scénarios de démonstration</span></div><Badge variant="outline">Données fictives</Badge><ChevronRight size={18} className="text-slate-400 transition-transform group-open:rotate-90" /></summary>
-        <div className="grid border-t border-slate-200 sm:grid-cols-2 xl:grid-cols-3">{store.scenarios.map((scenario) => <button type="button" className="group flex min-h-[82px] items-center gap-3 border-b border-slate-100 px-5 py-4 text-left last:border-b-0 sm:border-r" key={scenario.id} onClick={() => navigate(scenario.route)}><span className="text-xs font-bold tabular-nums text-brand-red">{String(scenario.number).padStart(2, "0")}</span><div className="min-w-0 flex-1"><strong className="block text-sm text-slate-900 group-hover:text-brand-red">{scenario.title}</strong><small className="mt-1 block text-xs leading-5 text-slate-500">{scenario.description}</small></div></button>)}</div>
-      </details>}
     </div>
   );
 }
@@ -341,7 +337,7 @@ export function RequestDetailPage({ reference }: { reference: string }) {
       {request.status === "policy_issuing" && <section className="attention-card success"><span><CheckCircle2 size={23} /></span><div><strong>Paiement reçu. Votre contrat est en cours de finalisation.</strong><p>Vous serez informé dès que la police sera disponible.</p></div></section>}
       <div className="detail-grid">
         <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Progression</span><h2>Suivi du dossier</h2></div></div><Timeline items={request.timeline} /></section>
-        <aside className="panel advisor-card"><span className="page-eyebrow">Gestionnaire du dossier</span>{requestAdvisor?<><span className="large-avatar">{requestAdvisor.initials}</span><h2>{requestAdvisor.name}</h2><p>{advisorRole}. Cette personne suit personnellement l’avancement de cette demande.</p>{requestAdvisor.phone&&<a href={`tel:${requestAdvisor.phone}`}><Phone size={17} /> {requestAdvisor.phone}</a>}<a href={`mailto:${requestAdvisor.email}`}><Mail size={17} /> {requestAdvisor.email}</a>{whatsappHref&&<a className="button advisor-whatsapp-button" href={whatsappHref} target="_blank" rel="noopener noreferrer" aria-label={`Écrire à ${requestAdvisor.name} sur WhatsApp`}><WhatsAppIcon /> Envoyer un message WhatsApp</a>}</>:<><span className="large-avatar"><Clock3 size={20}/></span><h2>Aucun gestionnaire affecté</h2><p>Votre demande est encore dans la file commune. Les coordonnées du responsable apparaîtront ici dès sa prise en charge.</p></>}</aside>
+        <aside className="panel advisor-card"><span className="page-eyebrow">Gestionnaire du dossier</span>{requestAdvisor?<><span className="large-avatar">{requestAdvisor.initials}</span><h2>{requestAdvisor.name}</h2><p>{advisorRole}. Cette personne suit personnellement l’avancement de cette demande.</p>{requestAdvisor.phone&&<a href={`tel:${requestAdvisor.phone}`}><Phone size={17} /> {requestAdvisor.phone}</a>}{requestAdvisor.email&&<a href={`mailto:${requestAdvisor.email}`}><Mail size={17} /> {requestAdvisor.email}</a>}{whatsappHref&&<a className="button advisor-whatsapp-button" href={whatsappHref} target="_blank" rel="noopener noreferrer" aria-label={`Écrire à ${requestAdvisor.name} sur WhatsApp`}><WhatsAppIcon /> Envoyer un message WhatsApp</a>}</>:<><span className="large-avatar"><Clock3 size={20}/></span><h2>Aucun gestionnaire affecté</h2><p>Votre demande est encore dans la file commune. Les coordonnées du responsable apparaîtront ici dès sa prise en charge.</p></>}</aside>
       </div>
       {delegatedAutomobileRequest && <section className="panel auto-request-delegated-detail"><div className="panel-heading"><div><span className="page-eyebrow">Demande déléguée</span><h2>Votre message au courtier</h2></div></div><div className="request-comments"><span>Besoin exprimé librement</span><p>{delegatedAutomobileRequest.delegatedMessage}</p></div><p className="auto-request-detail-note"><CircleHelp size={17} /> Votre courtier vous recontactera pour compléter les informations nécessaires et préparer votre dossier.</p></section>}
       {selfServiceAutomobileRequest && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre demande automobile</h2></div></div><div className="auto-request-detail-groups">
@@ -409,34 +405,16 @@ export function DocumentsPage() {
   const libraryDocuments = store.documents.filter((document) => !document.downloadUrl);
   const slots = folderId ? documentSlotsByFolder[folderId] : [];
   const documentForSlot = (slotId: string) => libraryDocuments.find((document) => document.slotId === slotId);
-  const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
   const handleFile = async (slot: DocumentSlotDefinition, file?: File) => {
     if (!file || !folderId) return;
     setOperationEnCours(slot.id);
     setDocumentError("");
     try {
-      if (isPortalDeployment) {
-        const document = await televerserDocument(slot.id, file, store.client.id);
-        updateStore((current) => ({
-          ...current,
-          documents: [document, ...current.documents.filter((item) => item.slotId !== slot.id)],
-        }));
-      } else {
-        const contentUrl = await fileToDataUrl(file);
-        updateStore((current) => saveDocumentToSlot(current, {
-          slotId: slot.id,
-          title: slot.title,
-          category: folderId,
-          type: slot.type,
-          file,
-          contentUrl,
-        }));
-      }
+      const document = await televerserDocument(slot.id, file, store.client.id);
+      updateStore((current) => ({
+        ...current,
+        documents: [document, ...current.documents.filter((item) => item.slotId !== slot.id)],
+      }));
     } catch (caught) {
       setDocumentError(caught instanceof Error ? caught.message : "Le document n’a pas pu être envoyé.");
     } finally {
@@ -447,7 +425,7 @@ export function DocumentsPage() {
     setOperationEnCours(documentId);
     setDocumentError("");
     try {
-      if (isPortalDeployment) await supprimerDocumentServeur(documentId);
+      await supprimerDocumentServeur(documentId);
       updateStore((current) => removeDocument(current, documentId));
       if (previewDocument?.id === documentId) setPreviewDocument(null);
     } catch (caught) {
@@ -459,12 +437,8 @@ export function DocumentsPage() {
   const preview = async (document: ClientDocument) => {
     setDocumentError("");
     try {
-      if (isPortalDeployment) {
-        const lien = await obtenirLienConsultation(document.id);
-        setPreviewDocument({ ...document, contentUrl: lien.url });
-      } else {
-        setPreviewDocument(document);
-      }
+      const lien = await obtenirLienConsultation(document.id);
+      setPreviewDocument({ ...document, contentUrl: lien.url });
     } catch (caught) {
       setDocumentError(caught instanceof Error ? caught.message : "Le document ne peut pas être affiché.");
     }
@@ -734,26 +708,15 @@ export function ClaimDetailPage({ reference }: { reference: string }) {
 }
 
 export function MessagesPage() {
-  const { store, updateStore } = usePortal();
-  const [message, setMessage] = useState("");
-  const [attachment, setAttachment] = useState("");
-  const endRef = useRef<HTMLDivElement>(null);
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    if (!message.trim() && !attachment) return;
-    const body = [message.trim(), attachment ? `Pièce jointe : ${attachment}` : ""].filter(Boolean).join("\n");
-    updateStore(addMessage(store, body));
-    setMessage("");
-    setAttachment("");
-    setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 20);
-  };
-  return <div className="page-stack"><PageHeader eyebrow="Conversation" title="Ma messagerie" description="Échangez directement avec votre courtier depuis votre espace." /><section className="message-layout"><div className="conversation"><div className="conversation-head"><span className="large-avatar">{store.advisor.initials}</span><div><strong>{store.advisor.name}</strong><small><span /> Disponible pour vous accompagner</small></div></div><div className="messages-scroll">{store.messages.map((item) => <div className={`message-bubble ${item.sender}`} key={item.id}><span>{item.body}</span><small>{new Date(item.sentAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</small></div>)}<div ref={endRef} /></div><form className="message-compose" onSubmit={submit}><label className="attach-button" title="Joindre un document"><Paperclip size={19} /><span className="sr-only">Joindre un document</span><input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => setAttachment(event.target.files?.[0]?.name || "")} /></label><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Écrivez votre message…" aria-label="Nouveau message" /><button type="submit" aria-label="Envoyer le message"><Send size={19} /></button>{attachment && <span className="message-attachment" aria-live="polite"><FileText size={14} /> {attachment}</span>}</form></div><aside className="panel advisor-compact"><span className="large-avatar">{store.advisor.initials}</span><h2>{store.advisor.name}</h2><p>Conseillère clientèle</p><a href={`tel:${store.advisor.phone}`}><Phone size={17} /> {store.advisor.phone}</a><a href={`mailto:${store.advisor.email}`}><Mail size={17} /> {store.advisor.email}</a></aside></section></div>;
+  const { store } = usePortal();
+  const whatsappHref = construireLienWhatsApp(store.advisor.phone, "Bonjour, je souhaite échanger au sujet de mon dossier d’assurance.");
+  return <div className="page-stack"><PageHeader eyebrow="Conversation" title="Ma messagerie" description="La messagerie interne sera disponible après sa connexion au serveur." /><section className="panel"><EmptyState title="Messagerie temporairement indisponible" description="Aucun message local n’est simulé. Contactez l’équipe Follow-Up par téléphone ou WhatsApp en attendant l’activation de la messagerie persistante." /><div className="help-actions"><a className="button button-secondary" href={`tel:${store.advisor.phone}`}><Phone size={18} /> Appeler</a>{whatsappHref&&<a className="button button-primary" href={whatsappHref} target="_blank" rel="noopener noreferrer"><WhatsAppIcon /> Écrire sur WhatsApp</a>}</div></section></div>;
 }
 
 export function NotificationsPage() {
   const { store, updateStore, navigate } = usePortal();
-  const open = (id: string, route: string) => { updateStore(markNotificationRead(store, id)); if (isPortalDeployment) void marquerNotificationLue(id); navigate(route); };
-  const toutMarquerCommeLu = () => { updateStore({ ...store, notifications: store.notifications.map((item) => ({ ...item, read: true })) }); if (isPortalDeployment) void marquerToutesNotificationsLues(); };
+  const open = (id: string, route: string) => { updateStore(markNotificationRead(store, id)); void marquerNotificationLue(id); navigate(route); };
+  const toutMarquerCommeLu = () => { updateStore({ ...store, notifications: store.notifications.map((item) => ({ ...item, read: true })) }); void marquerToutesNotificationsLues(); };
   return <div className="page-stack"><PageHeader eyebrow="Centre de notifications" title="Mes notifications" description="Retrouvez en temps réel les mises à jour importantes de vos demandes, documents et sinistres." action={store.notifications.some((item)=>!item.read)?<button type="button" className="button button-secondary" onClick={toutMarquerCommeLu}>Tout marquer comme lu</button>:undefined} />{store.notifications.length?<div className="notifications-list">{store.notifications.map((notification) => { const Icon = iconForKind[notification.kind] || Bell; return <button type="button" className={notification.read ? "read" : "unread"} key={notification.id} onClick={() => open(notification.id, notification.route)}><span className={`notification-icon ${notification.kind}`}><Icon size={20} /></span><div><strong>{notification.title}</strong><p>{notification.body}</p><small>{new Date(notification.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</small></div>{!notification.read && <em>Nouveau</em>}<ChevronRight size={18} /></button>; })}</div>:<EmptyState title="Aucune notification" description="Les mises à jour de vos dossiers apparaîtront ici."/>}</div>;
 }
 
@@ -848,11 +811,11 @@ export function ProfilePage() {
 
 export function HelpPage() {
   const { store, navigate } = usePortal();
-  return <div className="page-stack"><PageHeader eyebrow="Nous sommes là" title="Besoin d’aide ?" description="Votre courtier reste disponible pour répondre à vos questions." /><section className="help-hero"><img className="help-hero-photo" src={assetUrl("/images/advisor-amina.webp")} alt="" aria-hidden="true" /><span className="large-avatar">{store.advisor.initials}</span><div><span className="page-eyebrow">Votre conseillère</span><h2>{store.advisor.name}</h2><p>Une question sur une offre, un document ou un sinistre ? Contactez votre interlocutrice dédiée.</p></div><div className="help-actions"><a className="button button-secondary" href={`tel:${store.advisor.phone}`}><Phone size={18} /> Appeler</a><button className="button button-primary" type="button" onClick={() => navigate("/espace/messagerie")}><MessageCircle size={18} /> Envoyer un message</button></div></section><div className="help-grid"><article className="panel"><Phone size={22} /><h3>Téléphone</h3><p>{store.advisor.phone}</p><small>Du lundi au vendredi, de 8h à 17h</small></article><article className="panel"><Mail size={22} /><h3>Email</h3><p>{store.advisor.email}</p><small>Adresse fictive de démonstration</small></article><article className="panel"><MapPin size={22} /><h3>À distance</h3><p>Toutes vos démarches en ligne</p><small>Aucun déplacement nécessaire</small></article></div></div>;
+  return <div className="page-stack"><PageHeader eyebrow="Nous sommes là" title="Besoin d’aide ?" description="L’équipe Follow-Up reste disponible pour répondre à vos questions." /><section className="help-hero"><span className="large-avatar">{store.advisor.initials}</span><div><span className="page-eyebrow">Votre interlocuteur</span><h2>{store.advisor.name}</h2><p>Une question sur une offre, un document ou un sinistre ? Contactez l’équipe chargée de votre dossier.</p></div><div className="help-actions"><a className="button button-secondary" href={`tel:${store.advisor.phone}`}><Phone size={18} /> Appeler</a><button className="button button-primary" type="button" onClick={() => navigate("/espace/messagerie")}><MessageCircle size={18} /> Nous contacter</button></div></section><div className="help-grid"><article className="panel"><Phone size={22} /><h3>Téléphone</h3><p>{store.advisor.phone}</p><small>Numéro public Follow-Up Insurance</small></article>{store.advisor.email?<article className="panel"><Mail size={22} /><h3>Email</h3><p>{store.advisor.email}</p><small>Adresse du responsable de votre dossier</small></article>:<article className="panel"><MessageCircle size={22} /><h3>Formulaire de contact</h3><p><a href="https://followupassurance.com/contact">Écrire à Follow-Up Insurance</a></p><small>Votre demande sera transmise à l’équipe.</small></article>}<article className="panel"><MapPin size={22} /><h3>Adresse</h3><p>Yaoundé, Odza, entrée Koweït</p><small>12830 Yaoundé</small></article></div></div>;
 }
 
 export function NotFoundPage() {
-  return <div className="not-found"><span>404</span><h1>Cette page n’est pas disponible.</h1><p>Le contenu demandé n’existe pas dans cette démonstration.</p><LinkButton to="/espace">Retour à l’accueil</LinkButton></div>;
+  return <div className="not-found"><span>404</span><h1>Cette page n’est pas disponible.</h1><p>Le contenu demandé n’existe pas ou n’est plus accessible.</p><LinkButton to="/espace">Retour à l’accueil</LinkButton></div>;
 }
 
 function formatAutoClaimDate(value?: string | null) {

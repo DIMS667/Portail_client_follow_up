@@ -8,9 +8,7 @@ import {
   CircleAlert,
   FileCheck2,
   Landmark,
-  Save,
   ShieldCheck,
-  Upload,
 } from "lucide-react";
 
 import { formatDate, formatFcfa } from "../services/portal-service";
@@ -114,7 +112,6 @@ function RequiredMark() {
 export function CautionRequestForm({ backLabel = "Choisir un autre parcours", onBack, onSubmit }: CautionRequestFormProps) {
   const [cautionType, setCautionType] = useState<CautionType>("soumission");
   const [values, setValues] = useState(initialValues);
-  const [files, setFiles] = useState<Record<string, File>>({});
   const [comments, setComments] = useState("");
   const selectedType = cautionTypes.find((item) => item.id === cautionType)!;
   const visibleDocuments = useMemo(
@@ -131,19 +128,8 @@ export function CautionRequestForm({ backLabel = "Choisir un autre parcours", on
   const updateValue = (key: keyof typeof initialValues, value: string) => {
     setValues((current) => ({ ...current, [key]: value }));
   };
-  const updateFile = (documentId: string, file?: File) => {
-    setFiles((current) => {
-      const next = { ...current };
-      if (file) next[documentId] = file;
-      else delete next[documentId];
-      return next;
-    });
-  };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const attachedDocuments = visibleDocuments
-      .filter((document) => files[document.id])
-      .map((document) => `${document.label} (${files[document.id].name})`);
     onSubmit({
       product: "caution",
       productLabel: "Assurance caution",
@@ -165,7 +151,7 @@ export function CautionRequestForm({ backLabel = "Choisir un autre parcours", on
         "Banque de domiciliation": values.bankName || "Non renseignée",
         "Date d’émission souhaitée": formatDate(values.desiredStartDate),
         "Pièces à fournir": visibleDocuments.map((document) => document.label).join(" · "),
-        "Pièces déjà jointes": attachedDocuments.length > 0 ? attachedDocuments.join(" · ") : "À transmettre depuis l’espace Documents",
+        "Transmission des pièces": "À effectuer depuis l’espace Documents",
       },
     });
   };
@@ -230,14 +216,10 @@ export function CautionRequestForm({ backLabel = "Choisir un autre parcours", on
                 <h4>{group.category === "Marché" ? "Documents sur le marché" : group.category === "Entreprise" ? "Informations sur l’entreprise" : "Références de l’entreprise"}</h4>
                 <div>
                   {group.documents.map((document) => (
-                    <article className={files[document.id] ? "attached" : ""} key={document.id}>
+                    <article key={document.id}>
                       <span className="caution-document-index">{String(requiredDocuments.findIndex((item) => item.id === document.id) + 1).padStart(2, "0")}</span>
-                      <span className="caution-document-status">{files[document.id] ? <Check size={17} /> : <FileCheck2 size={17} />}</span>
-                      <div><strong>{document.label}</strong><small>{files[document.id]?.name ?? "Document à transmettre"}</small></div>
-                      <label className="caution-document-upload">
-                        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={(event) => updateFile(document.id, event.target.files?.[0])} />
-                        <Upload size={15} /> {files[document.id] ? "Remplacer" : "Ajouter"}
-                      </label>
+                      <span className="caution-document-status"><FileCheck2 size={17} /></span>
+                      <div><strong>{document.label}</strong><small>À transmettre depuis l’espace Documents</small></div>
                     </article>
                   ))}
                 </div>
@@ -251,8 +233,7 @@ export function CautionRequestForm({ backLabel = "Choisir un autre parcours", on
           <VoiceTextarea id="caution-comments" label="Précisions complémentaires" value={comments} onChange={setComments} placeholder="Ex. Le dossier de soumission doit être déposé avant le…" rows={5} />
         </section>
 
-        <div className="form-alert info"><CircleAlert size={18} /> Les pièces ajoutées sont conservées uniquement dans cette démonstration frontend. Leur envoi sécurisé sera relié au backend.</div>
-        <div className="auto-request-save"><Save size={15} /><span>Type sélectionné : {selectedType.label} · {Object.keys(files).filter((id) => visibleDocuments.some((document) => document.id === id)).length}/{visibleDocuments.length} pièce(s) ajoutée(s)</span></div>
+        <div className="form-alert info"><CircleAlert size={18} /> Après l’envoi de la demande, transmettez ces pièces dans les rubriques correspondantes de l’espace Documents.</div>
         <div className="flow-actions"><button className="button button-secondary" type="button" onClick={onBack}>{backLabel}</button><button className="button button-primary" type="submit"><ShieldCheck size={17} /> Envoyer ma demande <ChevronRight size={18} /></button></div>
       </form>
     </div>

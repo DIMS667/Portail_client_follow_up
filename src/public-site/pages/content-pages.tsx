@@ -576,7 +576,7 @@ export function FaqPublicPage() {
 const legalContent = {
   "mentions-legales": { title: "Mentions légales", intro: "Informations relatives à l’éditeur et à l’exploitation du site." },
   confidentialite: { title: "Politique de confidentialité", intro: "Principes appliqués au traitement des informations transmises sur ce site." },
-  "conditions-utilisation": { title: "Conditions d’utilisation", intro: "Règles générales applicables à la consultation de cette démonstration." },
+  "conditions-utilisation": { title: "Conditions d’utilisation", intro: "Règles générales applicables à la consultation et à l’utilisation de la plateforme." },
 } as const;
 
 export type LegalPageKind = keyof typeof legalContent;

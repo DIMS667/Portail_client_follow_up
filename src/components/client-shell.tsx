@@ -6,7 +6,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "./brand-logo";
-import { isPortalDeployment } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
 import { marquerNotificationLue } from "../services/notifications-api";
 import { markNotificationRead, signOut } from "../services/portal-service";
@@ -99,7 +98,7 @@ export function ClientShell({ children }: { children: ReactNode }) {
   const openNotification = (notification: Notification) => {
     updateStore((current) => markNotificationRead(current, notification.id));
     setNotificationsOpen(false);
-    if (isPortalDeployment) void marquerNotificationLue(notification.id).catch(() => undefined);
+    void marquerNotificationLue(notification.id).catch(() => undefined);
     navigate(notification.route.startsWith("/espace") ? notification.route : "/espace/notifications");
   };
 

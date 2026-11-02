@@ -325,8 +325,6 @@ export interface Claim {
 export interface Message { id: string; sender: "client" | "advisor"; body: string; sentAt: string; }
 export interface Notification { id: string; title: string; body: string; date: string; route: string; read: boolean; kind: string; }
 export interface Activity { id: string; label: string; date: string; route: string; kind: string; }
-export interface DemoScenario { id: string; number: number; title: string; description: string; route: string; }
-
 export interface PortalStore {
   version: 1;
   session: { authenticated: boolean; clientId?: string };
@@ -344,5 +342,4 @@ export interface PortalStore {
   messages: Message[];
   notifications: Notification[];
   activities: Activity[];
-  scenarios: DemoScenario[];
 }

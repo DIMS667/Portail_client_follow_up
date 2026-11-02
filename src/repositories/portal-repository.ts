@@ -1,42 +1,24 @@
-import { createDemoSeed } from "../data/demo-seed";
+import { createInitialStore } from "../data/initial-store";
 import type { PortalStore } from "../types/domain";
 
 const STORAGE_KEY = "portail-client-demo:v1:db";
-const FAKE_DOCUMENT_IDS = new Set(["DOC-001", "DOC-002", "DOC-003", "DOC-004", "DOC-005"]);
 
 export interface PortalRepository {
   load(): PortalStore;
   save(store: PortalStore): void;
 }
 
-function cloneSeed() {
-  return structuredClone(createDemoSeed());
-}
-
-function migrateStore(store: PortalStore): PortalStore {
-  return {
-    ...store,
-    documents: store.documents.filter((document) => !FAKE_DOCUMENT_IDS.has(document.id) && document.title !== "Ancienne attestation"),
-    offers: store.offers.map((offer) => ({
-      ...offer,
-      requiredDocuments: offer.requiredDocuments.filter((document) => document !== "Ancienne attestation"),
-    })),
-  };
+function initialStore() {
+  return structuredClone(createInitialStore());
 }
 
 export const localStoragePortalRepository: PortalRepository = {
   load() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return cloneSeed();
-      const parsed = JSON.parse(raw) as PortalStore;
-      return parsed.version === 1 ? migrateStore(parsed) : cloneSeed();
-    } catch {
-      return cloneSeed();
-    }
+    localStorage.removeItem(STORAGE_KEY);
+    return initialStore();
   },
-  save(store) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  save(_store) {
+    // Les donnees metier proviennent de l'API et ne sont jamais remplacees par un cache local.
   },
 };
 
