@@ -213,7 +213,7 @@ export interface InsuranceRequest {
   details?: Record<string, string>;
   coverage?: string; desiredStartDate?: string; comments?: string; proposalId?: string; selectedOfferId?: string; timeline: StatusEvent[]; scope?: "core" | "scenario";
 }
-export interface Proposal { id: string; reference: string; requestId: string; offerIds: string[]; recommendedOfferId: string; advice: string; }
+export interface Proposal { id: string; reference: string; requestId: string; offerIds: string[]; recommendedOfferId?: string; advice: string; }
 export interface Offer { id: string; reference: string; proposalId: string; product: string; premium: number; duration: string; effectiveDate: string; deductible: number; guarantees: string[]; options: string[]; exclusions: string[]; requiredDocuments: string[]; requestReference?: string; recommended?: boolean; selected?: boolean; advice?: string; }
 export interface ClientDocument { id: string; title: string; category: string; type: string; ownerId: string; status: DocumentStatus; slotId?: string; fileName?: string; date?: string; correctionMessage?: string; downloadUrl?: string; contentUrl?: string; }
 export interface Payment { id: string; reference: string; contractId?: string; requestId?: string; amount: number; date: string; method: PaymentMethod; status: PaymentStatus; providerStatus?: "initialisation" | "en_attente" | "reussi" | "echoue" | "a_verifier"; phone?: string; operator?: string; ussdCode?: string; }

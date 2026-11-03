@@ -167,7 +167,7 @@ export async function obtenirSouscriptions() {
     reference: `PROPOSITION-${requestReference}`,
     requestId: requestReference,
     offerIds: items.map((offer) => offer.id),
-    recommendedOfferId: items.find((offer) => offer.recommended)?.id ?? items[0].id,
+    recommendedOfferId: items.find((offer) => offer.recommended)?.id,
     advice: items.find((offer) => offer.recommended)?.advice
       || items.find((offer) => offer.advice)?.advice
       || "Comparez les garanties et le coût avant de confirmer votre choix.",
