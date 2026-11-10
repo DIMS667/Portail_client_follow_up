@@ -3,6 +3,7 @@ import { ArrowLeft, LoaderCircle, MessageCircle, Send, ShieldCheck } from "lucid
 
 import { usePortal } from "../app/portal-context";
 import { PageHeader } from "../components/portal-ui";
+import { fusionnerDemandesAutomobile, obtenirDemandesAutomobile } from "../services/automobile-request-api";
 import {
   creerFluxMessages,
   envoyerMessage,
@@ -22,7 +23,7 @@ function heureMessage(value: string) {
 }
 
 export function ConversationPage({ requestReference }: { requestReference: string }) {
-  const { store, navigate } = usePortal();
+  const { store, updateStore, navigate } = usePortal();
   const request = store.requests.find((item) => item.reference === requestReference);
   const [messages, setMessages] = useState<MessageConversation[]>([]);
   const [contenu, setContenu] = useState("");
@@ -34,7 +35,16 @@ export function ConversationPage({ requestReference }: { requestReference: strin
   const actualiser = async (silencieux = false) => {
     if (!silencieux) setChargement(true);
     try {
-      setMessages(await listerMessages(requestReference));
+      const conversation = await listerMessages(requestReference);
+      setMessages(conversation);
+      if (conversation.length > 0) {
+        void obtenirDemandesAutomobile().then((demandes) => {
+          updateStore((current) => ({
+            ...current,
+            requests: fusionnerDemandesAutomobile(current.requests, demandes),
+          }));
+        }).catch(() => undefined);
+      }
       setErreur("");
     } catch (cause) {
       if (!silencieux) setErreur(cause instanceof Error ? cause.message : "La discussion n’a pas pu être chargée.");

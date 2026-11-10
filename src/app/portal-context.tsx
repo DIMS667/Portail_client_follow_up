@@ -102,7 +102,14 @@ export function PortalProvider({ children }: { children: ReactNode }) {
           demande_reference?: string;
           type_auteur?: string;
         };
-        if (donnees.type_auteur !== "courtier" || !donnees.message_id || !donnees.demande_reference) return;
+        if (!donnees.message_id || !donnees.demande_reference) return;
+        void obtenirDemandesAutomobile().then((demandes) => {
+          setStore((current) => ({
+            ...current,
+            requests: fusionnerDemandesAutomobile(current.requests, demandes),
+          }));
+        }).catch(() => undefined);
+        if (donnees.type_auteur !== "courtier") return;
         setStore((current) => current.notifications.some((item) => item.id === donnees.message_id)
           ? current
           : {
