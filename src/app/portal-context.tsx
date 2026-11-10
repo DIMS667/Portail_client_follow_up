@@ -7,6 +7,7 @@ import { obtenirDemandesGenerales } from "../services/general-request-api";
 import { obtenirSinistres } from "../services/claims-api";
 import { creerFluxDocuments, fusionnerDocumentsServeur, obtenirDocuments } from "../services/documents-api";
 import { creerFluxNotifications, obtenirNotifications } from "../services/notifications-api";
+import { creerFluxMessages } from "../services/messages-api";
 import { appliquerSouscriptions, obtenirSouscriptions } from "../services/subscription-api";
 import { initialiserAlerteSonore, jouerAlerteSonore } from "../services/notification-sound";
 import type { PortalStore } from "../types/domain";
@@ -87,6 +88,43 @@ export function PortalProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
       flux.removeEventListener("document", actualiser);
+      flux.close();
+    };
+  }, [store.client.id, store.session.authenticated]);
+
+  useEffect(() => {
+    if (!isPortalDeployment || !store.session.authenticated || !store.client.id) return;
+    const flux = creerFluxMessages();
+    const recevoir = (evenement: Event) => {
+      try {
+        const donnees = JSON.parse((evenement as MessageEvent<string>).data) as {
+          message_id?: string;
+          demande_reference?: string;
+          type_auteur?: string;
+        };
+        if (donnees.type_auteur !== "courtier" || !donnees.message_id || !donnees.demande_reference) return;
+        setStore((current) => current.notifications.some((item) => item.id === donnees.message_id)
+          ? current
+          : {
+              ...current,
+              notifications: [{
+                id: donnees.message_id!,
+                title: "Nouveau message de votre courtier",
+                body: `Un nouveau message est disponible pour le dossier ${donnees.demande_reference}.`,
+                date: new Date().toISOString(),
+                route: `/espace/demandes/${donnees.demande_reference}/discussion`,
+                read: false,
+                kind: "message",
+              }, ...current.notifications],
+            });
+        void jouerAlerteSonore();
+      } catch {
+        // Les événements invalides sont ignorés ; EventSource se reconnecte automatiquement.
+      }
+    };
+    flux.addEventListener("message", recevoir);
+    return () => {
+      flux.removeEventListener("message", recevoir);
       flux.close();
     };
   }, [store.client.id, store.session.authenticated]);

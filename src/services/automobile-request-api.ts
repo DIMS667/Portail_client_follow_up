@@ -153,7 +153,7 @@ const chaineStatuts: Array<{ statut: string; libelle: string }> = [
   { statut: "propositions_disponibles", libelle: "Propositions disponibles" },
   { statut: "offre_selectionnee", libelle: "Offre sélectionnée" },
   { statut: "documents_requis", libelle: "Informations à compléter" },
-  { statut: "paiement_en_attente", libelle: "Paiement en attente" },
+  { statut: "paiement_en_attente", libelle: "Échange avec le courtier" },
   { statut: "contrat_en_preparation", libelle: "Contrat en préparation" },
   { statut: "police_disponible", libelle: "Police disponible" },
   { statut: "finalisee", libelle: "Demande terminée" },

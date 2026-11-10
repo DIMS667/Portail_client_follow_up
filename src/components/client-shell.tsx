@@ -17,7 +17,6 @@ const primaryNav = [
   { label: "Mes demandes", route: "/espace/demandes", icon: ClipboardList },
   { label: "Mes contrats", route: "/espace/contrats", icon: ShieldCheck },
   { label: "Mes documents", route: "/espace/documents", icon: FolderOpen },
-  { label: "Mes paiements", route: "/espace/paiements", icon: WalletCards },
   { label: "Mes sinistres", route: "/espace/sinistres", icon: LifeBuoy },
 ];
 

@@ -14,7 +14,7 @@ const requestLabels: Record<RequestStatus, string> = {
   proposals_available: "Propositions disponibles",
   offer_selected: "Souscription en cours",
   documents_required: "Informations à compléter",
-  payment_pending: "Paiement à effectuer",
+  payment_pending: "Offre sélectionnée",
   policy_issuing: "Contrat en préparation",
   policy_available: "Police disponible",
   completed: "Terminée",

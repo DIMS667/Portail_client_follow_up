@@ -52,7 +52,7 @@ const chaine: Array<{ statut: StatutApi; libelle: string }> = [
   { statut: "propositions_disponibles", libelle: "Propositions disponibles" },
   { statut: "offre_selectionnee", libelle: "Offre sélectionnée" },
   { statut: "documents_requis", libelle: "Documents" },
-  { statut: "paiement_en_attente", libelle: "Paiement" },
+  { statut: "paiement_en_attente", libelle: "Échange avec le courtier" },
   { statut: "contrat_en_preparation", libelle: "Création du contrat" },
   { statut: "police_disponible", libelle: "Contrat disponible" },
   { statut: "finalisee", libelle: "Dossier finalisé" },

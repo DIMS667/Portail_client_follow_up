@@ -228,8 +228,8 @@ export function appliquerSouscriptions(
       ));
       const contractExists = data.contracts.some((contract) => contract.requestId === item.reference);
       const statusBeforeContract = selectedOfferId
-        && (item.status === "proposals_available" || item.status === "offer_selected")
-        ? "payment_pending"
+        && (item.status === "proposals_available" || item.status === "offer_selected" || item.status === "payment_pending")
+        ? "offer_selected"
         : item.status;
       const status = (contractExists || paymentSucceeded)
         && ["proposals_available", "offer_selected", "documents_required", "payment_pending"].includes(statusBeforeContract)

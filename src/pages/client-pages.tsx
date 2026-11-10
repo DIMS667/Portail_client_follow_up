@@ -19,7 +19,6 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { assetUrl } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
-import { PaymentDialog } from "../components/payment-dialog";
 import { EmptyState, InfoCard, LinkButton, PageHeader, StatusBadge, Timeline, documentLabels, requestLabels } from "../components/portal-ui";
 import { documentFolderId, documentSlotsByFolder, type DocumentFolderId, type DocumentSlotDefinition } from "../data/document-folders";
 import {
@@ -289,7 +288,7 @@ export function RequestsPage() {
   return (
     <div className="page-stack">
       <PageHeader eyebrow="Mes dossiers" title="Mes demandes" description="Suivez l’avancement de chaque demande transmise à votre courtier." action={<LinkButton to="/espace/demandes/nouvelle"><Plus size={18} /> Nouvelle demande</LinkButton>} />
-      <div className="list-toolbar"><div className="search-box"><Search size={18} /><input aria-label="Rechercher une demande" placeholder="Rechercher par référence ou produit" value={search} onChange={(event) => setSearch(event.target.value)} /></div><label className="filter-select"><Filter size={17} /><span className="sr-only">Filtrer les demandes par statut</span><select aria-label="Filtrer les demandes par statut" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Tous les statuts</option><option value="proposals_available">Propositions disponibles</option><option value="payment_pending">Paiement à effectuer</option><option value="under_review">En cours d’analyse</option><option value="completed">Terminée</option></select></label></div>
+      <div className="list-toolbar"><div className="search-box"><Search size={18} /><input aria-label="Rechercher une demande" placeholder="Rechercher par référence ou produit" value={search} onChange={(event) => setSearch(event.target.value)} /></div><label className="filter-select"><Filter size={17} /><span className="sr-only">Filtrer les demandes par statut</span><select aria-label="Filtrer les demandes par statut" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Tous les statuts</option><option value="proposals_available">Propositions disponibles</option><option value="payment_pending">Offre sélectionnée</option><option value="under_review">En cours d’analyse</option><option value="completed">Terminée</option></select></label></div>
       {visibleRequests.length > 0 ? <div className="request-list">
         {visibleRequests.map((request) => { const ProductIcon = iconForProduct[request.product]; const vehicleKind = getRequestVehicleKind(request); return <button type="button" className="request-card" key={request.id} onClick={() => navigate(`/espace/demandes/${request.reference}`)}><span className="product-icon"><ProductIcon size={22} /></span><div className="request-main"><span className="reference">{request.reference}</span><strong>{request.productLabel}</strong>{vehicleKind && <em className="vehicle-kind-tag">{vehicleKind === "moto" ? "Moto / 2–3 roues" : "Voiture"}</em>}<small>Créée le {formatDate(request.date)}</small><small>{request.advisor?`Gérée par ${request.advisor.name}`:"En attente d’affectation"}</small></div><StatusBadge status={request.status} /><ChevronRight size={19} /></button>; })}
       </div> : <EmptyState title="Aucune demande trouvée" description="Modifiez votre recherche ou choisissez un autre statut." />}
@@ -305,7 +304,7 @@ export function RequestDetailPage({ reference }: { reference: string }) {
   const proposalAvailable = request.status === "proposals_available";
   const selectedOffer = store.offers.find((offer) => offer.id === request.selectedOfferId
     || (offer.requestReference === request.reference && offer.selected));
-  const paymentDue = request.status === "payment_pending"
+  const discussionRequired = (request.status === "offer_selected" || request.status === "payment_pending")
     && selectedOffer
     && !store.payments.some((payment) => payment.requestId === request.reference && payment.status === "succeeded");
   const automobileRequest = request.automobileRequest;
@@ -334,7 +333,7 @@ export function RequestDetailPage({ reference }: { reference: string }) {
       <button className="back-link" type="button" onClick={() => navigate("/espace/demandes")}><ArrowLeft size={17} /> Retour aux demandes</button>
       <PageHeader eyebrow={request.reference} title={request.productLabel} description={`Demande transmise le ${formatDate(request.date)}`} action={<div className="request-header-tags">{vehicleKind && <em className="vehicle-kind-tag">{vehicleKind === "moto" ? "Moto / 2–3 roues" : "Voiture"}</em>}<StatusBadge status={request.status} /></div>} />
       {proposalAvailable && <section className="attention-card blue"><span><ClipboardList size={23} /></span><div><strong>3 propositions sont disponibles</strong><p>Votre courtier a comparé plusieurs solutions pour votre assurance automobile.</p></div><LinkButton to={`/espace/demandes/${reference}/propositions`}>Consulter les propositions</LinkButton></section>}
-      {paymentDue && <section className="attention-card payment"><span><WalletCards size={23} /></span><div><strong>Paiement à effectuer</strong><p>{selectedOffer.product} · {formatFcfa(selectedOffer.premium)}</p></div><PaymentDialog offer={selectedOffer} /> </section>}
+      {discussionRequired && <section className="attention-card blue"><span><MessageCircle size={23} /></span><div><strong>Votre offre est sélectionnée</strong><p>Échangez maintenant avec votre courtier pour convenir des prochaines étapes.</p></div><LinkButton to={`/espace/demandes/${reference}/discussion`}><MessageCircle size={17} /> Discuter avec mon courtier</LinkButton></section>}
       {request.status === "policy_issuing" && <section className="attention-card success"><span><CheckCircle2 size={23} /></span><div><strong>Paiement reçu. Votre contrat est en cours de finalisation.</strong><p>Vous serez informé dès que la police sera disponible.</p></div></section>}
       <div className="detail-grid">
         <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Progression</span><h2>Suivi du dossier</h2></div></div><Timeline items={request.timeline} /></section>
@@ -379,7 +378,7 @@ export function ProposalsPage({ requestReference }: { requestReference: string }
   return (
     <div className="grid gap-6 lg:gap-8">
       <Button variant="ghost" className="h-9 w-fit rounded-lg px-2 text-slate-600" type="button" onClick={() => navigate(`/espace/demandes/${requestReference}`)}><ArrowLeft size={17} /> Retour au dossier</Button>
-      <PageHeader eyebrow={proposal.reference} title="Comparez vos propositions" description={`${offers.length} offre${offers.length > 1 ? "s" : ""} préparée${offers.length > 1 ? "s" : ""} pour votre demande.`} />
+      <PageHeader eyebrow={proposal.reference} title="Comparez vos propositions" description={`${offers.length} offre${offers.length > 1 ? "s" : ""} préparée${offers.length > 1 ? "s" : ""} pour votre demande.`} action={<Button type="button" className="rounded-xl" onClick={() => navigate(`/espace/demandes/${requestReference}/discussion`)}><MessageCircle size={17} /> Discuter avec mon courtier</Button>} />
       <section className="flex items-start gap-3 rounded-2xl border border-orange-200 bg-brand-soft/80 p-4 sm:items-center sm:p-5"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-red text-xs font-bold text-white">{store.advisor.initials}</span><div className="min-w-0 flex-1"><span className="text-[10px] font-bold uppercase tracking-[.16em] text-brand-red-dark">L’avis de votre courtier</span><p className="mt-1 text-sm leading-6 text-brand-ink">{proposal.advice}</p></div></section>
 
       <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">

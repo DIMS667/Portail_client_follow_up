@@ -8,6 +8,7 @@ const ClaimDetailPage = lazy(() => import("../pages/client-pages").then((module)
 const ClaimsPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.ClaimsPage })));
 const ContractDetailPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.ContractDetailPage })));
 const ContractsPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.ContractsPage })));
+const ConversationPage = lazy(() => import("../pages/conversation-page").then((module) => ({ default: module.ConversationPage })));
 const DashboardPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.DashboardPage })));
 const DocumentsPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.DocumentsPage })));
 const NotFoundPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.NotFoundPage })));
@@ -36,6 +37,7 @@ export function PortalRouteView() {
   if (pathname === "/" || pathname === "/espace") page = <DashboardPage />;
   else if (pathname === "/espace/demandes") page = <RequestsPage />;
   else if (pathname === "/espace/demandes/nouvelle") page = <NewRequestPage />;
+  else if (/^\/espace\/demandes\/[^/]+\/discussion$/.test(pathname)) page = <ConversationPage requestReference={decodeURIComponent(pathname.split("/")[3])} />;
   else if (/^\/espace\/demandes\/[^/]+\/propositions$/.test(pathname)) page = <ProposalsPage requestReference={decodeURIComponent(pathname.split("/")[3])} />;
   else if (/^\/espace\/demandes\/[^/]+$/.test(pathname)) page = <RequestDetailPage reference={decodeURIComponent(pathname.split("/")[3])} />;
   else if (/^\/espace\/offres\/[^/]+$/.test(pathname)) page = <OfferDetailPage offerId={decodeURIComponent(pathname.split("/")[3])} />;
