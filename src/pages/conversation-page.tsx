@@ -100,8 +100,10 @@ export function ConversationPage({ requestReference }: { requestReference: strin
         <header className="flex items-center gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-4 sm:px-6">
           <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand-red"><MessageCircle size={22} /></span>
           <div className="min-w-0 flex-1">
-            <strong className="block truncate text-sm text-slate-900">{request.advisor?.name || "Équipe FOLLOW-UP INSURANCE"}</strong>
-            <span className="mt-0.5 flex items-center gap-1.5 text-xs text-emerald-700"><span className="size-2 rounded-full bg-emerald-500" /> Discussion disponible</span>
+            <strong className="block truncate text-sm text-slate-900">{request.advisor?.name || "En attente de prise en charge"}</strong>
+            {request.advisor
+              ? <span className="mt-0.5 flex items-center gap-1.5 text-xs text-emerald-700"><span className="size-2 rounded-full bg-emerald-500" /> Discussion disponible</span>
+              : <span className="mt-0.5 flex items-center gap-1.5 text-xs text-amber-700"><span className="size-2 rounded-full bg-amber-500" /> Attribution du gestionnaire en cours</span>}
           </div>
         </header>
         <div className="h-[min(56vh,580px)] overflow-y-auto bg-[#fbfaf9] px-4 py-5 sm:px-6" aria-live="polite">
