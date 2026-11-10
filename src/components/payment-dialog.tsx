@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { CheckCircle2, CircleAlert, Smartphone } from "lucide-react";
+import { CheckCircle2, CircleAlert, MessageCircle, Smartphone } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { assetUrl } from "../app/base-path";
@@ -13,8 +13,10 @@ import {
 } from "../services/subscription-api";
 import type { Offer, PortalStore } from "../types/domain";
 
+const paiementsEnLigneActifs = import.meta.env.VITE_PAIEMENTS_EN_LIGNE_ACTIFS === "true";
+
 export function PaymentDialog({ offer, trigger }: { offer: Offer; trigger?: ReactNode }) {
-  const { store, updateStore } = usePortal();
+  const { store, updateStore, navigate } = usePortal();
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState(store.client.phone);
   const [operator, setOperator] = useState<"MTN" | "ORANGE">("MTN");
@@ -59,6 +61,19 @@ export function PaymentDialog({ offer, trigger }: { offer: Offer; trigger?: Reac
     const timer = window.setInterval(() => { void checkPayment(currentPaymentId, true); }, 6000);
     return () => window.clearInterval(timer);
   }, [currentPaymentId, open, store.payments]);
+
+  if (!paiementsEnLigneActifs) {
+    return (
+      <button
+        className="button button-primary"
+        type="button"
+        disabled={!offer.requestReference}
+        onClick={() => navigate(`/espace/demandes/${offer.requestReference}/discussion`)}
+      >
+        <MessageCircle size={17} /> Discuter avec mon courtier
+      </button>
+    );
+  }
 
   const startPayment = async () => {
     if (!offer.requestReference) return;

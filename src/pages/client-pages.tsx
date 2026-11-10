@@ -301,7 +301,12 @@ export function RequestDetailPage({ reference }: { reference: string }) {
   const request = store.requests.find((item) => item.reference === reference);
   if (!request) return <NotFoundPage />;
   const vehicleKind = getRequestVehicleKind(request);
-  const proposalAvailable = request.status === "proposals_available";
+  const proposal = store.proposals.find((item) => item.id === request.proposalId
+    || item.requestId === request.reference);
+  const proposalOfferCount = proposal
+    ? store.offers.filter((offer) => proposal.offerIds.includes(offer.id)).length
+    : 0;
+  const proposalAvailable = request.status === "proposals_available" && proposalOfferCount > 0;
   const selectedOffer = store.offers.find((offer) => offer.id === request.selectedOfferId
     || (offer.requestReference === request.reference && offer.selected));
   const discussionRequired = (request.status === "offer_selected" || request.status === "payment_pending")
@@ -332,7 +337,7 @@ export function RequestDetailPage({ reference }: { reference: string }) {
     <div className="page-stack">
       <button className="back-link" type="button" onClick={() => navigate("/espace/demandes")}><ArrowLeft size={17} /> Retour aux demandes</button>
       <PageHeader eyebrow={request.reference} title={request.productLabel} description={`Demande transmise le ${formatDate(request.date)}`} action={<div className="request-header-tags">{vehicleKind && <em className="vehicle-kind-tag">{vehicleKind === "moto" ? "Moto / 2–3 roues" : "Voiture"}</em>}<StatusBadge status={request.status} /></div>} />
-      {proposalAvailable && <section className="attention-card blue"><span><ClipboardList size={23} /></span><div><strong>3 propositions sont disponibles</strong><p>Votre courtier a comparé plusieurs solutions pour votre assurance automobile.</p></div><LinkButton to={`/espace/demandes/${reference}/propositions`}>Consulter les propositions</LinkButton></section>}
+      {proposalAvailable && <section className="attention-card blue"><span><ClipboardList size={23} /></span><div><strong>{proposalOfferCount} proposition{proposalOfferCount > 1 ? "s sont disponibles" : " est disponible"}</strong><p>Votre courtier a préparé {proposalOfferCount > 1 ? "plusieurs solutions" : "une solution"} pour votre demande d’assurance.</p></div><LinkButton to={`/espace/demandes/${reference}/propositions`}>Consulter {proposalOfferCount > 1 ? "les propositions" : "la proposition"}</LinkButton></section>}
       {discussionRequired && <section className="attention-card blue"><span><MessageCircle size={23} /></span><div><strong>Votre offre est sélectionnée</strong><p>Échangez maintenant avec votre courtier pour convenir des prochaines étapes.</p></div><LinkButton to={`/espace/demandes/${reference}/discussion`}><MessageCircle size={17} /> Discuter avec mon courtier</LinkButton></section>}
       {request.status === "policy_issuing" && <section className="attention-card success"><span><CheckCircle2 size={23} /></span><div><strong>Paiement reçu. Votre contrat est en cours de finalisation.</strong><p>Vous serez informé dès que la police sera disponible.</p></div></section>}
       <div className="detail-grid">
