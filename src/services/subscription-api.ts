@@ -44,14 +44,20 @@ interface ContratApi {
   reference: string;
   numero_police?: string | null;
   demande_reference: string;
-  paiement_id: string;
+  offre_reference: string;
+  paiement_id?: string | null;
   produit: InsuranceProduct;
   libelle_produit: string;
   prime_xaf: number;
+  duree_mois: number;
+  franchise_xaf: number;
   statut: "en_preparation" | "actif" | "expire";
   date_effet: string;
   date_expiration: string;
   garanties: string[];
+  options: string[];
+  exclusions: string[];
+  documents_requis: string[];
 }
 
 function csrfHeader(): HeadersInit {
@@ -72,7 +78,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       },
     });
   } catch {
-    throw new ErreurApi("Le service de paiement est momentanément inaccessible.", 0);
+    throw new ErreurApi("Le service de souscription est momentanément inaccessible.", 0);
   }
   if (!response.ok) {
     let message = "L’opération n’a pas pu être traitée.";
@@ -144,9 +150,10 @@ function mapContract(item: ContratApi): Contract {
     status: item.statut === "actif" ? "active" : item.statut === "expire" ? "expired" : "preparing",
     guarantees: item.garanties,
     documentIds: [],
-    paymentIds: [item.paiement_id],
+    paymentIds: item.paiement_id ? [item.paiement_id] : [],
     claimIds: [],
     requestId: item.demande_reference,
+    offerReference: item.offre_reference,
   };
 }
 
@@ -228,7 +235,7 @@ export function appliquerSouscriptions(
       ));
       const contractExists = data.contracts.some((contract) => contract.requestId === item.reference);
       const statusBeforeContract = selectedOfferId
-        && (item.status === "proposals_available" || item.status === "offer_selected" || item.status === "payment_pending")
+        && item.status === "proposals_available"
         ? "offer_selected"
         : item.status;
       const status = (contractExists || paymentSucceeded)
