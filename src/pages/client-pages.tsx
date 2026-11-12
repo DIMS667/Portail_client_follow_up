@@ -109,10 +109,11 @@ const getRequestVehicleKind = (request: InsuranceRequest) => request.vehicleKind
 const autoRequestTypeLabels: Record<AutoRequestType, string> = { new_vehicle: "Assurer un nouveau véhicule", renewal: "Renouveler mon assurance", switch_insurer: "Changer d’assureur", advice: "Obtenir un conseil", other: "Autre besoin" };
 const autoEnergyLabels: Record<AutoVehicleEnergy, string> = { petrol: "Essence", diesel: "Diesel" };
 const autoUsageLabels: Record<AutoVehicleUsage, string> = {
-  cat1_professional: "CAT1 (Véhicule pour usage professionnel)",
+  cat1_tourism: "CAT1 (Véhicules de tourisme)",
   cat2_product_transport: "CAT2 (Véhicule à usage de transport de produit)",
   cat3_transport: "CAT3 (Véhicules de transport de marchandises appartenant à des tiers)",
-  cat4b_urban_transport: "CAT4 B (Transport urbain : autobus, autocars et véhicules aménagés pour le transport payant de voyageurs)",
+  cat4a_city_taxi: "CAT4 A (Taxis de ville)",
+  cat4b_interurban_transport: "CAT4 B (Transport interurbain de voyageurs à titre payant)",
   cat4c_staff_students_transport: "CAT4 C (Transport du personnel et des élèves)",
   cat7_driving_school: "CAT7 (Véhicules destinés à l’enseignement de la conduite)",
   cat8_rental: "CAT8 (Véhicules destinés à la location avec ou sans chauffeur)",

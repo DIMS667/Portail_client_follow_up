@@ -32,7 +32,7 @@ import type {
 
 const DRAFT_KEY = "portail-client-demo:moto-request-draft:v3";
 const STEP_LABELS = ["Besoin", "Personnes", "Moto", "Durée", "Garanties", "Vérification"] as const;
-const DURATION_OPTIONS = [2, 4, 6, 8, 12] as const;
+const DURATION_OPTIONS: readonly AutoCoverageDurationMonths[] = [2, 4, 6, 8, 12];
 
 const guaranteeOptions: Array<{ value: MotoGuarantee; label: string; mandatory?: boolean }> = [
   { value: "civil_liability", label: "Responsabilité Civile", mandatory: true },

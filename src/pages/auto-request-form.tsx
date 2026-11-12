@@ -31,9 +31,21 @@ import type {
   SelfServiceAutomobileInsuranceRequestData,
 } from "../types/domain";
 
-const DRAFT_KEY = "portail-client-demo:auto-request-draft:v6";
+const DRAFT_KEY = "portail-client-demo:auto-request-draft:v7";
 const STEP_LABELS = ["Besoin", "Personnes", "Véhicule", "Durée", "Garanties", "Vérification"] as const;
-const DURATION_OPTIONS = [2, 4, 6, 8, 12] as const;
+const DEFAULT_DURATION_OPTIONS: readonly AutoCoverageDurationMonths[] = [2, 4, 6, 8, 12];
+const durationOptionsByUsage: Partial<Record<AutoVehicleUsage, readonly AutoCoverageDurationMonths[]>> = {
+  cat1_tourism: [2, 4, 6, 8, 12],
+  cat2_product_transport: [2, 4, 6, 8, 12],
+  cat3_transport: [2, 4, 6, 8, 12],
+  cat4a_city_taxi: [3, 6, 12],
+  cat4b_interurban_transport: [6, 12],
+  cat4c_staff_students_transport: [12],
+};
+
+function durationOptionsForUsage(usage: AutoVehicleUsage | "") {
+  return (usage && durationOptionsByUsage[usage]) || DEFAULT_DURATION_OPTIONS;
+}
 
 const guaranteeOptions: Array<{ value: AutoGuarantee; label: string; mandatory?: boolean }> = [
   { value: "civil_liability", label: "Responsabilité Civile", mandatory: true },
@@ -71,10 +83,11 @@ const requestLabels: Record<AutoRequestType, string> = {
 
 const energyLabels: Record<AutoVehicleEnergy, string> = { petrol: "Essence", diesel: "Diesel" };
 const usageLabels: Record<AutoVehicleUsage, string> = {
-  cat1_professional: "CAT1 (Véhicule pour usage professionnel)",
+  cat1_tourism: "CAT1 (Véhicules de tourisme)",
   cat2_product_transport: "CAT2 (Véhicule à usage de transport de produit)",
   cat3_transport: "CAT3 (Véhicules de transport de marchandises appartenant à des tiers)",
-  cat4b_urban_transport: "CAT4 B (Transport urbain : autobus, autocars et véhicules aménagés pour le transport payant de voyageurs)",
+  cat4a_city_taxi: "CAT4 A (Taxis de ville)",
+  cat4b_interurban_transport: "CAT4 B (Transport interurbain de voyageurs à titre payant)",
   cat4c_staff_students_transport: "CAT4 C (Transport du personnel et des élèves)",
   cat7_driving_school: "CAT7 (Véhicules destinés à l’enseignement de la conduite)",
   cat8_rental: "CAT8 (Véhicules destinés à la location avec ou sans chauffeur)",
@@ -88,10 +101,11 @@ const usageLabels: Record<AutoVehicleUsage, string> = {
   other: "Autre",
 };
 const usageOptions: AutoVehicleUsage[] = [
-  "cat1_professional",
+  "cat1_tourism",
   "cat2_product_transport",
   "cat3_transport",
-  "cat4b_urban_transport",
+  "cat4a_city_taxi",
+  "cat4b_interurban_transport",
   "cat4c_staff_students_transport",
   "cat7_driving_school",
   "cat8_rental",
@@ -127,6 +141,7 @@ interface AutoRequestFormState {
     fiscalPower: string;
     seatCount: string;
     chassisNumber: string;
+    circulationArea: string;
     usage: AutoVehicleUsage | "";
     estimatedValue: string;
     carriesFlammableMaterials: boolean | null;
@@ -162,7 +177,8 @@ const initialForm: AutoRequestFormState = {
     fiscalPower: "9",
     seatCount: "5",
     chassisNumber: "",
-    usage: "cat1_professional",
+    circulationArea: "A",
+    usage: "cat1_tourism",
     estimatedValue: "",
     carriesFlammableMaterials: null,
     hasTrailer: null,
@@ -230,13 +246,15 @@ function validateStep(step: number, form: AutoRequestFormState) {
     if (!Number.isInteger(fiscalPower) || fiscalPower <= 0) errors["vehicle-fiscal-power"] = "Indiquez une puissance fiscale entière et positive.";
     if (!Number.isInteger(seatCount) || seatCount <= 0) errors["vehicle-seat-count"] = "Indiquez un nombre de places entier et positif.";
     if (!form.vehicle.chassisNumber.trim()) errors["vehicle-chassis-number"] = "Renseignez le numéro de châssis.";
+    if (!form.vehicle.circulationArea) errors["vehicle-circulation-area"] = "Choisissez la zone principale de circulation.";
     if (!form.vehicle.usage) errors["vehicle-usage"] = "Choisissez l’usage du véhicule.";
     if (form.vehicle.estimatedValue && (!Number.isFinite(estimatedValue) || estimatedValue <= 0)) errors["vehicle-estimated-value"] = "Indiquez une valeur positive ou laissez ce champ vide.";
     if (form.vehicle.carriesFlammableMaterials === null) errors["vehicle-flammable"] = "Indiquez si le véhicule transporte des matières inflammables.";
     if (form.vehicle.hasTrailer === null) errors["vehicle-trailer"] = "Indiquez si le véhicule utilise une remorque.";
   }
   if (step === 3) {
-    if (!form.coverage.durationMonths || !DURATION_OPTIONS.includes(form.coverage.durationMonths)) errors.duration = "Choisissez une durée d’assurance.";
+    const dureesDisponibles = durationOptionsForUsage(form.vehicle.usage);
+    if (!form.coverage.durationMonths || !dureesDisponibles.includes(form.coverage.durationMonths)) errors.duration = "Choisissez une durée disponible pour cet usage.";
     if (!form.coverage.startDateUnknown && !form.coverage.desiredStartDate) errors["desired-start-date"] = "Choisissez une date de prise d’effet ou indiquez que vous ne la connaissez pas encore.";
     if (form.hasVignette === null) errors["has-vignette"] = "Indiquez si vous avez une vignette.";
   }
@@ -245,7 +263,7 @@ function validateStep(step: number, form: AutoRequestFormState) {
 
 const focusTargets: Record<string, string> = {
   "request-type": "request-type-new_vehicle",
-  duration: "duration-2",
+  duration: "duration-options",
   "has-vignette": "has-vignette-yes",
 };
 
@@ -277,6 +295,25 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
   const updateVehicle = <K extends keyof AutoRequestFormState["vehicle"]>(key: K, value: AutoRequestFormState["vehicle"][K]) => {
     updateForm((current) => ({ ...current, vehicle: { ...current.vehicle, [key]: value } }));
     clearError(`vehicle-${String(key).replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`);
+  };
+  const updateUsage = (usage: AutoVehicleUsage | "") => {
+    updateForm((current) => {
+      const dureesDisponibles = durationOptionsForUsage(usage);
+      const dureeActuelle = current.coverage.durationMonths;
+      return {
+        ...current,
+        vehicle: { ...current.vehicle, usage },
+        coverage: {
+          ...current.coverage,
+          durationMonths:
+            dureeActuelle && dureesDisponibles.includes(dureeActuelle)
+              ? dureeActuelle
+              : dureesDisponibles[0],
+        },
+      };
+    });
+    clearError("vehicle-usage");
+    clearError("duration");
   };
   const updateDriver = <K extends keyof AutoRequestFormState["driver"]>(key: K, value: AutoRequestFormState["driver"][K]) => {
     updateForm((current) => ({ ...current, driver: { ...current.driver, [key]: value } }));
@@ -386,6 +423,7 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
         fiscalPower: Number(form.vehicle.fiscalPower),
         seatCount: Number(form.vehicle.seatCount),
         chassisNumber: form.vehicle.chassisNumber.trim().toUpperCase(),
+        circulationArea: form.vehicle.circulationArea,
         usage: form.vehicle.usage as AutoVehicleUsage,
         estimatedValue: form.vehicle.estimatedValue ? Number(form.vehicle.estimatedValue) : null,
         carriesFlammableMaterials: Boolean(form.vehicle.carriesFlammableMaterials),
@@ -590,10 +628,20 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
               </label>
               <VoiceTextField id="vehicle-chassis-number" label="Numéro de châssis" value={form.vehicle.chassisNumber} onChange={(value) => updateVehicle("chassisNumber", value.toUpperCase())} error={errors["vehicle-chassis-number"]} required inputProps={{ autoCapitalize: "characters" }} />
               <label htmlFor="vehicle-usage"><span className="auto-request-label-text">Usage du véhicule <RequiredMark /></span>
-                <select id="vehicle-usage" value={form.vehicle.usage} onChange={(event) => updateVehicle("usage", event.target.value as AutoVehicleUsage | "")} aria-invalid={Boolean(errors["vehicle-usage"])} aria-describedby={errors["vehicle-usage"] ? "vehicle-usage-error" : undefined}>
+                <select id="vehicle-usage" value={form.vehicle.usage} onChange={(event) => updateUsage(event.target.value as AutoVehicleUsage | "")} aria-invalid={Boolean(errors["vehicle-usage"])} aria-describedby={errors["vehicle-usage"] ? "vehicle-usage-error" : undefined}>
                   <option value="">Sélectionner</option>{usageOptions.map((usage)=><option value={usage} key={usage}>{usageLabels[usage]}</option>)}
                 </select>
                 <FieldError id="vehicle-usage-error" message={errors["vehicle-usage"]} />
+              </label>
+              <label htmlFor="vehicle-circulation-area"><span className="auto-request-label-text">Zone principale de circulation <RequiredMark /></span>
+                <select id="vehicle-circulation-area" value={form.vehicle.circulationArea} onChange={(event) => updateVehicle("circulationArea", event.target.value)} aria-invalid={Boolean(errors["vehicle-circulation-area"])} aria-describedby={errors["vehicle-circulation-area"] ? "vehicle-circulation-area-error" : "vehicle-circulation-area-help"}>
+                  <option value="">Sélectionner</option>
+                  <option value="A">Zone A</option>
+                  <option value="B">Zone B</option>
+                  <option value="C">Zone C</option>
+                </select>
+                <small className="auto-request-field-help" id="vehicle-circulation-area-help">Choisissez la zone tarifaire indiquée par votre courtier.</small>
+                <FieldError id="vehicle-circulation-area-error" message={errors["vehicle-circulation-area"]} />
               </label>
               <label htmlFor="vehicle-estimated-value">Valeur estimée du véhicule <span className="field-optional">Facultatif</span>
                 <input id="vehicle-estimated-value" type="number" inputMode="numeric" min="1" value={form.vehicle.estimatedValue} onChange={(event) => updateVehicle("estimatedValue", event.target.value)} aria-invalid={Boolean(errors["vehicle-estimated-value"])} aria-describedby={errors["vehicle-estimated-value"] ? "vehicle-estimated-value-error" : undefined} placeholder="À renseigner si vous la connaissez" />
@@ -610,9 +658,9 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
         {step === 3 && (
           <section aria-labelledby="auto-request-step-title">
             <AutoStepHeading number="4" title="Pour quelle période souhaitez-vous être assuré ?" description="Choisissez une durée, puis indiquez la date de prise d’effet souhaitée." />
-            <fieldset className="auto-request-duration-grid" aria-describedby={errors.duration ? "duration-error" : undefined}>
+            <fieldset id="duration-options" className="auto-request-duration-grid" aria-describedby={errors.duration ? "duration-error" : undefined}>
               <legend>Durée souhaitée <RequiredMark /></legend>
-              {DURATION_OPTIONS.map((duration) => <label className={form.coverage.durationMonths === duration ? "selected" : ""} key={duration}>
+              {durationOptionsForUsage(form.vehicle.usage).map((duration) => <label className={form.coverage.durationMonths === duration ? "selected" : ""} key={duration}>
                 <input id={`duration-${duration}`} type="radio" name="duration" value={duration} checked={form.coverage.durationMonths === duration} onChange={() => {
                   updateCoverage("durationMonths", duration);
                   clearError("duration");
@@ -671,6 +719,7 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
                 ["Véhicule", `${form.vehicle.brand} ${form.vehicle.model}`], ["Année", form.vehicle.year],
                 ["Immatriculation", form.vehicle.registration.toUpperCase()], ["Énergie", form.vehicle.energy ? energyLabels[form.vehicle.energy] : "Non renseignée"],
                 ["Puissance fiscale", `${form.vehicle.fiscalPower} CV`], ["Nombre de places", form.vehicle.seatCount], ["Numéro de châssis", form.vehicle.chassisNumber.toUpperCase()], ["Usage", form.vehicle.usage ? usageLabels[form.vehicle.usage] : "Non renseigné"],
+                ["Zone de circulation", form.vehicle.circulationArea ? `Zone ${form.vehicle.circulationArea}` : "Non renseignée"],
                 ["Matières inflammables", form.vehicle.carriesFlammableMaterials ? "Oui" : "Non"], ["Remorque", form.vehicle.hasTrailer ? "Oui" : "Non"],
                 ["Valeur estimée", form.vehicle.estimatedValue ? formatFcfa(Number(form.vehicle.estimatedValue)) : "Non renseignée"],
               ]} />

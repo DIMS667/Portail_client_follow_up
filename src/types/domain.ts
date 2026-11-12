@@ -19,10 +19,11 @@ export type AutoRequestType = "new_vehicle" | "renewal" | "switch_insurer" | "ad
 export type AutoVehicleCategory = "tourism";
 export type AutoVehicleEnergy = "petrol" | "diesel";
 export type AutoVehicleUsage =
-  | "cat1_professional"
+  | "cat1_tourism"
   | "cat2_product_transport"
   | "cat3_transport"
-  | "cat4b_urban_transport"
+  | "cat4a_city_taxi"
+  | "cat4b_interurban_transport"
   | "cat4c_staff_students_transport"
   | "cat7_driving_school"
   | "cat8_rental"
@@ -34,7 +35,7 @@ export type AutoVehicleUsage =
   | "professional"
   | "transport"
   | "other";
-export type AutoCoverageDurationMonths = 2 | 4 | 6 | 8 | 12;
+export type AutoCoverageDurationMonths = 2 | 3 | 4 | 6 | 8 | 12;
 export interface AutomobilePartySnapshot {
   firstName: string;
   lastName: string;
@@ -89,6 +90,7 @@ export interface SelfServiceAutomobileInsuranceRequestData {
     fiscalPower: number;
     seatCount: number;
     chassisNumber: string;
+    circulationArea: string;
     usage: AutoVehicleUsage;
     estimatedValue: number | null;
     carriesFlammableMaterials: boolean;

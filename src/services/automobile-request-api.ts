@@ -29,10 +29,11 @@ const besoinsDepuisApi: Record<string, AutoRequestType> = {
   autre: "other",
 };
 const usagesVoitureVersApi: Record<AutoVehicleUsage, string> = {
-  cat1_professional: "cat1_professionnel",
+  cat1_tourism: "cat1_tourisme",
   cat2_product_transport: "cat2_transport_produits",
   cat3_transport: "cat3_transport_marchandises_tiers",
-  cat4b_urban_transport: "cat4b_transport_urbain",
+  cat4a_city_taxi: "cat4a_taxi_ville",
+  cat4b_interurban_transport: "cat4b_transport_interurbain",
   cat4c_staff_students_transport: "cat4c_transport_personnel_eleves",
   cat7_driving_school: "cat7_enseignement_conduite",
   cat8_rental: "cat8_location",
@@ -40,16 +41,19 @@ const usagesVoitureVersApi: Record<AutoVehicleUsage, string> = {
   cat10a_special: "cat10a_vehicules_speciaux",
   cat10b_public_authorities: "cat10b_collectivites_publiques",
   cat10c_agricultural_forestry_tractors: "cat10c_tracteurs_agricoles_forestiers",
-  personal: "cat1_professionnel",
-  professional: "cat1_professionnel",
+  personal: "cat1_tourisme",
+  professional: "cat1_tourisme",
   transport: "cat3_transport_marchandises_tiers",
-  other: "cat1_professionnel",
+  other: "cat1_tourisme",
 };
 const usagesVoitureDepuisApi: Record<string, AutoVehicleUsage> = {
-  cat1_professionnel: "cat1_professional",
+  cat1_tourisme: "cat1_tourism",
+  cat1_professionnel: "cat1_tourism",
   cat2_transport_produits: "cat2_product_transport",
   cat3_transport_marchandises_tiers: "cat3_transport",
-  cat4b_transport_urbain: "cat4b_urban_transport",
+  cat4a_taxi_ville: "cat4a_city_taxi",
+  cat4b_transport_interurbain: "cat4b_interurban_transport",
+  cat4b_transport_urbain: "cat4a_city_taxi",
   cat4c_transport_personnel_eleves: "cat4c_staff_students_transport",
   cat7_enseignement_conduite: "cat7_driving_school",
   cat8_location: "cat8_rental",
@@ -144,7 +148,7 @@ interface DemandeAutomobileApi {
   } | null;
   vehicule?: Record<string, unknown> | null;
   couverture?: {
-    duree_mois: 2 | 4 | 6 | 8 | 12;
+    duree_mois: 2 | 3 | 4 | 6 | 8 | 12;
     date_effet_souhaitee?: string | null;
     date_effet_inconnue: boolean;
     garanties: string[];
@@ -308,6 +312,7 @@ function construireEntree(data: Partial<InsuranceRequest>) {
       puissance_fiscale: auto.vehicle.fiscalPower,
       nombre_places: auto.vehicle.seatCount,
       numero_chassis: auto.vehicle.chassisNumber,
+      zone_circulation_principale: auto.vehicle.circulationArea,
       usage: usagesVoitureVersApi[auto.vehicle.usage],
       valeur_estimee: auto.vehicle.estimatedValue,
       transporte_matieres_inflammables: auto.vehicle.carriesFlammableMaterials,
@@ -333,6 +338,7 @@ function versDemandePortail(api: DemandeAutomobileApi): InsuranceRequest {
       registration: String(vehicule.immatriculation),
       seatCount: Number(vehicule.nombre_places),
       chassisNumber: String(vehicule.numero_chassis),
+      circulationArea: String(vehicule.zone_circulation_principale ?? ""),
       estimatedValue: vehicule.valeur_estimee == null ? null : Number(vehicule.valeur_estimee),
       carriesFlammableMaterials: Boolean(vehicule.transporte_matieres_inflammables),
       hasTrailer: Boolean(vehicule.possede_remorque),
@@ -371,7 +377,7 @@ function versDemandePortail(api: DemandeAutomobileApi): InsuranceRequest {
           ...commun,
           energy: vehicule.energie === "diesel" ? "diesel" : "petrol",
           fiscalPower: Number(vehicule.puissance_fiscale),
-          usage: usagesVoitureDepuisApi[String(vehicule.usage)] ?? "cat1_professional",
+          usage: usagesVoitureDepuisApi[String(vehicule.usage)] ?? "cat1_tourism",
         },
         coverage: { ...couverture, guarantees: couverture.guarantees as AutoGuarantee[] },
       };
