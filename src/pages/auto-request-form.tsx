@@ -74,11 +74,32 @@ const usageLabels: Record<AutoVehicleUsage, string> = {
   cat1_professional: "CAT1 (Véhicule pour usage professionnel)",
   cat2_product_transport: "CAT2 (Véhicule à usage de transport de produit)",
   cat3_transport: "CAT3 (Véhicules de transport de marchandises appartenant à des tiers)",
+  cat4b_urban_transport: "CAT4 B (Transport urbain : autobus, autocars et véhicules aménagés pour le transport payant de voyageurs)",
+  cat4c_staff_students_transport: "CAT4 C (Transport du personnel et des élèves)",
+  cat7_driving_school: "CAT7 (Véhicules destinés à l’enseignement de la conduite)",
+  cat8_rental: "CAT8 (Véhicules destinés à la location avec ou sans chauffeur)",
+  cat9_mobile_construction: "CAT9 (Engins mobiles de chantier)",
+  cat10a_special: "CAT10 A (Véhicules spéciaux)",
+  cat10b_public_authorities: "CAT10 B (Véhicules des collectivités publiques)",
+  cat10c_agricultural_forestry_tractors: "CAT10 C (Tracteurs agricoles ou forestiers)",
   personal: "Usage personnel",
   professional: "Usage professionnel",
   transport: "Transport",
   other: "Autre",
 };
+const usageOptions: AutoVehicleUsage[] = [
+  "cat1_professional",
+  "cat2_product_transport",
+  "cat3_transport",
+  "cat4b_urban_transport",
+  "cat4c_staff_students_transport",
+  "cat7_driving_school",
+  "cat8_rental",
+  "cat9_mobile_construction",
+  "cat10a_special",
+  "cat10b_public_authorities",
+  "cat10c_agricultural_forestry_tractors",
+];
 
 interface AutoRequestFormState {
   delegatedMessage: string;
@@ -570,7 +591,7 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
               <VoiceTextField id="vehicle-chassis-number" label="Numéro de châssis" value={form.vehicle.chassisNumber} onChange={(value) => updateVehicle("chassisNumber", value.toUpperCase())} error={errors["vehicle-chassis-number"]} required inputProps={{ autoCapitalize: "characters" }} />
               <label htmlFor="vehicle-usage"><span className="auto-request-label-text">Usage du véhicule <RequiredMark /></span>
                 <select id="vehicle-usage" value={form.vehicle.usage} onChange={(event) => updateVehicle("usage", event.target.value as AutoVehicleUsage | "")} aria-invalid={Boolean(errors["vehicle-usage"])} aria-describedby={errors["vehicle-usage"] ? "vehicle-usage-error" : undefined}>
-                  <option value="">Sélectionner</option><option value="cat1_professional">CAT1 (VÉHICULE POUR USAGE PROFESSIONNEL)</option><option value="cat2_product_transport">CAT2 (VÉHICULE À USAGE DE TRANSPORT DE PRODUIT)</option><option value="cat3_transport">CAT3 (VÉHICULES DE TRANSPORT DE MARCHANDISES APPARTENANT À DES TIERS)</option>
+                  <option value="">Sélectionner</option>{usageOptions.map((usage)=><option value={usage} key={usage}>{usageLabels[usage]}</option>)}
                 </select>
                 <FieldError id="vehicle-usage-error" message={errors["vehicle-usage"]} />
               </label>

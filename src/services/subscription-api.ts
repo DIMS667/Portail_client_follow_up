@@ -22,6 +22,7 @@ interface OffreApi {
   documents_requis: string[];
   recommandee: boolean;
   conseil: string;
+  detail_calcul: Record<string, unknown>;
   selectionnee: boolean;
 }
 
@@ -102,6 +103,31 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 function mapOffer(item: OffreApi): Offer {
+  const detail = item.detail_calcul ?? {};
+  const lignes = Array.isArray(detail.garanties_detail)
+    ? detail.garanties_detail.filter((ligne): ligne is Record<string, unknown> => Boolean(ligne) && typeof ligne === "object" && !Array.isArray(ligne))
+    : [];
+  const lireMontant = (cle: string) => typeof detail[cle] === "number" ? detail[cle] as number : 0;
+  const pricingBreakdown = detail.calcul_complet === true ? {
+    guarantees: lignes.map((ligne, index) => ({
+      code: typeof ligne.code === "string" ? ligne.code : null,
+      label: typeof ligne.libelle === "string" ? ligne.libelle : `Garantie ${index + 1}`,
+      premium: typeof ligne.prime_xaf === "number" ? ligne.prime_xaf : 0,
+      annualPremium: typeof ligne.annuite_xaf === "number" ? ligne.annuite_xaf : null,
+      capital: typeof ligne.capital_montant === "string" ? ligne.capital_montant : null,
+      deductible: typeof ligne.franchise === "string" ? ligne.franchise : null,
+    })),
+    netPremium: lireMontant("prime_nette_xaf"),
+    accessories: lireMontant("accessoires_xaf"),
+    asacFile: lireMontant("fichier_asac_xaf"),
+    taxBase: lireMontant("base_taxe_xaf"),
+    taxRate: lireMontant("taux_taxe_pourcent"),
+    taxes: lireMontant("taxes_xaf"),
+    cemacCard: lireMontant("carte_cemac_xaf"),
+    dta: lireMontant("dta_xaf"),
+    otherFees: lireMontant("autres_frais_xaf"),
+    total: lireMontant("prime_ttc_xaf"),
+  } : undefined;
   return {
     id: item.id,
     reference: item.reference,
@@ -115,6 +141,7 @@ function mapOffer(item: OffreApi): Offer {
     options: item.options,
     exclusions: item.exclusions,
     requiredDocuments: item.documents_requis,
+    pricingBreakdown,
     requestReference: item.demande_reference,
     recommended: item.recommandee,
     selected: item.selectionnee,

@@ -22,6 +22,14 @@ export type AutoVehicleUsage =
   | "cat1_professional"
   | "cat2_product_transport"
   | "cat3_transport"
+  | "cat4b_urban_transport"
+  | "cat4c_staff_students_transport"
+  | "cat7_driving_school"
+  | "cat8_rental"
+  | "cat9_mobile_construction"
+  | "cat10a_special"
+  | "cat10b_public_authorities"
+  | "cat10c_agricultural_forestry_tractors"
   | "personal"
   | "professional"
   | "transport"
@@ -214,7 +222,9 @@ export interface InsuranceRequest {
   coverage?: string; desiredStartDate?: string; comments?: string; proposalId?: string; selectedOfferId?: string; timeline: StatusEvent[]; scope?: "core" | "scenario";
 }
 export interface Proposal { id: string; reference: string; requestId: string; offerIds: string[]; recommendedOfferId?: string; advice: string; }
-export interface Offer { id: string; reference: string; proposalId: string; product: string; premium: number; duration: string; effectiveDate: string; deductible: number; guarantees: string[]; options: string[]; exclusions: string[]; requiredDocuments: string[]; requestReference?: string; recommended?: boolean; selected?: boolean; advice?: string; }
+export interface OfferGuaranteePrice { code?: string | null; label: string; premium: number; annualPremium?: number | null; capital?: string | null; deductible?: string | null; }
+export interface OfferPricingBreakdown { guarantees: OfferGuaranteePrice[]; netPremium: number; accessories: number; asacFile: number; taxBase: number; taxRate: number; taxes: number; cemacCard: number; dta: number; otherFees: number; total: number; }
+export interface Offer { id: string; reference: string; proposalId: string; product: string; premium: number; duration: string; effectiveDate: string; deductible: number; guarantees: string[]; options: string[]; exclusions: string[]; requiredDocuments: string[]; pricingBreakdown?: OfferPricingBreakdown; requestReference?: string; recommended?: boolean; selected?: boolean; advice?: string; }
 export interface ClientDocument { id: string; title: string; category: string; type: string; ownerId: string; status: DocumentStatus; slotId?: string; fileName?: string; date?: string; correctionMessage?: string; downloadUrl?: string; contentUrl?: string; }
 export interface Payment { id: string; reference: string; contractId?: string; requestId?: string; amount: number; date: string; method: PaymentMethod; status: PaymentStatus; providerStatus?: "initialisation" | "en_attente" | "reussi" | "echoue" | "a_verifier"; phone?: string; operator?: string; ussdCode?: string; }
 export interface Contract { id: string; policyNumber: string; clientId: string; product: InsuranceProduct; productLabel: string; effectiveDate: string; expirationDate: string; premium: number; status: ContractStatus; guarantees: string[]; documentIds: string[]; paymentIds: string[]; claimIds: string[]; requestId?: string; offerReference?: string; policyAvailable?: boolean; policyFileName?: string; }
