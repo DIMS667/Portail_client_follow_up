@@ -35,6 +35,7 @@ import {
   marquerNotificationLue,
   marquerToutesNotificationsLues,
 } from "../services/notifications-api";
+import { obtenirLienPolice } from "../services/subscription-api";
 import {
   formatDate, formatFcfa, markNotificationRead, removeDocument,
   signOut, updateProfile,
@@ -507,17 +508,35 @@ export function ContractsPage() {
 
 export function ContractDetailPage({ policyNumber }: { policyNumber: string }) {
   const { store, navigate } = usePortal();
+  const [policyError, setPolicyError] = useState("");
+  const [openingPolicy, setOpeningPolicy] = useState(false);
   const contract = store.contracts.find((item) => item.policyNumber === policyNumber);
   if (!contract) return <NotFoundPage />;
   const documents = store.documents.filter((document) => contract.documentIds.includes(document.id));
   const payments = store.payments.filter((payment) => contract.paymentIds.includes(payment.id));
   const claims = store.claims.filter((claim) => contract.claimIds.includes(claim.id));
+  const openOfficialPolicy = async () => {
+    const preview = window.open("", "_blank");
+    setOpeningPolicy(true);
+    setPolicyError("");
+    try {
+      const link = await obtenirLienPolice(contract.id);
+      if (preview) preview.location.href = link.url;
+      else window.location.assign(link.url);
+    } catch (cause) {
+      preview?.close();
+      setPolicyError(cause instanceof Error ? cause.message : "La police n’a pas pu être ouverte.");
+    } finally {
+      setOpeningPolicy(false);
+    }
+  };
   return <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate("/espace/contrats")}><ArrowLeft size={17} /> Retour aux contrats</button><PageHeader eyebrow={contract.policyNumber} title={contract.productLabel} description="Accompagnement Follow-Up Insurance" action={<StatusBadge status={contract.status}>{contract.status === "active" ? "Actif" : contract.status === "expired" ? "Expiré" : "En préparation"}</StatusBadge>} />
-    <section className="policy-hero"><div><span className="policy-icon"><ShieldCheck size={28} /></span><div><small>{contract.status === "active" ? "Votre police d’assurance est disponible." : `Votre gestionnaire prépare le contrat lié à l’offre ${contract.offerReference || "sélectionnée"}.`}</small><h2>{contract.policyNumber}</h2></div></div><div className="policy-downloads">{documents.slice(0, 3).map((document) => <a className="button button-secondary" href={assetUrl(document.downloadUrl || "")} download key={document.id}><Download size={17} /> {document.type}</a>)}</div></section>
+    <section className="policy-hero"><div><span className="policy-icon"><ShieldCheck size={28} /></span><div><small>{contract.status === "active" ? "Votre police d’assurance est disponible." : `Votre gestionnaire prépare le contrat lié à l’offre ${contract.offerReference || "sélectionnée"}.`}</small><h2>{contract.policyNumber}</h2></div></div><div className="policy-downloads">{contract.status === "active" && contract.policyAvailable && <button className="button button-primary" type="button" disabled={openingPolicy} onClick={() => void openOfficialPolicy()}><Download size={17} />{openingPolicy ? "Ouverture…" : "Voir la police officielle"}</button>}{documents.slice(0, 3).map((document) => <a className="button button-secondary" href={assetUrl(document.downloadUrl || "")} download key={document.id}><Download size={17} /> {document.type}</a>)}</div></section>
+    {policyError && <div className="form-alert error" role="alert"><CircleAlert size={17} />{policyError}</div>}
     <Tabs defaultValue="resume" className="contract-tabs"><TabsList className="contract-tabs-list"><TabsTrigger value="resume">Résumé</TabsTrigger><TabsTrigger value="garanties">Garanties</TabsTrigger><TabsTrigger value="documents">Documents</TabsTrigger><TabsTrigger value="paiements">Paiements</TabsTrigger><TabsTrigger value="sinistres">Sinistres</TabsTrigger></TabsList>
       <TabsContent value="resume"><section className="panel"><div className="details-grid"><Detail label="Numéro de police" value={contract.policyNumber} />{contract.offerReference&&<Detail label="Référence de l’offre" value={contract.offerReference}/>}<Detail label="Produit" value={contract.productLabel} /><Detail label="Date d’effet" value={formatDate(contract.effectiveDate)} /><Detail label="Expiration" value={formatDate(contract.expirationDate)} /><Detail label="Prime annuelle" value={formatFcfa(contract.premium)} /></div></section></TabsContent>
       <TabsContent value="garanties"><section className="panel"><h2>Garanties incluses</h2><ul className="guarantee-list large">{contract.guarantees.map((item) => <li key={item}><Check size={17} /> {item}</li>)}</ul></section></TabsContent>
-      <TabsContent value="documents"><section className="panel mini-list">{documents.length ? documents.map((document) => <a href={assetUrl(document.downloadUrl || "")} download key={document.id}><FileText size={20} /><div><strong>{document.title}</strong><small>{document.fileName || document.type}</small></div><Download size={18} /></a>) : <p>La police sera disponible ici après sa finalisation.</p>}</section></TabsContent>
+      <TabsContent value="documents"><section className="panel mini-list">{contract.status === "active" && contract.policyAvailable && <button type="button" onClick={() => void openOfficialPolicy()} disabled={openingPolicy}><FileText size={20} /><div><strong>Police d’assurance officielle</strong><small>{contract.policyFileName || contract.policyNumber}</small></div><Download size={18} /></button>}{documents.map((document) => <a href={assetUrl(document.downloadUrl || "")} download key={document.id}><FileText size={20} /><div><strong>{document.title}</strong><small>{document.fileName || document.type}</small></div><Download size={18} /></a>)}{!contract.policyAvailable && documents.length === 0 && <p>La police sera disponible ici après sa finalisation.</p>}</section></TabsContent>
       <TabsContent value="paiements"><section className="panel mini-list">{payments.map((payment) => <div key={payment.id}><WalletCards size={20} /><div><strong>{payment.reference}</strong><small>{formatDate(payment.date)}</small></div><strong>{formatFcfa(payment.amount)}</strong></div>)}</section></TabsContent>
       <TabsContent value="sinistres"><section className="panel mini-list">{claims.map((claim) => <button type="button" onClick={() => navigate(`/espace/sinistres/${claim.reference}`)} key={claim.id}><LifeBuoy size={20} /><div><strong>{claim.reference}</strong><small>{claim.type}</small></div><ChevronRight size={18} /></button>)}</section></TabsContent>
     </Tabs>

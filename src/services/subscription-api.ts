@@ -58,6 +58,8 @@ interface ContratApi {
   options: string[];
   exclusions: string[];
   documents_requis: string[];
+  police_disponible: boolean;
+  police_nom_fichier?: string | null;
 }
 
 function csrfHeader(): HeadersInit {
@@ -154,6 +156,8 @@ function mapContract(item: ContratApi): Contract {
     claimIds: [],
     requestId: item.demande_reference,
     offerReference: item.offre_reference,
+    policyAvailable: item.police_disponible,
+    policyFileName: item.police_nom_fichier ?? undefined,
   };
 }
 
@@ -212,6 +216,12 @@ export async function verifierPaiement(paiementId: string) {
     method: "POST",
     headers: csrfHeader(),
   }));
+}
+
+export async function obtenirLienPolice(contratId: string) {
+  return request<{ url: string; expire_dans_secondes: number }>(
+    `/contrats/${encodeURIComponent(contratId)}/police/consultation`,
+  );
 }
 
 export function appliquerSouscriptions(
