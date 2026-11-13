@@ -32,6 +32,7 @@ import type {
 } from "../types/domain";
 
 const DRAFT_KEY = "portail-client-demo:auto-request-draft:v7";
+const CAT3_ROYAL_SEAT_COUNT = 3;
 const STEP_LABELS = ["Besoin", "Personnes", "Véhicule", "Durée", "Garanties", "Vérification"] as const;
 const DEFAULT_DURATION_OPTIONS: readonly AutoCoverageDurationMonths[] = [2, 4, 6, 8, 12];
 const durationOptionsByUsage: Partial<Record<AutoVehicleUsage, readonly AutoCoverageDurationMonths[]>> = {
@@ -199,7 +200,14 @@ function loadDraft(): AutoDraft {
         ...initialForm,
         ...savedForm,
         driver: { ...initialForm.driver, ...savedForm?.driver },
-        vehicle: { ...initialForm.vehicle, ...savedForm?.vehicle },
+        vehicle: {
+          ...initialForm.vehicle,
+          ...savedForm?.vehicle,
+          seatCount:
+            savedForm?.vehicle?.usage === "cat3_transport"
+              ? String(CAT3_ROYAL_SEAT_COUNT)
+              : savedForm?.vehicle?.seatCount ?? initialForm.vehicle.seatCount,
+        },
         coverage: {
           ...initialForm.coverage,
           ...savedForm?.coverage,
@@ -244,7 +252,11 @@ function validateStep(step: number, form: AutoRequestFormState) {
     if (!form.vehicle.registration.trim()) errors["vehicle-registration"] = "Renseignez l’immatriculation du véhicule.";
     if (!form.vehicle.energy) errors["vehicle-energy"] = "Choisissez l’énergie du véhicule.";
     if (!Number.isInteger(fiscalPower) || fiscalPower <= 0) errors["vehicle-fiscal-power"] = "Indiquez une puissance fiscale entière et positive.";
-    if (!Number.isInteger(seatCount) || seatCount <= 0) errors["vehicle-seat-count"] = "Indiquez un nombre de places entier et positif.";
+    if (!Number.isInteger(seatCount) || seatCount <= 0) {
+      errors["vehicle-seat-count"] = "Indiquez un nombre de places entier et positif.";
+    } else if (form.vehicle.usage === "cat3_transport" && seatCount !== CAT3_ROYAL_SEAT_COUNT) {
+      errors["vehicle-seat-count"] = "Le tarif Royal de la catégorie 3 est établi pour 3 places, conducteur compris.";
+    }
     if (!form.vehicle.chassisNumber.trim()) errors["vehicle-chassis-number"] = "Renseignez le numéro de châssis.";
     if (!form.vehicle.circulationArea) errors["vehicle-circulation-area"] = "Choisissez la zone principale de circulation.";
     if (!form.vehicle.usage) errors["vehicle-usage"] = "Choisissez l’usage du véhicule.";
@@ -302,7 +314,11 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
       const dureeActuelle = current.coverage.durationMonths;
       return {
         ...current,
-        vehicle: { ...current.vehicle, usage },
+        vehicle: {
+          ...current.vehicle,
+          usage,
+          ...(usage === "cat3_transport" ? { seatCount: String(CAT3_ROYAL_SEAT_COUNT) } : {}),
+        },
         coverage: {
           ...current.coverage,
           durationMonths:
@@ -313,6 +329,7 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
       };
     });
     clearError("vehicle-usage");
+    clearError("vehicle-seat-count");
     clearError("duration");
   };
   const updateDriver = <K extends keyof AutoRequestFormState["driver"]>(key: K, value: AutoRequestFormState["driver"][K]) => {
@@ -623,7 +640,8 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
                 <FieldError id="vehicle-fiscal-power-error" message={errors["vehicle-fiscal-power"]} />
               </label>
               <label htmlFor="vehicle-seat-count"><span className="auto-request-label-text">Nombre de places <RequiredMark /></span>
-                <input id="vehicle-seat-count" type="number" inputMode="numeric" min="1" step="1" value={form.vehicle.seatCount} onChange={(event) => updateVehicle("seatCount", event.target.value)} aria-invalid={Boolean(errors["vehicle-seat-count"])} />
+                <input id="vehicle-seat-count" type="number" inputMode="numeric" min="1" step="1" value={form.vehicle.seatCount} onChange={(event) => updateVehicle("seatCount", event.target.value)} readOnly={form.vehicle.usage === "cat3_transport"} aria-invalid={Boolean(errors["vehicle-seat-count"])} aria-describedby={form.vehicle.usage === "cat3_transport" ? "vehicle-seat-count-help" : errors["vehicle-seat-count"] ? "vehicle-seat-count-error" : undefined} />
+                {form.vehicle.usage === "cat3_transport" && <small className="auto-request-field-help" id="vehicle-seat-count-help">Le tarif Royal CAT3 est prévu pour 3 places, conducteur compris.</small>}
                 <FieldError id="vehicle-seat-count-error" message={errors["vehicle-seat-count"]} />
               </label>
               <VoiceTextField id="vehicle-chassis-number" label="Numéro de châssis" value={form.vehicle.chassisNumber} onChange={(value) => updateVehicle("chassisNumber", value.toUpperCase())} error={errors["vehicle-chassis-number"]} required inputProps={{ autoCapitalize: "characters" }} />
