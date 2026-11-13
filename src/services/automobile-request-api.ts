@@ -287,6 +287,7 @@ function construireEntree(data: Partial<InsuranceRequest>) {
         marque: moto.vehicle.brand,
         modele: moto.vehicle.model,
         annee: moto.vehicle.year,
+        date_premiere_mise_circulation: moto.vehicle.firstRegistrationDate,
         immatriculation: moto.vehicle.registration,
         energie: moto.vehicle.energy === "electric" ? "electrique" : "essence",
         cylindree_cm3: moto.vehicle.cylinderCapacity,
@@ -307,6 +308,7 @@ function construireEntree(data: Partial<InsuranceRequest>) {
       marque: auto.vehicle.brand,
       modele: auto.vehicle.model,
       annee: auto.vehicle.year,
+      date_premiere_mise_circulation: auto.vehicle.firstRegistrationDate,
       immatriculation: auto.vehicle.registration,
       energie: auto.vehicle.energy === "diesel" ? "diesel" : "essence",
       puissance_fiscale: auto.vehicle.fiscalPower,
@@ -335,6 +337,10 @@ function versDemandePortail(api: DemandeAutomobileApi): InsuranceRequest {
       brand: String(vehicule.marque),
       model: String(vehicule.modele),
       year: Number(vehicule.annee),
+      firstRegistrationDate:
+        typeof vehicule.date_premiere_mise_circulation === "string"
+          ? vehicule.date_premiere_mise_circulation
+          : undefined,
       registration: String(vehicule.immatriculation),
       seatCount: Number(vehicule.nombre_places),
       chassisNumber: String(vehicule.numero_chassis),

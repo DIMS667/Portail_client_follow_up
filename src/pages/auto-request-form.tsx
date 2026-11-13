@@ -19,6 +19,14 @@ import type { LucideIcon } from "lucide-react";
 import { usePortal } from "../app/portal-context";
 import { PageHeader } from "../components/portal-ui";
 import { formatDate, formatFcfa } from "../services/portal-service";
+import {
+  AUTO_REGISTRATION_PATTERN,
+  CHASSIS_NUMBER_PATTERN,
+  currentLocalDate,
+  formatAutoRegistration,
+  isValidFirstRegistrationDate,
+  normalizeChassisNumber,
+} from "../services/vehicle-identifiers";
 import type {
   AutoCoverageDurationMonths,
   AutoGuarantee,
@@ -31,8 +39,7 @@ import type {
   SelfServiceAutomobileInsuranceRequestData,
 } from "../types/domain";
 
-const DRAFT_KEY = "portail-client-demo:auto-request-draft:v7";
-const CAT3_ROYAL_SEAT_COUNT = 3;
+const DRAFT_KEY = "portail-client-demo:auto-request-draft:v9";
 const STEP_LABELS = ["Besoin", "Personnes", "Véhicule", "Durée", "Garanties", "Vérification"] as const;
 const DEFAULT_DURATION_OPTIONS: readonly AutoCoverageDurationMonths[] = [2, 4, 6, 8, 12];
 const durationOptionsByUsage: Partial<Record<AutoVehicleUsage, readonly AutoCoverageDurationMonths[]>> = {
@@ -46,6 +53,44 @@ const durationOptionsByUsage: Partial<Record<AutoVehicleUsage, readonly AutoCove
 
 function durationOptionsForUsage(usage: AutoVehicleUsage | "") {
   return (usage && durationOptionsByUsage[usage]) || DEFAULT_DURATION_OPTIONS;
+}
+
+const totalSeatOptionsByUsage: Partial<Record<AutoVehicleUsage, readonly number[]>> = {
+  cat1_tourism: [5],
+  cat2_product_transport: [5],
+  cat3_transport: [3],
+  // Le tarif Royal exprime les CAT4 A et CAT4 B en places passagers,
+  // sans compter le conducteur. Le formulaire, lui, collecte le total.
+  cat4a_city_taxi: [5, 6],
+  cat4b_interurban_transport: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 30, 31, 32, 35, 52, 56, 59, 70],
+};
+
+function totalSeatOptionsForUsage(usage: AutoVehicleUsage | "") {
+  return usage ? totalSeatOptionsByUsage[usage] : undefined;
+}
+
+function normalizedSeatCountForUsage(usage: AutoVehicleUsage | "", currentValue: string) {
+  const options = totalSeatOptionsForUsage(usage);
+  if (!options) return currentValue;
+  const currentCount = Number(currentValue);
+  return options.includes(currentCount) ? currentValue : String(options[0]);
+}
+
+function seatOptionLabel(usage: AutoVehicleUsage | "", total: number) {
+  if (usage === "cat4a_city_taxi" || usage === "cat4b_interurban_transport") {
+    return `${total} places au total (${total - 1} passagers + conducteur)`;
+  }
+  return `${total} places, conducteur compris`;
+}
+
+function invalidSeatCountMessage(usage: AutoVehicleUsage | "", options: readonly number[]) {
+  if (options.length === 1) {
+    return `Le tarif Royal de cette catégorie est établi pour ${options[0]} places, conducteur compris.`;
+  }
+  if (usage === "cat4a_city_taxi") {
+    return "Le tarif Royal CAT4 A accepte 4 ou 5 passagers, auxquels s’ajoute le conducteur.";
+  }
+  return "Choisissez un nombre total de places prévu par le tarif Royal pour cette catégorie.";
 }
 
 const guaranteeOptions: Array<{ value: AutoGuarantee; label: string; mandatory?: boolean }> = [
@@ -136,7 +181,7 @@ interface AutoRequestFormState {
     category: AutoVehicleCategory;
     brand: string;
     model: string;
-    year: string;
+    firstRegistrationDate: string;
     registration: string;
     energy: AutoVehicleEnergy | "";
     fiscalPower: string;
@@ -172,8 +217,8 @@ const initialForm: AutoRequestFormState = {
     category: "tourism",
     brand: "Toyota",
     model: "Corolla",
-    year: "2021",
-    registration: "LT-123-AB",
+    firstRegistrationDate: "2021-01-01",
+    registration: "LT 123 AB",
     energy: "petrol",
     fiscalPower: "9",
     seatCount: "5",
@@ -200,14 +245,17 @@ function loadDraft(): AutoDraft {
         ...initialForm,
         ...savedForm,
         driver: { ...initialForm.driver, ...savedForm?.driver },
-        vehicle: {
-          ...initialForm.vehicle,
-          ...savedForm?.vehicle,
-          seatCount:
-            savedForm?.vehicle?.usage === "cat3_transport"
-              ? String(CAT3_ROYAL_SEAT_COUNT)
-              : savedForm?.vehicle?.seatCount ?? initialForm.vehicle.seatCount,
-        },
+        vehicle: (() => {
+          const usage = savedForm?.vehicle?.usage ?? initialForm.vehicle.usage;
+          return {
+            ...initialForm.vehicle,
+            ...savedForm?.vehicle,
+            seatCount: normalizedSeatCountForUsage(
+              usage,
+              savedForm?.vehicle?.seatCount ?? initialForm.vehicle.seatCount,
+            ),
+          };
+        })(),
         coverage: {
           ...initialForm.coverage,
           ...savedForm?.coverage,
@@ -241,23 +289,22 @@ function validateStep(step: number, form: AutoRequestFormState) {
     }
   }
   if (step === 2) {
-    const year = Number(form.vehicle.year);
     const fiscalPower = Number(form.vehicle.fiscalPower);
     const seatCount = Number(form.vehicle.seatCount);
     const estimatedValue = Number(form.vehicle.estimatedValue);
-    const latestCoherentYear = new Date().getFullYear() + 1;
     if (!form.vehicle.brand.trim()) errors["vehicle-brand"] = "Renseignez la marque du véhicule.";
     if (!form.vehicle.model.trim()) errors["vehicle-model"] = "Renseignez le modèle du véhicule.";
-    if (!Number.isInteger(year) || year < 1950 || year > latestCoherentYear) errors["vehicle-year"] = `Indiquez une année comprise entre 1950 et ${latestCoherentYear}.`;
-    if (!form.vehicle.registration.trim()) errors["vehicle-registration"] = "Renseignez l’immatriculation du véhicule.";
+    if (!isValidFirstRegistrationDate(form.vehicle.firstRegistrationDate)) errors["vehicle-first-registration-date"] = "Indiquez une date de mise en circulation valide.";
+    if (!AUTO_REGISTRATION_PATTERN.test(form.vehicle.registration)) errors["vehicle-registration"] = "Utilisez le format LT 123 AB.";
     if (!form.vehicle.energy) errors["vehicle-energy"] = "Choisissez l’énergie du véhicule.";
-    if (!Number.isInteger(fiscalPower) || fiscalPower <= 0) errors["vehicle-fiscal-power"] = "Indiquez une puissance fiscale entière et positive.";
+    if (!Number.isInteger(fiscalPower) || fiscalPower < 1 || fiscalPower > 99) errors["vehicle-fiscal-power"] = "Indiquez une puissance fiscale entière comprise entre 1 et 99 CV.";
+    const allowedSeatCounts = totalSeatOptionsForUsage(form.vehicle.usage);
     if (!Number.isInteger(seatCount) || seatCount <= 0) {
       errors["vehicle-seat-count"] = "Indiquez un nombre de places entier et positif.";
-    } else if (form.vehicle.usage === "cat3_transport" && seatCount !== CAT3_ROYAL_SEAT_COUNT) {
-      errors["vehicle-seat-count"] = "Le tarif Royal de la catégorie 3 est établi pour 3 places, conducteur compris.";
+    } else if (allowedSeatCounts && !allowedSeatCounts.includes(seatCount)) {
+      errors["vehicle-seat-count"] = invalidSeatCountMessage(form.vehicle.usage, allowedSeatCounts);
     }
-    if (!form.vehicle.chassisNumber.trim()) errors["vehicle-chassis-number"] = "Renseignez le numéro de châssis.";
+    if (!CHASSIS_NUMBER_PATTERN.test(form.vehicle.chassisNumber)) errors["vehicle-chassis-number"] = "Le numéro de châssis doit contenir exactement 17 caractères alphanumériques.";
     if (!form.vehicle.circulationArea) errors["vehicle-circulation-area"] = "Choisissez la zone principale de circulation.";
     if (!form.vehicle.usage) errors["vehicle-usage"] = "Choisissez l’usage du véhicule.";
     if (form.vehicle.estimatedValue && (!Number.isFinite(estimatedValue) || estimatedValue <= 0)) errors["vehicle-estimated-value"] = "Indiquez une valeur positive ou laissez ce champ vide.";
@@ -286,6 +333,7 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
   const [submissionError, setSubmissionError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { mode, step, form } = draft;
+  const availableSeatCounts = totalSeatOptionsForUsage(form.vehicle.usage);
 
   useEffect(() => {
     try {
@@ -317,7 +365,7 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
         vehicle: {
           ...current.vehicle,
           usage,
-          ...(usage === "cat3_transport" ? { seatCount: String(CAT3_ROYAL_SEAT_COUNT) } : {}),
+          seatCount: normalizedSeatCountForUsage(usage, current.vehicle.seatCount),
         },
         coverage: {
           ...current.coverage,
@@ -434,7 +482,8 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
         category: form.vehicle.category,
         brand: form.vehicle.brand.trim(),
         model: form.vehicle.model.trim(),
-        year: Number(form.vehicle.year),
+        year: Number(form.vehicle.firstRegistrationDate.slice(0, 4)),
+        firstRegistrationDate: form.vehicle.firstRegistrationDate,
         registration: form.vehicle.registration.trim().toUpperCase(),
         energy: form.vehicle.energy as AutoVehicleEnergy,
         fiscalPower: Number(form.vehicle.fiscalPower),
@@ -623,11 +672,11 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
             <div className="auto-request-form-grid">
               <VoiceTextField id="vehicle-brand" label="Marque" value={form.vehicle.brand} onChange={(value) => updateVehicle("brand", value)} error={errors["vehicle-brand"]} required inputProps={{ autoComplete: "organization" }} />
               <VoiceTextField id="vehicle-model" label="Modèle" value={form.vehicle.model} onChange={(value) => updateVehicle("model", value)} error={errors["vehicle-model"]} required />
-              <label htmlFor="vehicle-year"><span className="auto-request-label-text">Année de mise en circulation <RequiredMark /></span>
-                <input id="vehicle-year" type="number" inputMode="numeric" min="1950" max={new Date().getFullYear() + 1} value={form.vehicle.year} onChange={(event) => updateVehicle("year", event.target.value)} aria-invalid={Boolean(errors["vehicle-year"])} aria-describedby={errors["vehicle-year"] ? "vehicle-year-error" : undefined} />
-                <FieldError id="vehicle-year-error" message={errors["vehicle-year"]} />
+              <label htmlFor="vehicle-first-registration-date"><span className="auto-request-label-text">Date de première mise en circulation <RequiredMark /></span>
+                <input id="vehicle-first-registration-date" type="date" min="1950-01-01" max={currentLocalDate()} value={form.vehicle.firstRegistrationDate} onChange={(event) => updateVehicle("firstRegistrationDate", event.target.value)} aria-invalid={Boolean(errors["vehicle-first-registration-date"])} aria-describedby={errors["vehicle-first-registration-date"] ? "vehicle-first-registration-date-error" : undefined} />
+                <FieldError id="vehicle-first-registration-date-error" message={errors["vehicle-first-registration-date"]} />
               </label>
-              <VoiceTextField id="vehicle-registration" label="Immatriculation" value={form.vehicle.registration} onChange={(value) => updateVehicle("registration", value.toUpperCase())} error={errors["vehicle-registration"]} required inputProps={{ autoCapitalize: "characters" }} />
+              <VoiceTextField id="vehicle-registration" label="Immatriculation" value={form.vehicle.registration} onChange={(value) => updateVehicle("registration", formatAutoRegistration(value))} error={errors["vehicle-registration"]} required inputProps={{ autoCapitalize: "characters", maxLength: 9, placeholder: "LT 123 AB" }} />
               <label htmlFor="vehicle-energy"><span className="auto-request-label-text">Énergie <RequiredMark /></span>
                 <select id="vehicle-energy" value={form.vehicle.energy} onChange={(event) => updateVehicle("energy", event.target.value as AutoVehicleEnergy | "")} aria-invalid={Boolean(errors["vehicle-energy"])} aria-describedby={errors["vehicle-energy"] ? "vehicle-energy-error" : undefined}>
                   <option value="">Sélectionner</option><option value="petrol">Essence</option><option value="diesel">Diesel</option>
@@ -635,22 +684,32 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
                 <FieldError id="vehicle-energy-error" message={errors["vehicle-energy"]} />
               </label>
               <label htmlFor="vehicle-fiscal-power"><span className="auto-request-label-text">Puissance fiscale (CV) <RequiredMark /></span>
-                <input id="vehicle-fiscal-power" type="number" inputMode="numeric" min="1" step="1" value={form.vehicle.fiscalPower} onChange={(event) => updateVehicle("fiscalPower", event.target.value)} aria-invalid={Boolean(errors["vehicle-fiscal-power"])} aria-describedby={errors["vehicle-fiscal-power"] ? "vehicle-fiscal-power-error" : "vehicle-fiscal-power-help"} />
+                <input id="vehicle-fiscal-power" type="number" inputMode="numeric" min="1" max="99" step="1" value={form.vehicle.fiscalPower} onChange={(event) => updateVehicle("fiscalPower", event.target.value)} aria-invalid={Boolean(errors["vehicle-fiscal-power"])} aria-describedby={errors["vehicle-fiscal-power"] ? "vehicle-fiscal-power-error" : "vehicle-fiscal-power-help"} />
                 <small className="auto-request-field-help" id="vehicle-fiscal-power-help">Cette information figure généralement sur la carte grise.</small>
                 <FieldError id="vehicle-fiscal-power-error" message={errors["vehicle-fiscal-power"]} />
               </label>
-              <label htmlFor="vehicle-seat-count"><span className="auto-request-label-text">Nombre de places <RequiredMark /></span>
-                <input id="vehicle-seat-count" type="number" inputMode="numeric" min="1" step="1" value={form.vehicle.seatCount} onChange={(event) => updateVehicle("seatCount", event.target.value)} readOnly={form.vehicle.usage === "cat3_transport"} aria-invalid={Boolean(errors["vehicle-seat-count"])} aria-describedby={form.vehicle.usage === "cat3_transport" ? "vehicle-seat-count-help" : errors["vehicle-seat-count"] ? "vehicle-seat-count-error" : undefined} />
-                {form.vehicle.usage === "cat3_transport" && <small className="auto-request-field-help" id="vehicle-seat-count-help">Le tarif Royal CAT3 est prévu pour 3 places, conducteur compris.</small>}
-                <FieldError id="vehicle-seat-count-error" message={errors["vehicle-seat-count"]} />
-              </label>
-              <VoiceTextField id="vehicle-chassis-number" label="Numéro de châssis" value={form.vehicle.chassisNumber} onChange={(value) => updateVehicle("chassisNumber", value.toUpperCase())} error={errors["vehicle-chassis-number"]} required inputProps={{ autoCapitalize: "characters" }} />
               <label htmlFor="vehicle-usage"><span className="auto-request-label-text">Usage du véhicule <RequiredMark /></span>
                 <select id="vehicle-usage" value={form.vehicle.usage} onChange={(event) => updateUsage(event.target.value as AutoVehicleUsage | "")} aria-invalid={Boolean(errors["vehicle-usage"])} aria-describedby={errors["vehicle-usage"] ? "vehicle-usage-error" : undefined}>
                   <option value="">Sélectionner</option>{usageOptions.map((usage)=><option value={usage} key={usage}>{usageLabels[usage]}</option>)}
                 </select>
                 <FieldError id="vehicle-usage-error" message={errors["vehicle-usage"]} />
               </label>
+              <label htmlFor="vehicle-seat-count"><span className="auto-request-label-text">Nombre total de places (conducteur compris) <RequiredMark /></span>
+                {availableSeatCounts ? (
+                  <select id="vehicle-seat-count" value={form.vehicle.seatCount} onChange={(event) => updateVehicle("seatCount", event.target.value)} aria-invalid={Boolean(errors["vehicle-seat-count"])} aria-describedby={errors["vehicle-seat-count"] ? "vehicle-seat-count-error" : "vehicle-seat-count-help"}>
+                    {availableSeatCounts.map((count) => <option value={count} key={count}>{seatOptionLabel(form.vehicle.usage, count)}</option>)}
+                  </select>
+                ) : (
+                  <input id="vehicle-seat-count" type="number" inputMode="numeric" min="1" max="100" step="1" value={form.vehicle.seatCount} onChange={(event) => updateVehicle("seatCount", event.target.value)} aria-invalid={Boolean(errors["vehicle-seat-count"])} aria-describedby={errors["vehicle-seat-count"] ? "vehicle-seat-count-error" : undefined} />
+                )}
+                {availableSeatCounts && <small className="auto-request-field-help" id="vehicle-seat-count-help">
+                  {form.vehicle.usage === "cat4a_city_taxi" || form.vehicle.usage === "cat4b_interurban_transport"
+                    ? "Le tarif Royal compte les passagers séparément ; le total affiché ajoute le conducteur."
+                    : "Nombre de places fixé par le tarif Royal pour cette catégorie."}
+                </small>}
+                <FieldError id="vehicle-seat-count-error" message={errors["vehicle-seat-count"]} />
+              </label>
+              <VoiceTextField id="vehicle-chassis-number" label="Numéro de châssis" value={form.vehicle.chassisNumber} onChange={(value) => updateVehicle("chassisNumber", normalizeChassisNumber(value))} error={errors["vehicle-chassis-number"]} required inputProps={{ autoCapitalize: "characters", maxLength: 17, minLength: 17, placeholder: "17 caractères alphanumériques" }} />
               <label htmlFor="vehicle-circulation-area"><span className="auto-request-label-text">Zone principale de circulation <RequiredMark /></span>
                 <select id="vehicle-circulation-area" value={form.vehicle.circulationArea} onChange={(event) => updateVehicle("circulationArea", event.target.value)} aria-invalid={Boolean(errors["vehicle-circulation-area"])} aria-describedby={errors["vehicle-circulation-area"] ? "vehicle-circulation-area-error" : "vehicle-circulation-area-help"}>
                   <option value="">Sélectionner</option>
@@ -734,7 +793,7 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
               <ReviewSection title="Votre besoin" items={[["Demande", form.requestType ? requestLabels[form.requestType] : "Non renseigné"], ...(form.requestType === "other" ? [["Précision", form.otherNeed]] as Array<[string, string]> : [])]} />
               <ReviewSection title="Souscripteur et assuré" items={[["Souscripteur", `${store.client.firstName} ${store.client.lastName}`], ["Assuré", `${store.client.firstName} ${store.client.lastName}`], ["Conducteur", form.driver.isSubscriber ? "Le souscripteur" : `${form.driver.firstNames} ${form.driver.lastName}`], ...(form.driver.isSubscriber ? [] : [["Permis", `${form.driver.licenceNumber} · catégorie ${form.driver.licenceCategory}`]] as Array<[string, string]>)]} />
               <ReviewSection title="Votre véhicule" items={[
-                ["Véhicule", `${form.vehicle.brand} ${form.vehicle.model}`], ["Année", form.vehicle.year],
+                ["Véhicule", `${form.vehicle.brand} ${form.vehicle.model}`], ["Première mise en circulation", formatDate(form.vehicle.firstRegistrationDate)],
                 ["Immatriculation", form.vehicle.registration.toUpperCase()], ["Énergie", form.vehicle.energy ? energyLabels[form.vehicle.energy] : "Non renseignée"],
                 ["Puissance fiscale", `${form.vehicle.fiscalPower} CV`], ["Nombre de places", form.vehicle.seatCount], ["Numéro de châssis", form.vehicle.chassisNumber.toUpperCase()], ["Usage", form.vehicle.usage ? usageLabels[form.vehicle.usage] : "Non renseigné"],
                 ["Zone de circulation", form.vehicle.circulationArea ? `Zone ${form.vehicle.circulationArea}` : "Non renseignée"],

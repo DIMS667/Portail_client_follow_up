@@ -19,6 +19,14 @@ import type { LucideIcon } from "lucide-react";
 import { usePortal } from "../app/portal-context";
 import { PageHeader } from "../components/portal-ui";
 import { formatDate, formatFcfa } from "../services/portal-service";
+import {
+  CHASSIS_NUMBER_PATTERN,
+  MOTO_REGISTRATION_PATTERN,
+  currentLocalDate,
+  formatMotoRegistration,
+  isValidFirstRegistrationDate,
+  normalizeChassisNumber,
+} from "../services/vehicle-identifiers";
 import type {
   AutoCoverageDurationMonths,
   AutoRequestType,
@@ -30,7 +38,7 @@ import type {
   SelfServiceMotoInsuranceRequestData,
 } from "../types/domain";
 
-const DRAFT_KEY = "portail-client-demo:moto-request-draft:v3";
+const DRAFT_KEY = "portail-client-demo:moto-request-draft:v4";
 const STEP_LABELS = ["Besoin", "Personnes", "Moto", "Durée", "Garanties", "Vérification"] as const;
 const DURATION_OPTIONS: readonly AutoCoverageDurationMonths[] = [2, 4, 6, 8, 12];
 
@@ -89,7 +97,7 @@ interface MotoRequestFormState {
   vehicle: {
     brand: string;
     model: string;
-    year: string;
+    firstRegistrationDate: string;
     registration: string;
     energy: MotoVehicleEnergy | "";
     cylinderCapacity: string;
@@ -123,8 +131,8 @@ const initialForm: MotoRequestFormState = {
   vehicle: {
     brand: "Yamaha",
     model: "NMAX",
-    year: "2022",
-    registration: "LT-456-MT",
+    firstRegistrationDate: "2022-01-01",
+    registration: "CEMT 551 EA",
     energy: "petrol",
     cylinderCapacity: "155",
     seatCount: "2",
@@ -184,19 +192,17 @@ function validateStep(step: number, form: MotoRequestFormState) {
     }
   }
   if (step === 2) {
-    const year = Number(form.vehicle.year);
     const cylinderCapacity = Number(form.vehicle.cylinderCapacity);
     const seatCount = Number(form.vehicle.seatCount);
     const estimatedValue = Number(form.vehicle.estimatedValue);
-    const latestCoherentYear = new Date().getFullYear() + 1;
     if (!form.vehicle.brand.trim()) errors["vehicle-brand"] = "Renseignez la marque de la moto.";
     if (!form.vehicle.model.trim()) errors["vehicle-model"] = "Renseignez le modèle de la moto.";
-    if (!Number.isInteger(year) || year < 1950 || year > latestCoherentYear) errors["vehicle-year"] = `Indiquez une année comprise entre 1950 et ${latestCoherentYear}.`;
-    if (!form.vehicle.registration.trim()) errors["vehicle-registration"] = "Renseignez l’immatriculation de la moto.";
+    if (!isValidFirstRegistrationDate(form.vehicle.firstRegistrationDate)) errors["vehicle-first-registration-date"] = "Indiquez une date de mise en circulation valide.";
+    if (!MOTO_REGISTRATION_PATTERN.test(form.vehicle.registration)) errors["vehicle-registration"] = "Utilisez le format CEMT 551 EA.";
     if (!form.vehicle.energy) errors["vehicle-energy"] = "Choisissez l’énergie de la moto.";
     if (!Number.isInteger(cylinderCapacity) || cylinderCapacity <= 0) errors["vehicle-cylinder-capacity"] = "Indiquez une cylindrée entière et positive.";
     if (!Number.isInteger(seatCount) || seatCount <= 0) errors["vehicle-seat-count"] = "Indiquez un nombre de places entier et positif.";
-    if (!form.vehicle.chassisNumber.trim()) errors["vehicle-chassis-number"] = "Renseignez le numéro de châssis.";
+    if (!CHASSIS_NUMBER_PATTERN.test(form.vehicle.chassisNumber)) errors["vehicle-chassis-number"] = "Le numéro de châssis doit contenir exactement 17 caractères alphanumériques.";
     if (!form.vehicle.usage) errors["vehicle-usage"] = "Choisissez l’usage de la moto.";
     if (form.vehicle.estimatedValue && (!Number.isFinite(estimatedValue) || estimatedValue <= 0)) errors["vehicle-estimated-value"] = "Indiquez une valeur positive ou laissez ce champ vide.";
     if (form.vehicle.carriesFlammableMaterials === null) errors["vehicle-flammable"] = "Indiquez si la moto transporte des matières inflammables.";
@@ -346,7 +352,8 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
       vehicle: {
         brand: form.vehicle.brand.trim(),
         model: form.vehicle.model.trim(),
-        year: Number(form.vehicle.year),
+        year: Number(form.vehicle.firstRegistrationDate.slice(0, 4)),
+        firstRegistrationDate: form.vehicle.firstRegistrationDate,
         registration: form.vehicle.registration.trim().toUpperCase(),
         energy: form.vehicle.energy as MotoVehicleEnergy,
         cylinderCapacity: Number(form.vehicle.cylinderCapacity),
@@ -534,11 +541,11 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
             <div className="auto-request-form-grid">
               <VoiceTextField id="vehicle-brand" label="Marque" value={form.vehicle.brand} onChange={(value) => updateVehicle("brand", value)} error={errors["vehicle-brand"]} required inputProps={{ autoComplete: "organization" }} />
               <VoiceTextField id="vehicle-model" label="Modèle" value={form.vehicle.model} onChange={(value) => updateVehicle("model", value)} error={errors["vehicle-model"]} required />
-              <label htmlFor="vehicle-year"><span className="auto-request-label-text">Année de mise en circulation <RequiredMark /></span>
-                <input id="vehicle-year" type="number" inputMode="numeric" min="1950" max={new Date().getFullYear() + 1} value={form.vehicle.year} onChange={(event) => updateVehicle("year", event.target.value)} aria-invalid={Boolean(errors["vehicle-year"])} aria-describedby={errors["vehicle-year"] ? "vehicle-year-error" : undefined} />
-                <FieldError id="vehicle-year-error" message={errors["vehicle-year"]} />
+              <label htmlFor="vehicle-first-registration-date"><span className="auto-request-label-text">Date de première mise en circulation <RequiredMark /></span>
+                <input id="vehicle-first-registration-date" type="date" min="1950-01-01" max={currentLocalDate()} value={form.vehicle.firstRegistrationDate} onChange={(event) => updateVehicle("firstRegistrationDate", event.target.value)} aria-invalid={Boolean(errors["vehicle-first-registration-date"])} aria-describedby={errors["vehicle-first-registration-date"] ? "vehicle-first-registration-date-error" : undefined} />
+                <FieldError id="vehicle-first-registration-date-error" message={errors["vehicle-first-registration-date"]} />
               </label>
-              <VoiceTextField id="vehicle-registration" label="Immatriculation" value={form.vehicle.registration} onChange={(value) => updateVehicle("registration", value.toUpperCase())} error={errors["vehicle-registration"]} required inputProps={{ autoCapitalize: "characters" }} />
+              <VoiceTextField id="vehicle-registration" label="Immatriculation" value={form.vehicle.registration} onChange={(value) => updateVehicle("registration", formatMotoRegistration(value))} error={errors["vehicle-registration"]} required inputProps={{ autoCapitalize: "characters", maxLength: 11, placeholder: "CEMT 551 EA" }} />
               <label htmlFor="vehicle-energy"><span className="auto-request-label-text">Énergie <RequiredMark /></span>
                 <select id="vehicle-energy" value={form.vehicle.energy} onChange={(event) => updateVehicle("energy", event.target.value as MotoVehicleEnergy | "")} aria-invalid={Boolean(errors["vehicle-energy"])} aria-describedby={errors["vehicle-energy"] ? "vehicle-energy-error" : undefined}>
                   <option value="">Sélectionner</option><option value="petrol">Essence</option><option value="electric">Électrique</option>
@@ -554,7 +561,7 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
                 <input id="vehicle-seat-count" type="number" inputMode="numeric" min="1" step="1" value={form.vehicle.seatCount} onChange={(event) => updateVehicle("seatCount", event.target.value)} aria-invalid={Boolean(errors["vehicle-seat-count"])} />
                 <FieldError id="vehicle-seat-count-error" message={errors["vehicle-seat-count"]} />
               </label>
-              <VoiceTextField id="vehicle-chassis-number" label="Numéro de châssis" value={form.vehicle.chassisNumber} onChange={(value) => updateVehicle("chassisNumber", value.toUpperCase())} error={errors["vehicle-chassis-number"]} required inputProps={{ autoCapitalize: "characters" }} />
+              <VoiceTextField id="vehicle-chassis-number" label="Numéro de châssis" value={form.vehicle.chassisNumber} onChange={(value) => updateVehicle("chassisNumber", normalizeChassisNumber(value))} error={errors["vehicle-chassis-number"]} required inputProps={{ autoCapitalize: "characters", maxLength: 17, minLength: 17, placeholder: "17 caractères alphanumériques" }} />
               <label htmlFor="vehicle-usage"><span className="auto-request-label-text">Usage de la moto <RequiredMark /></span>
                 <select id="vehicle-usage" value={form.vehicle.usage} onChange={(event) => updateVehicle("usage", event.target.value as MotoVehicleUsage | "")} aria-invalid={Boolean(errors["vehicle-usage"])} aria-describedby={errors["vehicle-usage"] ? "vehicle-usage-error" : undefined}>
                   <option value="">Sélectionner</option><option value="cat5">CAT5 (VÉHICULES MOTORISÉS À DEUX OU TROIS ROUES)</option><option value="cat5_bis">CAT5 BIS (VÉHICULES MOTORISÉS À DEUX OU TROIS ROUES POUR LE TRANSPORT DE PASSAGERS À TITRE PAYANT)</option>
@@ -634,7 +641,7 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
               <ReviewSection title="Votre besoin" items={[["Demande", form.requestType ? requestLabels[form.requestType] : "Non renseigné"], ...(form.requestType === "other" ? [["Précision", form.otherNeed]] as Array<[string, string]> : [])]} />
               <ReviewSection title="Souscripteur et assuré" items={[["Souscripteur", `${store.client.firstName} ${store.client.lastName}`], ["Assuré", `${store.client.firstName} ${store.client.lastName}`], ["Conducteur", form.driver.isSubscriber ? "Le souscripteur" : `${form.driver.firstNames} ${form.driver.lastName}`], ...(form.driver.isSubscriber ? [] : [["Permis", `${form.driver.licenceNumber} · catégorie ${form.driver.licenceCategory}`]] as Array<[string, string]>)]} />
               <ReviewSection title="Votre moto" items={[
-                ["Moto", `${form.vehicle.brand} ${form.vehicle.model}`], ["Année", form.vehicle.year],
+                ["Moto", `${form.vehicle.brand} ${form.vehicle.model}`], ["Première mise en circulation", formatDate(form.vehicle.firstRegistrationDate)],
                 ["Immatriculation", form.vehicle.registration.toUpperCase()], ["Énergie", form.vehicle.energy ? energyLabels[form.vehicle.energy] : "Non renseignée"],
                 ["Cylindrée", `${form.vehicle.cylinderCapacity} cm³`], ["Nombre de places", form.vehicle.seatCount], ["Numéro de châssis", form.vehicle.chassisNumber.toUpperCase()], ["Usage", form.vehicle.usage ? usageLabels[form.vehicle.usage] : "Non renseigné"],
                 ["Matières inflammables", form.vehicle.carriesFlammableMaterials ? "Oui" : "Non"], ["Remorque", form.vehicle.hasTrailer ? "Oui" : "Non"],

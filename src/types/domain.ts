@@ -85,6 +85,7 @@ export interface SelfServiceAutomobileInsuranceRequestData {
     brand: string;
     model: string;
     year: number;
+    firstRegistrationDate?: string;
     registration: string;
     energy: AutoVehicleEnergy;
     fiscalPower: number;
@@ -140,6 +141,7 @@ export interface SelfServiceMotoInsuranceRequestData {
     brand: string;
     model: string;
     year: number;
+    firstRegistrationDate?: string;
     registration: string;
     energy: MotoVehicleEnergy;
     cylinderCapacity: number;
