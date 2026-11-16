@@ -17,6 +17,7 @@ const PublicNotFoundPage = lazy(() => import("../public-site/pages/content-pages
 const SolutionDetailPublicPage = lazy(() => import("../public-site/pages/content-pages").then((module) => ({ default: module.SolutionDetailPublicPage })));
 const SolutionsPublicPage = lazy(() => import("../public-site/pages/content-pages").then((module) => ({ default: module.SolutionsPublicPage })));
 const ForgotPasswordPage = lazy(() => import("../pages/public-pages").then((module) => ({ default: module.ForgotPasswordPage })));
+const ContractVerificationPage = lazy(() => import("../public-site/pages/contract-verification-page").then((module) => ({ default: module.ContractVerificationPage })));
 const LoginPage = lazy(() => import("../pages/public-pages").then((module) => ({ default: module.LoginPage })));
 const RegisterPage = lazy(() => import("../pages/public-pages").then((module) => ({ default: module.RegisterPage })));
 
@@ -63,6 +64,10 @@ export function PublicRouteView() {
   if (pathname === "/login" || pathname === "/connexion") return <LoginPage />;
   if (pathname === "/inscription") return <RegisterPage />;
   if (pathname === "/mot-de-passe-oublie") return <ForgotPasswordPage />;
+  if (/^\/verifier-contrat\/[^/]+$/.test(pathname)) {
+    const code = decodeURIComponent(pathname.split("/")[2]);
+    return <ContractVerificationPage code={code} />;
+  }
 
   return <PublicNotFoundPage />;
 }

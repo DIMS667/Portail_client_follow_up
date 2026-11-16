@@ -234,6 +234,59 @@
 .public-page-heading > p { margin-top: 20px; color: var(--public-muted); font-size: 17px; line-height: 1.62; }
 .public-page-heading--split { max-width: none; display: grid; grid-template-columns: 1fr .8fr; gap: 80px; align-items: end; }
 .public-page-heading--split > p { margin: 0; }
+
+/* Vérification publique d'une police via QR code */
+.contract-verification { min-height: 75vh; padding: 72px 0 96px; background: #f5f7fb; color: #111b2f; }
+.contract-verification__container { max-width: 1120px; }
+.contract-verification__intro { max-width: 760px; margin-bottom: 34px; }
+.contract-verification__intro h1 { margin-top: 14px; font-size: clamp(38px, 5vw, 66px); line-height: .98; letter-spacing: -.045em; }
+.contract-verification__intro > p { max-width: 680px; margin-top: 18px; color: #5e687a; font-size: 17px; line-height: 1.6; }
+.contract-verification__state { min-height: 300px; display: grid; place-items: center; align-content: center; gap: 12px; border: 1px solid #dce3ee; border-radius: 22px; background: #fff; text-align: center; box-shadow: 0 18px 45px rgba(16, 41, 75, .07); }
+.contract-verification__state svg { width: 38px; height: 38px; color: #176b4a; }
+.contract-verification__state strong { font-size: 22px; }
+.contract-verification__state span { color: #657084; }
+.contract-verification__state--error svg { color: #c51625; }
+.contract-verification__spinner { animation: public-spin 1s linear infinite; }
+@keyframes public-spin { to { transform: rotate(360deg); } }
+.contract-verification__result { display: grid; gap: 20px; }
+.contract-verification__status { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 25px; border: 1px solid #a9dbc4; border-radius: 22px; background: linear-gradient(135deg, #edf9f3 0%, #fff 100%); box-shadow: 0 18px 45px rgba(16, 41, 75, .07); }
+.contract-verification__status--brouillon { border-color: #b8ccee; background: linear-gradient(135deg, #eff5ff 0%, #fff 100%); }
+.contract-verification__status--expire { border-color: #e5c88e; background: linear-gradient(135deg, #fff8e9 0%, #fff 100%); }
+.contract-verification__status--remplace, .contract-verification__status--invalide { border-color: #edb5ba; background: linear-gradient(135deg, #fff0f1 0%, #fff 100%); }
+.contract-verification__status-icon { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 18px; background: #10704c; color: #fff; }
+.contract-verification__status--brouillon .contract-verification__status-icon { background: #2466ae; }
+.contract-verification__status--expire .contract-verification__status-icon { background: #9d6510; }
+.contract-verification__status--remplace .contract-verification__status-icon, .contract-verification__status--invalide .contract-verification__status-icon { background: #bc1827; }
+.contract-verification__status-icon svg { width: 31px; height: 31px; }
+.contract-verification__status p { color: #10704c; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.contract-verification__status h2 { margin-top: 4px; font-size: clamp(24px, 3vw, 34px); letter-spacing: -.025em; }
+.contract-verification__status div > span { display: block; margin-top: 6px; color: #526074; line-height: 1.5; }
+.contract-verification__proof { min-width: 160px; padding: 13px 16px; border: 1px solid rgba(16, 41, 75, .12); border-radius: 14px; background: rgba(255, 255, 255, .72); text-align: right; }
+.contract-verification__proof small { display: block; color: #697488; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.contract-verification__proof strong { display: block; margin: 3px 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px; }
+.contract-verification__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.contract-verification__card { padding: 25px; border: 1px solid #dce3ee; border-radius: 20px; background: #fff; box-shadow: 0 12px 30px rgba(16, 41, 75, .045); }
+.contract-verification__card h3 { display: flex; align-items: center; gap: 9px; margin-bottom: 20px; font-size: 18px; }
+.contract-verification__card h3 svg { color: #d31321; }
+.contract-verification__card--wide { grid-column: 1 / -1; }
+.contract-verification__information-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; }
+.contract-verification__info { min-width: 0; }
+.contract-verification__info span { display: block; margin-bottom: 5px; color: #737e90; font-size: 12px; }
+.contract-verification__info strong { display: block; overflow-wrap: anywhere; color: #172136; font-size: 14px; line-height: 1.45; }
+.contract-verification__guarantees { border-top: 1px solid #e4e9f1; }
+.contract-verification__guarantees > div { display: flex; justify-content: space-between; gap: 20px; padding: 15px 0; border-bottom: 1px solid #e4e9f1; }
+.contract-verification__guarantees > div > span { display: grid; grid-template-columns: auto 1fr; gap: 2px 9px; }
+.contract-verification__guarantees svg { width: 17px; color: #19835b; }
+.contract-verification__guarantees small { grid-column: 2; color: #707b8e; }
+.contract-verification__breakdown { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+.contract-verification__breakdown > div:last-child { padding: 12px; border-radius: 12px; background: #10294b; }
+.contract-verification__breakdown > div:last-child span, .contract-verification__breakdown > div:last-child strong { color: #fff; }
+.contract-verification__author { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding: 20px 24px; border-radius: 18px; background: #10294b; color: #fff; }
+.contract-verification__author > span { width: 45px; height: 45px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.12); }
+.contract-verification__author small, .contract-verification__author p { display: block; color: #bdc9d9; font-size: 12px; }
+.contract-verification__author strong { display: block; margin: 2px 0; font-size: 16px; }
+.contract-verification__author-check { width: 30px; height: 30px; color: #5ee0a4; }
+.contract-verification__privacy { max-width: 800px; margin: 2px auto 0; color: #747f90; font-size: 12px; line-height: 1.55; text-align: center; }
 .public-text-link, .public-article__link { margin-top: 20px; display: inline-flex; align-items: center; gap: 8px; color: var(--public-red); font-size: 14px; font-weight: 700; }
 .public-text-link svg, .public-article__link svg { transition: transform .18s ease; }
 .public-text-link:hover svg, .public-article__link:hover svg { transform: translateX(3px); }
@@ -509,6 +562,15 @@
   .public-subhero__visual, .public-subhero__visual img { height: 300px; min-height: 0; }
   .public-page-section { padding-block: 52px; }
   .public-page-heading--split { grid-template-columns: 1fr; gap: 16px; }
+  .contract-verification { padding: 46px 0 68px; }
+  .contract-verification__status { grid-template-columns: auto 1fr; padding: 20px; }
+  .contract-verification__proof { grid-column: 1 / -1; width: 100%; text-align: left; }
+  .contract-verification__grid { grid-template-columns: 1fr; }
+  .contract-verification__information-grid { grid-template-columns: 1fr; }
+  .contract-verification__breakdown { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .contract-verification__guarantees > div { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .contract-verification__author { grid-template-columns: auto 1fr; }
+  .contract-verification__author-check { display: none; }
   .public-values-grid, .public-solutions-grid, .public-vehicle-types__grid { grid-template-columns: 1fr; }
   .public-value { min-height: 0; border-right: 0; border-top: 1px solid var(--public-line); }
   .public-value:first-child { border-top: 0; }
