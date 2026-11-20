@@ -56,7 +56,7 @@ export function HealthRequestForm({ onBack, onSubmit, backLabel = "Changer d’a
   const { store } = usePortal();
   const [step, setStep] = useState(0);
   const subscriberName = `${store.client.firstName} ${store.client.lastName}`;
-  const [adhesionFor, setAdhesionFor] = useState<HealthInsuranceRequestData["adhesionFor"]>("employee");
+  const [adhesionFor, setAdhesionFor] = useState<HealthInsuranceRequestData["adhesionFor"] | "">("");
   const [people, setPeople] = useState<HealthInsuredPerson[]>(() => [{
     ...emptyPerson("principal", "principal"),
     lastName: store.client.lastName,
@@ -72,7 +72,7 @@ export function HealthRequestForm({ onBack, onSubmit, backLabel = "Changer d’a
   const [additionalMedicalInformation, setAdditionalMedicalInformation] = useState("");
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
   const [signedBy, setSignedBy] = useState("");
-  const [signedAt, setSignedAt] = useState(new Date().toISOString().slice(0, 10));
+  const [signedAt, setSignedAt] = useState("");
   const [signedIn, setSignedIn] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -113,6 +113,7 @@ export function HealthRequestForm({ onBack, onSubmit, backLabel = "Changer d’a
 
   const validateStep = (index: number) => {
     const nextErrors: string[] = [];
+    if (index === 0 && !adhesionFor) nextErrors.push("Indiquez pour qui l'adhésion est demandée.");
     if (index === 1) {
       people.forEach((person) => {
         const name = relationshipLabels[person.relationship];
@@ -146,6 +147,7 @@ export function HealthRequestForm({ onBack, onSubmit, backLabel = "Changer d’a
       window.requestAnimationFrame(() => document.getElementById("health-step-title")?.focus());
       return;
     }
+    if (!adhesionFor) return;
     const healthRequest: HealthInsuranceRequestData = {
       subscriberName, insuredName: subscriberName, adhesionFor, insuredPeople: people,
       medicalAnswers, ...(familyHistory.trim() ? { familyHistory: familyHistory.trim() } : {}),
@@ -181,7 +183,7 @@ export function HealthRequestForm({ onBack, onSubmit, backLabel = "Changer d’a
       {step === 0 && <section><HealthHeading number="1" title="Informations sur le dossier" description="Le client connecté est à la fois le souscripteur et l’assuré principal." />
         <div className="auto-request-parties-grid health-parties-grid"><HealthPartySummary title="Souscripteur" badge="Paie la cotisation" name={subscriberName} phone={store.client.phone} email={store.client.email} /><HealthPartySummary title="Assuré principal" badge="Personne couverte" name={subscriberName} phone={store.client.phone} email={store.client.email} /></div>
         <div className="health-form-grid">
-          <HealthField label="L’adhésion est demandée pour" required><select value={adhesionFor} onChange={(event) => setAdhesionFor(event.target.value as HealthInsuranceRequestData["adhesionFor"])}><option value="employee">Le salarié</option><option value="family">Le salarié et sa famille</option><option value="other">Autre composition</option></select></HealthField>
+          <HealthField label="L’adhésion est demandée pour" required><select value={adhesionFor} onChange={(event) => setAdhesionFor(event.target.value as HealthInsuranceRequestData["adhesionFor"])}><option value="" disabled>Choisir…</option><option value="employee">Le salarié</option><option value="family">Le salarié et sa famille</option><option value="other">Autre composition</option></select></HealthField>
         </div>
       </section>}
 

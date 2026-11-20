@@ -129,27 +129,25 @@ const emptyWitness = (): Witness => ({ name: "", address: "", phone: "" });
 
 export function NewClaimPage() {
   const { store, updateStore, navigate } = usePortal();
-  const initialContract = store.contracts.find((contract) => contract.product === "automobile") ?? store.contracts[0];
-  const initialVehicle = store.requests.find((request) => request.product === "automobile" && request.vehicle)?.vehicle;
-  const [contractId, setContractId] = useState(initialContract?.policyNumber ?? "");
+  const [contractId, setContractId] = useState("");
   const [step, setStep] = useState(0);
   const [created, setCreated] = useState("");
   const [showErrors, setShowErrors] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
-  const [generic, setGeneric] = useState({ type: "Dégât des eaux", date: "2026-10-08", location: "Douala", description: "" });
+  const [generic, setGeneric] = useState({ type: "", date: "", location: "", description: "" });
   const [auto, setAuto] = useState<AutoClaimForm>(() => ({
     clientNumber: store.client.id,
-    pointOfSale: "Agence de Douala",
-    policyEffectiveDate: initialContract?.effectiveDate ?? "",
-    policyExpiryDate: initialContract?.expirationDate ?? "",
-    accidentDate: "2026-10-08",
-    accidentTime: "09:30",
-    location: "Douala, Bonanjo",
+    pointOfSale: "",
+    policyEffectiveDate: "",
+    policyExpiryDate: "",
+    accidentDate: "",
+    accidentTime: "",
+    location: "",
     insured: {
       lastName: store.client.lastName,
       firstNames: store.client.firstName,
-      profession: "Cadre commercial",
+      profession: "",
       address: `${store.client.address}, ${store.client.city}`,
       phone: store.client.phone,
       email: store.client.email,
@@ -158,17 +156,17 @@ export function NewClaimPage() {
     insuredDriver: {
       lastName: store.client.lastName,
       firstNames: store.client.firstName,
-      profession: "Cadre commercial",
+      profession: "",
       address: `${store.client.address}, ${store.client.city}`,
       phone: store.client.phone,
       email: store.client.email,
-      age: "38",
+      age: "",
       relationship: "Assuré",
-      licenceNumber: "CMR-DL-458721",
-      licenceCategory: "B",
-      licenceIssuedOn: "2018-03-14",
-      licenceIssuedAt: "Douala",
-      licenceValidUntil: "2028-03-14",
+      licenceNumber: "",
+      licenceCategory: "",
+      licenceIssuedOn: "",
+      licenceIssuedAt: "",
+      licenceValidUntil: "",
       capacityCertificateNumber: "",
       capacityCertificateIssuedOn: "",
       capacityCertificateIssuedAt: "",
@@ -178,16 +176,16 @@ export function NewClaimPage() {
     adversary: { ...emptyPerson(), insurer: "", broker: "", policyNumber: "", registration: "" },
     adversaryDriver: emptyDriver(),
     insuredVehicle: {
-      type: "Véhicule particulier",
-      brand: initialVehicle ? `${initialVehicle.brand} ${initialVehicle.model}` : "Toyota RAV4",
-      registration: initialVehicle?.registration ?? "LT 458 AA",
-      firstRegistrationDate: "2022-02-18",
-      technicalInspectionValidUntil: "2027-02-18",
-      usage: initialVehicle?.usage ?? "Personnel",
+      type: "",
+      brand: "",
+      registration: "",
+      firstRegistrationDate: "",
+      technicalInspectionValidUntil: "",
+      usage: "",
     },
     adverseVehicle: emptyVehicle(),
     circumstances: Object.fromEntries(circumstances.map(([code]) => [code, { vehicleA: false, vehicleB: false }])),
-    impactPointA: "Avant droit",
+    impactPointA: "",
     impactPointB: "",
     damageDescriptionA: "",
     damageDescriptionB: "",
@@ -213,7 +211,19 @@ export function NewClaimPage() {
     const contract = store.contracts.find((item) => item.policyNumber === policyNumber);
     setContractId(policyNumber);
     if (contract?.product === "automobile") {
-      setAuto((current) => ({ ...current, policyEffectiveDate: contract.effectiveDate, policyExpiryDate: contract.expirationDate }));
+      const demande = store.requests.find((request) => request.reference === contract.requestId || request.id === contract.requestId);
+      const vehicle = demande?.vehicle;
+      const details = demande?.automobileRequest;
+      const vehiculeRenseigne = details?.completionMode === "self_service" ? details.vehicle : undefined;
+      setAuto((current) => ({
+        ...current, policyEffectiveDate: contract.effectiveDate, policyExpiryDate: contract.expirationDate,
+        insuredVehicle: {
+          ...emptyVehicle(),
+          brand: vehicle ? `${vehicle.brand} ${vehicle.model}`.trim() : "",
+          registration: vehicle?.registration ?? "",
+          firstRegistrationDate: vehiculeRenseigne?.firstRegistrationDate ?? "",
+        },
+      }));
     }
   };
 
@@ -422,7 +432,7 @@ function FormSection({ icon, title, description, className = "", children }: { i
 
 function TextField({ label, value, onChange, type = "text", required = false, readOnly = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; readOnly?: boolean }) { return <label>{label}{required && <small className="auto-required">Requis</small>}<input type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} readOnly={readOnly} /></label>; }
 
-function SelectField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) { return <label>{label}<select value={value} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option key={option || "empty"} value={option}>{option || "Non renseigné"}</option>)}</select></label>; }
+function SelectField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) { return <label>{label}<select value={value} onChange={(event) => onChange(event.target.value)}>{!options.includes("") && <option value="" disabled>Choisir…</option>}{options.map((option) => <option key={option || "empty"} value={option}>{option || "Non renseigné"}</option>)}</select></label>; }
 
 function PersonFields({ person, onChange }: { person: Person; onChange: (field: keyof Person, value: string) => void }) { return <div className="auto-claim-grid"><TextField label="Nom" value={person.lastName} onChange={(value) => onChange("lastName", value)} required /><TextField label="Prénoms" value={person.firstNames} onChange={(value) => onChange("firstNames", value)} /><TextField label="Profession" value={person.profession} onChange={(value) => onChange("profession", value)} /><TextField label="Téléphone" value={person.phone} onChange={(value) => onChange("phone", value)} type="tel" /><TextField label="Adresse" value={person.address} onChange={(value) => onChange("address", value)} /><TextField label="E-mail" value={person.email} onChange={(value) => onChange("email", value)} type="email" /></div>; }
 

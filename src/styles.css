@@ -517,7 +517,7 @@ td strong { color: var(--navy); }
 .contracts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .contract-card { padding: 22px; border: 1px solid #dce6f0; border-radius: 20px; background: white; }
 .contract-visual { margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
-.contract-visual > span { width: 56px; height: 56px; display: grid; place-items: center; color: var(--blue); border-radius: 17px; background: var(--sky); }
+.contract-visual > span:not([data-slot="badge"]) { width: 56px; height: 56px; display: grid; place-items: center; color: var(--blue); border-radius: 17px; background: var(--sky); }
 .contract-card h2 { margin: 7px 0 4px; color: var(--navy); }
 .contract-card > p { margin: 0; color: var(--muted); }
 .contract-date { margin: 20px 0; padding: 14px; display: flex; align-items: center; gap: 11px; border-radius: 12px; background: #f4f7fb; }
@@ -527,6 +527,32 @@ td strong { color: var(--navy); }
 .contract-date strong { color: var(--navy); font-size: .85rem; }
 .contract-actions { display: flex; gap: 8px; }
 .contract-actions .button { flex: 1; }
+.insurance-contracts { display: grid; gap: 14px; min-width: 0; }
+.insurance-contract { min-width: 0; padding: 22px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 20px 24px; border: 1px solid var(--border, #dce6f0); border-radius: 16px; background: white; }
+.insurance-contract-heading { min-width: 0; display: flex; align-items: flex-start; gap: 14px; }
+.insurance-contract-icon { display: grid; flex: 0 0 44px; width: 44px; height: 44px; place-items: center; color: var(--blue); border-radius: 12px; background: var(--sky); }
+.insurance-contract-title { display: grid; justify-items: start; gap: 8px; min-width: 0; }
+.insurance-contract-title .reference { margin: 0; font-size: .7rem; overflow-wrap: anywhere; }
+.insurance-contract-title h2 { margin: 0; color: var(--navy); font-size: 1rem; line-height: 1.4; overflow-wrap: anywhere; }
+.insurance-contract-title [data-slot="badge"] { flex-shrink: 0; height: auto; max-width: 100%; }
+.insurance-contract-meta { min-width: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.insurance-contract-meta > div { min-width: 0; }
+.insurance-contract-meta dt { margin-bottom: 5px; color: var(--muted); font-size: .72rem; }
+.insurance-contract-meta dd { margin: 0; color: var(--navy); font-size: .82rem; line-height: 1.5; font-weight: 650; overflow-wrap: anywhere; }
+.insurance-contract-actions { grid-column: 2; grid-row: 1 / 3; min-width: 0; display: grid; justify-items: end; gap: 10px; }
+.insurance-contract-actions .button { padding-inline: 14px; font-size: .8rem; white-space: normal; }
+.insurance-contract-actions small { max-width: 100%; color: var(--muted); font-size: .7rem; text-align: right; overflow-wrap: anywhere; }
+@media (min-width: 1280px) {
+  .insurance-contract { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) auto; }
+  .insurance-contract-actions { grid-column: 3; grid-row: auto; }
+}
+@media (max-width: 700px) {
+  .insurance-contract { padding: 18px; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .insurance-contract-meta { padding-top: 16px; border-top: 1px solid #edf1f5; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
+  .insurance-contract-actions { grid-column: auto; grid-row: auto; justify-items: stretch; }
+  .insurance-contract-actions .button { width: 100%; }
+  .insurance-contract-actions small { text-align: left; }
+}
 .policy-hero { padding: 22px; display: flex; align-items: center; justify-content: space-between; gap: 25px; color: white; border-radius: 20px 20px 20px 7px; background: linear-gradient(110deg, #6f0912, #cd131d 68%, #e5691c); }
 .policy-hero > div:first-child { display: flex; align-items: center; gap: 15px; }
 .policy-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 15px; background: rgba(255,255,255,.14); }

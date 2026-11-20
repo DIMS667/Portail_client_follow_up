@@ -550,8 +550,31 @@ function PaymentHistoryCard({ payment }: { payment: Payment }) {
 
 export function ContractsPage() {
   const { store, navigate } = usePortal();
-  return <div className="page-stack"><PageHeader eyebrow="Vos protections" title="Mes assurances" description="Consultez les contrats préparés par votre gestionnaire à partir de vos choix." />
-    {store.contracts.length ? <div className="contracts-grid">{store.contracts.map((contract) => <article className="contract-card" key={contract.id}><div className="contract-visual"><span>{contract.product === "automobile" ? <Car size={29} /> : <ShieldCheck size={29} />}</span><StatusBadge status={contract.status}>{contract.status === "active" ? "Actif" : contract.status === "expired" ? "Expiré" : "En préparation"}</StatusBadge></div><span className="reference">{contract.policyNumber}</span><h2>{contract.productLabel}</h2><p>{contract.offerReference ? `Offre ${contract.offerReference}` : "Accompagnement Follow-Up Insurance"}</p><div className="contract-date"><CalendarDays size={18} /><div><small>Expiration prévue</small><strong>{formatDate(contract.expirationDate)}</strong></div></div><div className="contract-actions"><button className="button button-primary" type="button" onClick={() => navigate(`/espace/contrats/${contract.policyNumber}`)}>Voir le contrat</button></div></article>)}</div> : <EmptyState title="Aucun contrat pour le moment" description="Vos contrats apparaîtront ici dès que votre gestionnaire commencera leur préparation." />}
+  return <div className="page-stack contracts-page">
+    <PageHeader eyebrow="Vos protections" title="Mes assurances" description="Retrouvez vos contrats et suivez leur préparation." />
+    {store.contracts.length ? <section className="insurance-contracts" aria-label="Vos contrats d’assurance">
+      {store.contracts.map((contract) => <article className="insurance-contract" key={contract.id}>
+        <header className="insurance-contract-heading">
+          <span className="insurance-contract-icon" aria-hidden="true">{contract.product === "automobile" ? <Car size={23} /> : <ShieldCheck size={23} />}</span>
+          <div className="insurance-contract-title">
+            <span className="reference">{contract.policyNumber}</span>
+            <h2>{contract.productLabel}</h2>
+            <StatusBadge status={contract.status}>{contract.status === "active" ? "Actif" : contract.status === "expired" ? "Expiré" : "En préparation"}</StatusBadge>
+          </div>
+        </header>
+        <dl className="insurance-contract-meta">
+          <div><dt>Date d’effet</dt><dd>{formatDate(contract.effectiveDate)}</dd></div>
+          <div><dt>{contract.status === "preparing" ? "Échéance prévue" : "Échéance"}</dt><dd>{formatDate(contract.expirationDate)}</dd></div>
+          <div><dt>Prime du contrat</dt><dd>{formatFcfa(contract.premium)}</dd></div>
+        </dl>
+        <div className="insurance-contract-actions">
+          <button className="button button-secondary" type="button" onClick={() => navigate(`/espace/contrats/${contract.policyNumber}`)}>
+            {contract.status === "preparing" ? "Suivre la préparation" : "Consulter le contrat"}<ChevronRight size={16} />
+          </button>
+          {contract.offerReference && <small>Offre {contract.offerReference}</small>}
+        </div>
+      </article>)}
+    </section> : <EmptyState title="Aucun contrat pour le moment" description="Vos contrats apparaîtront ici dès que votre gestionnaire commencera leur préparation." />}
   </div>;
 }
 

@@ -19,6 +19,8 @@ import type { LucideIcon } from "lucide-react";
 import { usePortal } from "../app/portal-context";
 import { PageHeader } from "../components/portal-ui";
 import { formatDate, formatFcfa } from "../services/portal-service";
+import { obtenirContratsRenouvelables } from "../services/automobile-request-api";
+import { isRenewalDue, motoRenewalVehicle, type RenewableContract } from "../services/contract-renewal";
 import {
   CHASSIS_NUMBER_PATTERN,
   MOTO_REGISTRATION_PATTERN,
@@ -38,7 +40,7 @@ import type {
   SelfServiceMotoInsuranceRequestData,
 } from "../types/domain";
 
-const DRAFT_KEY = "portail-client-demo:moto-request-draft:v4";
+const DRAFT_KEY = "portail-client-demo:moto-request-draft:v5";
 const STEP_LABELS = ["Besoin", "Personnes", "Moto", "Durée", "Garanties", "Vérification"] as const;
 const DURATION_OPTIONS: readonly AutoCoverageDurationMonths[] = [2, 4, 6, 8, 12];
 
@@ -81,6 +83,7 @@ const usageLabels: Record<MotoVehicleUsage, string> = {
 interface MotoRequestFormState {
   delegatedMessage: string;
   requestType: AutoRequestType | "";
+  renewalContractId: string;
   otherNeed: string;
   driver: {
     isSubscriber: boolean | null;
@@ -125,25 +128,26 @@ interface MotoDraft {
 
 const initialForm: MotoRequestFormState = {
   delegatedMessage: "",
-  requestType: "renewal",
+  requestType: "new_vehicle",
+  renewalContractId: "",
   otherNeed: "",
-  driver: { isSubscriber: true, firstNames: "", lastName: "", birthDate: "", phone: "", occupation: "", licenceNumber: "", licenceCategory: "", licenceIssuedOn: "", licenceValidUntil: "" },
+  driver: { isSubscriber: null, firstNames: "", lastName: "", birthDate: "", phone: "", occupation: "", licenceNumber: "", licenceCategory: "", licenceIssuedOn: "", licenceValidUntil: "" },
   vehicle: {
-    brand: "Yamaha",
-    model: "NMAX",
-    firstRegistrationDate: "2022-01-01",
-    registration: "CEMT 551 EA",
-    energy: "petrol",
-    cylinderCapacity: "155",
-    seatCount: "2",
+    brand: "",
+    model: "",
+    firstRegistrationDate: "",
+    registration: "",
+    energy: "",
+    cylinderCapacity: "",
+    seatCount: "",
     chassisNumber: "",
-    usage: "cat5",
+    usage: "",
     estimatedValue: "",
     carriesFlammableMaterials: null,
     hasTrailer: null,
   },
-  coverage: { durationMonths: 12, desiredStartDate: "2026-10-15", startDateUnknown: false, guarantees: ["civil_liability", "defense_and_recours"] },
-  hasVignette: true,
+  coverage: { durationMonths: null, desiredStartDate: "", startDateUnknown: false, guarantees: ["civil_liability", "defense_and_recours"] },
+  hasVignette: null,
 };
 
 function loadDraft(): MotoDraft {
@@ -171,11 +175,12 @@ function loadDraft(): MotoDraft {
   }
 }
 
-function validateStep(step: number, form: MotoRequestFormState) {
+function validateStep(step: number, form: MotoRequestFormState, renewableContracts: RenewableContract[]) {
   const errors: Record<string, string> = {};
   if (step === 0) {
     if (!form.requestType) errors["request-type"] = "Choisissez le besoin qui correspond à votre situation.";
     if (form.requestType === "other" && !form.otherNeed.trim()) errors["other-need"] = "Précisez brièvement votre besoin.";
+    if (form.requestType === "renewal" && !renewableContracts.some(contract => contract.id === form.renewalContractId)) errors["renewal-contract"] = "Choisissez un contrat actif qui arrive à échéance dans les 30 prochains jours.";
   }
   if (step === 1) {
     if (form.driver.isSubscriber === null) errors["driver-is-subscriber"] = "Indiquez si le client est également le conducteur.";
@@ -229,6 +234,22 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
   const [submissionError, setSubmissionError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { mode, step, form } = draft;
+  const [renewalContracts, setRenewalContracts] = useState<RenewableContract[]>([]);
+  const [loadingRenewals, setLoadingRenewals] = useState(true);
+  const [renewalError, setRenewalError] = useState("");
+  const [renewalRefresh, setRenewalRefresh] = useState(0);
+  const eligibleRenewals = renewalContracts.filter(contract => contract.vehicleKind === "moto" && isRenewalDue(contract.expirationDate, currentLocalDate()));
+
+  useEffect(() => {
+    let active = true;
+    setLoadingRenewals(true);
+    obtenirContratsRenouvelables().then(contracts => {
+      if (active) { setRenewalContracts(contracts); setRenewalError(""); }
+    }).catch(() => {
+      if (active) { setRenewalContracts([]); setRenewalError("Les contrats à renouveler sont momentanément indisponibles."); }
+    }).finally(() => { if (active) setLoadingRenewals(false); });
+    return () => { active = false; };
+  }, [store.client.id, renewalRefresh]);
 
   useEffect(() => {
     try {
@@ -302,7 +323,7 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (step < STEP_LABELS.length - 1) {
-      const nextErrors = validateStep(step, form);
+      const nextErrors = validateStep(step, form, eligibleRenewals);
       setErrors(nextErrors);
       if (Object.keys(nextErrors).length > 0) {
         focusFirstError(nextErrors);
@@ -314,7 +335,7 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
     }
 
     for (let index = 0; index < STEP_LABELS.length - 1; index += 1) {
-      const nextErrors = validateStep(index, form);
+      const nextErrors = validateStep(index, form, eligibleRenewals);
       if (Object.keys(nextErrors).length > 0) {
         setErrors(nextErrors);
         setDraft((current) => ({ ...current, step: index }));
@@ -334,6 +355,7 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
     const motoRequest: SelfServiceMotoInsuranceRequestData = {
       completionMode: "self_service",
       requestType: form.requestType as AutoRequestType,
+      ...(form.requestType === "renewal" ? { renewalContractId: form.renewalContractId } : {}),
       ...(form.requestType === "other" ? { otherNeed: form.otherNeed.trim() } : {}),
       subscriber: clientSnapshot,
       insured: clientSnapshot,
@@ -487,10 +509,10 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
             <MotoStepHeading number="1" title="Parlez-nous de votre besoin" description="Que souhaitez-vous faire ?" />
             <fieldset className="auto-request-choice-grid" aria-describedby={errors["request-type"] ? "request-type-error" : undefined}>
               <legend className="sr-only">Que souhaitez-vous faire ?</legend>
-              {requestOptions.map(({ value, label, help, icon: Icon }) => (
+              {requestOptions.filter(option => option.value !== "renewal" || eligibleRenewals.length > 0 || form.requestType === "renewal").map(({ value, label, help, icon: Icon }) => (
                 <label className={form.requestType === value ? "selected" : ""} key={value}>
                   <input id={`request-type-${value}`} type="radio" name="request-type" value={value} checked={form.requestType === value} onChange={() => {
-                    updateForm((current) => ({ ...current, requestType: value }));
+                    updateForm((current) => ({ ...current, requestType: value, renewalContractId: "" }));
                     clearError("request-type");
                   }} />
                   <span className="auto-request-choice-icon"><Icon size={21} /></span>
@@ -500,6 +522,12 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
               ))}
             </fieldset>
             <FieldError id="request-type-error" message={errors["request-type"]} />
+            {loadingRenewals ? <p className="auto-request-helper">Vérification des contrats à renouveler…</p> : renewalError ? <p className="auto-request-helper" role="status">{renewalError} <button type="button" className="text-link" onClick={() => setRenewalRefresh(value => value + 1)}>Réessayer</button></p> : eligibleRenewals.length === 0 && <p className="auto-request-helper">Le renouvellement sera proposé lorsqu’un de vos contrats actifs arrivera à échéance dans les 30 prochains jours.</p>}
+            {form.requestType === "renewal" && <label htmlFor="renewal-contract" className="auto-request-other"><span className="auto-request-label-text">Contrat à renouveler <RequiredMark /></span><select id="renewal-contract" value={form.renewalContractId} disabled={loadingRenewals} aria-invalid={Boolean(errors["renewal-contract"])} onChange={(event) => {
+              const contract = eligibleRenewals.find(item => item.id === event.target.value);
+              updateForm(current => ({ ...current, renewalContractId: contract?.id ?? "", ...(contract ? { vehicle: motoRenewalVehicle(contract), coverage: { ...current.coverage, desiredStartDate: contract.expirationDate, startDateUnknown: false } } : {}) }));
+              clearError("renewal-contract");
+            }}><option value="">Choisir un contrat</option>{eligibleRenewals.map(contract => <option value={contract.id} key={contract.id}>{contract.policyNumber || contract.reference} · {String(contract.vehicle.immatriculation || "Moto")} · échéance le {formatDate(contract.expirationDate)}</option>)}</select>{eligibleRenewals.filter(contract => contract.id === form.renewalContractId).map(contract => <small className="auto-request-field-help" key={contract.id}>Contrat {contract.policyNumber || contract.reference} · {String(contract.vehicle.immatriculation || "Moto")} · Échéance : {formatDate(contract.expirationDate)}</small>)}<FieldError id="renewal-contract-error" message={errors["renewal-contract"]} /></label>}
             {form.requestType === "other" && <VoiceTextField className="auto-request-other" id="other-need" label="Précisez votre besoin" value={form.otherNeed} onChange={(value) => {
                 updateForm((current) => ({ ...current, otherNeed: value }));
                 clearError("other-need");

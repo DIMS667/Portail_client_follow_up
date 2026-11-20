@@ -11,6 +11,7 @@ import type {
   StatusEvent,
 } from "../types/domain";
 import { ErreurApi } from "./authentication-api";
+import { mapRenewableContract, type RenewableContract } from "./contract-renewal";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL
   || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://api.followupassurance.com"))
@@ -132,6 +133,7 @@ interface DemandeAutomobileApi {
   mode_preparation: "saisie_directe" | "delegation_courtier";
   message_delegation?: string | null;
   type_besoin?: string | null;
+  contrat_a_renouveler_id?: string | null;
   precision_autre_besoin?: string | null;
   souscripteur?: PersonneApi | null;
   assure?: PersonneApi | null;
@@ -265,6 +267,7 @@ function construireEntree(data: Partial<InsuranceRequest>) {
     sous_type_automobile: estMoto ? "moto_deux_trois_roues" : "voiture",
     mode_preparation: "saisie_directe",
     type_besoin: besoinsVersApi[demande.requestType],
+    ...(demande.requestType === "renewal" ? { contrat_a_renouveler_id: demande.renewalContractId } : {}),
     precision_autre_besoin: demande.otherNeed,
     souscripteur: personneVersApi(demande.subscriber),
     assure: personneVersApi(demande.insured),
@@ -358,6 +361,7 @@ function versDemandePortail(api: DemandeAutomobileApi): InsuranceRequest {
     const base = {
       completionMode: "self_service" as const,
       requestType: besoinsDepuisApi[api.type_besoin ?? "autre"] ?? "other",
+      ...(api.contrat_a_renouveler_id ? { renewalContractId: api.contrat_a_renouveler_id } : {}),
       ...(api.precision_autre_besoin ? { otherNeed: api.precision_autre_besoin } : {}),
       subscriber: personneDepuisApi(api.souscripteur),
       insured: personneDepuisApi(api.assure),
@@ -499,6 +503,11 @@ export async function creerDemandeAutomobile(data: Partial<InsuranceRequest>) {
 export async function obtenirDemandesAutomobile() {
   const resultats = await envoyer<DemandeAutomobileApi[]>();
   return resultats.map(versDemandePortail);
+}
+
+export async function obtenirContratsRenouvelables(): Promise<RenewableContract[]> {
+  const resultats = await envoyer<unknown[]>("/contrats-renouvelables");
+  return resultats.map(mapRenewableContract).filter((item): item is RenewableContract => item !== undefined);
 }
 
 export function fusionnerDemandesAutomobile(

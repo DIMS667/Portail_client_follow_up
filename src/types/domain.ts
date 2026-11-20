@@ -89,6 +89,7 @@ export type AutoGuarantee =
 export interface SelfServiceAutomobileInsuranceRequestData {
   completionMode: "self_service";
   requestType: AutoRequestType;
+  renewalContractId?: string;
   otherNeed?: string;
   subscriber: AutomobilePartySnapshot;
   insured: AutomobilePartySnapshot;
@@ -146,6 +147,7 @@ export type MotoGuarantee =
 export interface SelfServiceMotoInsuranceRequestData {
   completionMode: "self_service";
   requestType: AutoRequestType;
+  renewalContractId?: string;
   otherNeed?: string;
   subscriber: AutomobilePartySnapshot;
   insured: AutomobilePartySnapshot;

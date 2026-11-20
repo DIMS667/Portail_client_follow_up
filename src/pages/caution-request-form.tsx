@@ -110,12 +110,12 @@ function RequiredMark() {
 }
 
 export function CautionRequestForm({ backLabel = "Choisir un autre parcours", onBack, onSubmit }: CautionRequestFormProps) {
-  const [cautionType, setCautionType] = useState<CautionType>("soumission");
+  const [cautionType, setCautionType] = useState<CautionType | "">("");
   const [values, setValues] = useState(initialValues);
   const [comments, setComments] = useState("");
-  const selectedType = cautionTypes.find((item) => item.id === cautionType)!;
+  const selectedType = cautionTypes.find((item) => item.id === cautionType);
   const visibleDocuments = useMemo(
-    () => requiredDocuments.filter((document) => document.appliesTo.includes(cautionType)),
+    () => cautionType ? requiredDocuments.filter((document) => document.appliesTo.includes(cautionType)) : [],
     [cautionType],
   );
   const documentGroups = useMemo(
@@ -130,6 +130,7 @@ export function CautionRequestForm({ backLabel = "Choisir un autre parcours", on
   };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!selectedType) return;
     onSubmit({
       product: "caution",
       productLabel: "Assurance caution",
@@ -175,7 +176,7 @@ export function CautionRequestForm({ backLabel = "Choisir un autre parcours", on
           <fieldset className="caution-type-grid"><legend className="sr-only">Type de caution</legend>
             {cautionTypes.map((item) => (
               <label className={cautionType === item.id ? "selected" : ""} key={item.id}>
-                <input type="radio" name="caution-type" value={item.id} checked={cautionType === item.id} onChange={() => setCautionType(item.id)} />
+                <input type="radio" name="caution-type" value={item.id} checked={cautionType === item.id} onChange={() => setCautionType(item.id)} required />
                 <span>{item.abbreviation}</span>
                 <div><strong>{item.label}</strong><small>{item.description}</small></div>
                 {cautionType === item.id && <CheckCircle2 size={19} />}
@@ -209,7 +210,7 @@ export function CautionRequestForm({ backLabel = "Choisir un autre parcours", on
         </section>
 
         <section className="product-form-section">
-          <div className="product-form-heading"><span>4</span><div><h3>Pièces à fournir pour la {selectedType.label.toLowerCase()}</h3><p>{visibleDocuments.length} document{visibleDocuments.length > 1 ? "s" : ""} identifié{visibleDocuments.length > 1 ? "s" : ""}. Vous pouvez les ajouter maintenant ou compléter le dossier plus tard.</p></div></div>
+          <div className="product-form-heading"><span>4</span><div><h3>{selectedType ? `Pièces à fournir pour la ${selectedType.label.toLowerCase()}` : "Pièces à fournir"}</h3><p>{selectedType ? `${visibleDocuments.length} document${visibleDocuments.length > 1 ? "s" : ""} identifié${visibleDocuments.length > 1 ? "s" : ""}. Vous pouvez les ajouter maintenant ou compléter le dossier plus tard.` : "Choisissez le type de caution pour afficher les pièces nécessaires."}</p></div></div>
           <div className="caution-documents">
             {documentGroups.map((group) => (
               <section key={group.category}>
