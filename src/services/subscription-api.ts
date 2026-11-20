@@ -1,5 +1,7 @@
-import type { Contract, InsuranceProduct, Offer, Payment, PortalStore, Proposal } from "../types/domain";
+import type { Contract, InsuranceProduct, Offer, PaymentSchedule, PortalStore, Proposal } from "../types/domain";
 import { ErreurApi } from "./authentication-api";
+import { mapPersonalCoverage, mapRcAdjustment } from "./offer-pricing";
+import { mapPaymentRecord as mapPayment, mapPaymentSchedule, type PaymentApiRecord as PaiementApi } from "./payment-history";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL
   || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://api.followupassurance.com"))
@@ -24,20 +26,6 @@ interface OffreApi {
   conseil: string;
   detail_calcul: Record<string, unknown>;
   selectionnee: boolean;
-}
-
-interface PaiementApi {
-  id: string;
-  reference: string;
-  demande_reference: string;
-  offre_id: string;
-  montant_xaf: number;
-  numero_telephone: string;
-  statut: "initialisation" | "en_attente" | "reussi" | "echoue" | "a_verifier";
-  operateur?: string | null;
-  code_ussd?: string | null;
-  contrat_reference?: string | null;
-  cree_le: string;
 }
 
 interface ContratApi {
@@ -116,6 +104,7 @@ function mapOffer(item: OffreApi): Offer {
       annualPremium: typeof ligne.annuite_xaf === "number" ? ligne.annuite_xaf : null,
       capital: typeof ligne.capital_montant === "string" ? ligne.capital_montant : null,
       deductible: typeof ligne.franchise === "string" ? ligne.franchise : null,
+      personalCoverage: mapPersonalCoverage(ligne.capitaux_personnes),
     })),
     netPremium: lireMontant("prime_nette_xaf"),
     accessories: lireMontant("accessoires_xaf"),
@@ -127,6 +116,7 @@ function mapOffer(item: OffreApi): Offer {
     dta: lireMontant("dta_xaf"),
     otherFees: lireMontant("autres_frais_xaf"),
     total: lireMontant("prime_ttc_xaf"),
+    rcAdjustment: mapRcAdjustment(detail.correction_rc),
   } : undefined;
   return {
     id: item.id,
@@ -146,23 +136,6 @@ function mapOffer(item: OffreApi): Offer {
     recommended: item.recommandee,
     selected: item.selectionnee,
     advice: item.conseil,
-  };
-}
-
-function mapPayment(item: PaiementApi): Payment {
-  return {
-    id: item.id,
-    reference: item.reference,
-    contractId: item.contrat_reference ?? undefined,
-    requestId: item.demande_reference,
-    amount: item.montant_xaf,
-    date: item.cree_le.slice(0, 10),
-    method: "mobile_money",
-    status: item.statut === "reussi" ? "succeeded" : item.statut === "echoue" ? "failed" : "pending",
-    providerStatus: item.statut,
-    phone: item.numero_telephone,
-    operator: item.operateur ?? undefined,
-    ussdCode: item.code_ussd ?? undefined,
   };
 }
 
@@ -188,11 +161,16 @@ function mapContract(item: ContratApi): Contract {
   };
 }
 
-export async function obtenirSouscriptions() {
-  const [offresApi, paiementsApi, contratsApi] = await Promise.all([
+type SubscriptionData = Pick<PortalStore, "offers" | "proposals" | "payments" | "contracts" | "paymentSchedules" | "paymentSchedulesError">;
+
+export async function obtenirSouscriptions(): Promise<SubscriptionData> {
+  const [offresApi, paiementsApi, contratsApi, echeanciers] = await Promise.all([
     request<OffreApi[]>("/offres"),
     request<PaiementApi[]>("/paiements"),
     request<ContratApi[]>("/contrats"),
+    request<unknown[]>("/echeanciers")
+      .then(records => ({ records, error: undefined as string | undefined }))
+      .catch(() => ({ records: [] as unknown[], error: "Le suivi annuel des versements est momentanément indisponible." })),
   ]);
   const offers = offresApi.map(mapOffer);
   const grouped = new Map<string, Offer[]>();
@@ -210,11 +188,18 @@ export async function obtenirSouscriptions() {
       || items.find((offer) => offer.advice)?.advice
       || "Comparez les garanties et le coût avant de confirmer votre choix.",
   }));
+  const payments = paiementsApi.map(mapPayment);
+  const contracts = contratsApi.map(mapContract).map(contract => ({
+    ...contract,
+    paymentIds: [...new Set([...contract.paymentIds, ...payments.filter(payment => payment.contractId === contract.policyNumber || payment.requestId === contract.requestId).map(payment => payment.id)])],
+  }));
   return {
     offers,
     proposals,
-    payments: paiementsApi.map(mapPayment),
-    contracts: contratsApi.map(mapContract),
+    payments,
+    contracts,
+    paymentSchedules: echeanciers.records.map(mapPaymentSchedule).filter((item): item is PaymentSchedule => item !== undefined),
+    paymentSchedulesError: echeanciers.error,
   };
 }
 
@@ -265,17 +250,16 @@ export function appliquerSouscriptions(
     proposals: data.proposals,
     payments: data.payments,
     contracts: data.contracts,
+    paymentSchedules: data.paymentSchedules ?? [],
+    paymentSchedulesError: data.paymentSchedulesError,
     requests: store.requests.map((item) => {
       const selectedOfferId = selectedByRequest.get(item.reference);
-      const paymentSucceeded = data.payments.some((payment) => (
-        payment.requestId === item.reference && payment.status === "succeeded"
-      ));
       const contractExists = data.contracts.some((contract) => contract.requestId === item.reference);
       const statusBeforeContract = selectedOfferId
         && item.status === "proposals_available"
         ? "offer_selected"
         : item.status;
-      const status = (contractExists || paymentSucceeded)
+      const status = contractExists
         && ["proposals_available", "offer_selected", "documents_required", "payment_pending"].includes(statusBeforeContract)
         ? "policy_issuing"
         : statusBeforeContract;

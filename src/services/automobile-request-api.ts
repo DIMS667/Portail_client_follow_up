@@ -2,6 +2,7 @@ import type {
   AutoGuarantee,
   AutoRequestType,
   AutoVehicleUsage,
+  AutomobileDriver,
   AutomobileInsuranceRequestData,
   InsuranceRequest,
   MotoGuarantee,
@@ -141,6 +142,7 @@ interface DemandeAutomobileApi {
     date_naissance?: string | null;
     telephone?: string | null;
     profession?: string | null;
+    categorie_professionnelle?: AutomobileDriver["occupationCategory"] | null;
     numero_permis?: string | null;
     categorie_permis?: string | null;
     permis_delivre_le?: string | null;
@@ -203,11 +205,7 @@ function personneDepuisApi(personne: PersonneApi) {
   };
 }
 
-function conducteurVersApi(conducteur: {
-  isSubscriber: boolean; firstNames?: string; lastName?: string; birthDate?: string; phone?: string;
-  occupation?: string; licenceNumber?: string; licenceCategory?: string; licenceIssuedOn?: string;
-  licenceValidUntil?: string;
-}) {
+function conducteurVersApi(conducteur: AutomobileDriver) {
   return {
     est_souscripteur: conducteur.isSubscriber,
     prenoms: conducteur.firstNames,
@@ -215,6 +213,7 @@ function conducteurVersApi(conducteur: {
     date_naissance: conducteur.birthDate,
     telephone: conducteur.phone,
     profession: conducteur.occupation,
+    categorie_professionnelle: conducteur.occupationCategory,
     numero_permis: conducteur.licenceNumber,
     categorie_permis: conducteur.licenceCategory,
     permis_delivre_le: conducteur.licenceIssuedOn,
@@ -223,13 +222,14 @@ function conducteurVersApi(conducteur: {
 }
 
 function conducteurDepuisApi(conducteur: NonNullable<DemandeAutomobileApi["conducteur"]>) {
-  return conducteur.est_souscripteur ? { isSubscriber: true } : {
-    isSubscriber: false,
+  return {
+    isSubscriber: conducteur.est_souscripteur,
     firstNames: conducteur.prenoms ?? "",
     lastName: conducteur.nom ?? "",
     birthDate: conducteur.date_naissance ?? "",
     phone: conducteur.telephone ?? "",
     occupation: conducteur.profession ?? "",
+    occupationCategory: conducteur.categorie_professionnelle ?? undefined,
     licenceNumber: conducteur.numero_permis ?? "",
     licenceCategory: conducteur.categorie_permis ?? "",
     licenceIssuedOn: conducteur.permis_delivre_le ?? "",

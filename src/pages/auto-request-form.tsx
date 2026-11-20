@@ -19,6 +19,7 @@ import type { LucideIcon } from "lucide-react";
 import { usePortal } from "../app/portal-context";
 import { PageHeader } from "../components/portal-ui";
 import { formatDate, formatFcfa } from "../services/portal-service";
+import { driverOccupationLabel, driverOccupationOptions, validateAutomobileDriver } from "../services/automobile-driver";
 import {
   AUTO_REGISTRATION_PATTERN,
   CHASSIS_NUMBER_PATTERN,
@@ -34,6 +35,7 @@ import type {
   AutoVehicleCategory,
   AutoVehicleEnergy,
   AutoVehicleUsage,
+  AutomobileDriverOccupationCategory,
   BrokerDelegatedAutomobileInsuranceRequestData,
   InsuranceRequest,
   SelfServiceAutomobileInsuranceRequestData,
@@ -172,6 +174,7 @@ interface AutoRequestFormState {
     birthDate: string;
     phone: string;
     occupation: string;
+    occupationCategory: AutomobileDriverOccupationCategory | "";
     licenceNumber: string;
     licenceCategory: string;
     licenceIssuedOn: string;
@@ -212,7 +215,7 @@ const initialForm: AutoRequestFormState = {
   delegatedMessage: "",
   requestType: "renewal",
   otherNeed: "",
-  driver: { isSubscriber: true, firstNames: "", lastName: "", birthDate: "", phone: "", occupation: "", licenceNumber: "", licenceCategory: "", licenceIssuedOn: "", licenceValidUntil: "" },
+  driver: { isSubscriber: true, firstNames: "", lastName: "", birthDate: "", phone: "", occupation: "", occupationCategory: "", licenceNumber: "", licenceCategory: "", licenceIssuedOn: "", licenceValidUntil: "" },
   vehicle: {
     category: "tourism",
     brand: "Toyota",
@@ -244,7 +247,11 @@ function loadDraft(): AutoDraft {
       form: {
         ...initialForm,
         ...savedForm,
-        driver: { ...initialForm.driver, ...savedForm?.driver },
+        driver: {
+          ...initialForm.driver,
+          ...savedForm?.driver,
+          occupationCategory: savedForm?.driver?.occupationCategory || (savedForm?.driver?.occupation?.trim() ? "autre" : ""),
+        },
         vehicle: (() => {
           const usage = savedForm?.vehicle?.usage ?? initialForm.vehicle.usage;
           return {
@@ -275,18 +282,7 @@ function validateStep(step: number, form: AutoRequestFormState) {
     if (form.requestType === "other" && !form.otherNeed.trim()) errors["other-need"] = "Précisez brièvement votre besoin.";
   }
   if (step === 1) {
-    if (form.driver.isSubscriber === null) errors["driver-is-subscriber"] = "Indiquez si le client est également le conducteur.";
-    if (form.driver.isSubscriber === false) {
-      if (!form.driver.lastName.trim()) errors["driver-last-name"] = "Renseignez le nom du conducteur.";
-      if (!form.driver.firstNames.trim()) errors["driver-first-names"] = "Renseignez les prénoms du conducteur.";
-      if (!form.driver.birthDate) errors["driver-birth-date"] = "Renseignez la date de naissance du conducteur.";
-      if (!form.driver.phone.trim()) errors["driver-phone"] = "Renseignez le téléphone du conducteur.";
-      if (!form.driver.occupation.trim()) errors["driver-occupation"] = "Renseignez la profession du conducteur.";
-      if (!form.driver.licenceNumber.trim()) errors["driver-licence-number"] = "Renseignez le numéro du permis.";
-      if (!form.driver.licenceCategory.trim()) errors["driver-licence-category"] = "Renseignez la catégorie du permis.";
-      if (!form.driver.licenceIssuedOn) errors["driver-licence-issued-on"] = "Renseignez la date de délivrance du permis.";
-      if (!form.driver.licenceValidUntil) errors["driver-licence-valid-until"] = "Renseignez la date de validité du permis.";
-    }
+    Object.assign(errors, validateAutomobileDriver(form.driver, currentLocalDate()));
   }
   if (step === 2) {
     const fiscalPower = Number(form.vehicle.fiscalPower);
@@ -466,13 +462,14 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
       ...(form.requestType === "other" ? { otherNeed: form.otherNeed.trim() } : {}),
       subscriber: clientSnapshot,
       insured: clientSnapshot,
-      driver: form.driver.isSubscriber ? { isSubscriber: true } : {
-        isSubscriber: false,
-        firstNames: form.driver.firstNames.trim(),
-        lastName: form.driver.lastName.trim(),
+      driver: {
+        isSubscriber: Boolean(form.driver.isSubscriber),
+        firstNames: form.driver.isSubscriber ? clientSnapshot.firstName : form.driver.firstNames.trim(),
+        lastName: form.driver.isSubscriber ? clientSnapshot.lastName : form.driver.lastName.trim(),
         birthDate: form.driver.birthDate,
-        phone: form.driver.phone.trim(),
-        occupation: form.driver.occupation.trim(),
+        phone: form.driver.isSubscriber ? clientSnapshot.phone : form.driver.phone.trim(),
+        occupation: driverOccupationLabel(form.driver.occupationCategory, form.driver.occupation),
+        occupationCategory: form.driver.occupationCategory || undefined,
         licenceNumber: form.driver.licenceNumber.trim().toUpperCase(),
         licenceCategory: form.driver.licenceCategory.trim().toUpperCase(),
         licenceIssuedOn: form.driver.licenceIssuedOn,
@@ -641,26 +638,32 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
 
         {step === 1 && (
           <section aria-labelledby="auto-request-step-title">
-            <AutoStepHeading number="2" title="Souscripteur, assuré et conducteur" description="Le souscripteur et l’assuré correspondent au client connecté. Indiquez ensuite qui conduira le véhicule." />
+            <AutoStepHeading number="2" title="Souscripteur, assuré et conducteur habituel" description="Le souscripteur et l’assuré correspondent au client connecté. Renseignez la personne qui conduit habituellement le véhicule, même s’il s’agit de vous." />
             <div className="auto-request-parties-grid">
               <PartySummary title="Souscripteur" badge="Paie la cotisation" name={`${store.client.firstName} ${store.client.lastName}`} phone={store.client.phone} email={store.client.email} />
               <PartySummary title="Assuré" badge="Personne couverte" name={`${store.client.firstName} ${store.client.lastName}`} phone={store.client.phone} email={store.client.email} />
             </div>
             <div className="auto-request-driver-block">
-              <BinaryChoice id="driver-is-subscriber" legend="Le souscripteur est-il également le conducteur ?" value={form.driver.isSubscriber} error={errors["driver-is-subscriber"]} onChange={(value) => {
+              <BinaryChoice id="driver-is-subscriber" legend="Le souscripteur est-il également le conducteur habituel ?" value={form.driver.isSubscriber} error={errors["driver-is-subscriber"]} onChange={(value) => {
                 updateDriver("isSubscriber", value);
                 clearError("driver-is-subscriber");
               }} required />
-              {form.driver.isSubscriber === false && <div className="auto-request-driver-fields"><h3>Informations sur le conducteur</h3><div className="auto-request-form-grid">
+              {form.driver.isSubscriber !== null && <div className="auto-request-driver-fields"><h3>Informations sur le conducteur habituel</h3>{form.driver.isSubscriber && <p className="auto-request-helper">Votre nom et vos coordonnées sont repris de votre compte. Complétez votre profession et les informations de votre permis.</p>}<div className="auto-request-form-grid">
+                {form.driver.isSubscriber === false && <>
                 <VoiceTextField id="driver-last-name" label="Nom" value={form.driver.lastName} onChange={(value) => updateDriver("lastName", value)} error={errors["driver-last-name"]} required />
                 <VoiceTextField id="driver-first-names" label="Prénoms" value={form.driver.firstNames} onChange={(value) => updateDriver("firstNames", value)} error={errors["driver-first-names"]} required />
-                <label htmlFor="driver-birth-date"><span className="auto-request-label-text">Date de naissance <RequiredMark /></span><input id="driver-birth-date" type="date" value={form.driver.birthDate} onChange={(event) => updateDriver("birthDate", event.target.value)} aria-invalid={Boolean(errors["driver-birth-date"])} /><FieldError id="driver-birth-date-error" message={errors["driver-birth-date"]} /></label>
                 <VoiceTextField id="driver-phone" label="Téléphone" value={form.driver.phone} onChange={(value) => updateDriver("phone", value)} error={errors["driver-phone"]} required inputProps={{ type: "tel" }} />
-                <VoiceTextField id="driver-occupation" label="Profession" value={form.driver.occupation} onChange={(value) => updateDriver("occupation", value)} error={errors["driver-occupation"]} required />
-                <VoiceTextField id="driver-licence-number" label="Numéro du permis" value={form.driver.licenceNumber} onChange={(value) => updateDriver("licenceNumber", value.toUpperCase())} error={errors["driver-licence-number"]} required />
-                <VoiceTextField id="driver-licence-category" label="Catégorie du permis" value={form.driver.licenceCategory} onChange={(value) => updateDriver("licenceCategory", value.toUpperCase())} error={errors["driver-licence-category"]} required />
-                <label htmlFor="driver-licence-issued-on"><span className="auto-request-label-text">Date de délivrance du permis <RequiredMark /></span><input id="driver-licence-issued-on" type="date" value={form.driver.licenceIssuedOn} onChange={(event) => updateDriver("licenceIssuedOn", event.target.value)} aria-invalid={Boolean(errors["driver-licence-issued-on"])} /><FieldError id="driver-licence-issued-on-error" message={errors["driver-licence-issued-on"]} /></label>
-                <label htmlFor="driver-licence-valid-until"><span className="auto-request-label-text">Permis valable jusqu’au <RequiredMark /></span><input id="driver-licence-valid-until" type="date" value={form.driver.licenceValidUntil} onChange={(event) => updateDriver("licenceValidUntil", event.target.value)} aria-invalid={Boolean(errors["driver-licence-valid-until"])} /><FieldError id="driver-licence-valid-until-error" message={errors["driver-licence-valid-until"]} /></label>
+                </>}
+                <label htmlFor="driver-birth-date"><span className="auto-request-label-text">Date de naissance <RequiredMark /></span><input id="driver-birth-date" type="date" max={currentLocalDate()} value={form.driver.birthDate} onChange={(event) => updateDriver("birthDate", event.target.value)} aria-invalid={Boolean(errors["driver-birth-date"])} aria-describedby={errors["driver-birth-date"] ? "driver-birth-date-error" : undefined} /><FieldError id="driver-birth-date-error" message={errors["driver-birth-date"]} /></label>
+                <label htmlFor="driver-occupation-category"><span className="auto-request-label-text">Profession du conducteur habituel <RequiredMark /></span><select id="driver-occupation-category" value={form.driver.occupationCategory} onChange={(event) => {
+                  updateDriver("occupationCategory", event.target.value as AutomobileDriverOccupationCategory | "");
+                  clearError("driver-occupation");
+                }} aria-invalid={Boolean(errors["driver-occupation-category"])} aria-describedby={errors["driver-occupation-category"] ? "driver-occupation-category-error" : undefined}><option value="">Choisir une profession</option>{driverOccupationOptions.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}</select><FieldError id="driver-occupation-category-error" message={errors["driver-occupation-category"]} /></label>
+                {form.driver.occupationCategory === "autre" && <VoiceTextField id="driver-occupation" label="Précisez votre métier" value={form.driver.occupation} onChange={(value) => updateDriver("occupation", value)} error={errors["driver-occupation"]} required inputProps={{ maxLength: 120, placeholder: "Exemple : enseignant, comptable, mécanicien…" }} />}
+                <VoiceTextField id="driver-licence-number" label="Numéro du permis" value={form.driver.licenceNumber} onChange={(value) => updateDriver("licenceNumber", value.toUpperCase())} error={errors["driver-licence-number"]} required inputProps={{ maxLength: 80 }} />
+                <VoiceTextField id="driver-licence-category" label="Catégorie du permis" value={form.driver.licenceCategory} onChange={(value) => updateDriver("licenceCategory", value.toUpperCase())} error={errors["driver-licence-category"]} required inputProps={{ maxLength: 40 }} />
+                <label htmlFor="driver-licence-issued-on"><span className="auto-request-label-text">Date d’obtention du permis <RequiredMark /></span><input id="driver-licence-issued-on" type="date" min={form.driver.birthDate || undefined} max={currentLocalDate()} value={form.driver.licenceIssuedOn} onChange={(event) => updateDriver("licenceIssuedOn", event.target.value)} aria-invalid={Boolean(errors["driver-licence-issued-on"])} aria-describedby={errors["driver-licence-issued-on"] ? "driver-licence-issued-on-help driver-licence-issued-on-error" : "driver-licence-issued-on-help"} /><small id="driver-licence-issued-on-help">Indiquez la date d’obtention initiale, même si le permis a été renouvelé.</small><FieldError id="driver-licence-issued-on-error" message={errors["driver-licence-issued-on"]} /></label>
+                <label htmlFor="driver-licence-valid-until"><span className="auto-request-label-text">Permis valable jusqu’au <RequiredMark /></span><input id="driver-licence-valid-until" type="date" min={form.driver.licenceIssuedOn || undefined} value={form.driver.licenceValidUntil} onChange={(event) => updateDriver("licenceValidUntil", event.target.value)} aria-invalid={Boolean(errors["driver-licence-valid-until"])} aria-describedby={errors["driver-licence-valid-until"] ? "driver-licence-valid-until-error" : undefined} /><FieldError id="driver-licence-valid-until-error" message={errors["driver-licence-valid-until"]} /></label>
               </div></div>}
             </div>
           </section>
@@ -791,7 +794,15 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
             <AutoStepHeading number="6" title="Vérifiez votre demande" description="Relisez les informations avant de les transmettre à votre courtier." />
             <div className="auto-request-review">
               <ReviewSection title="Votre besoin" items={[["Demande", form.requestType ? requestLabels[form.requestType] : "Non renseigné"], ...(form.requestType === "other" ? [["Précision", form.otherNeed]] as Array<[string, string]> : [])]} />
-              <ReviewSection title="Souscripteur et assuré" items={[["Souscripteur", `${store.client.firstName} ${store.client.lastName}`], ["Assuré", `${store.client.firstName} ${store.client.lastName}`], ["Conducteur", form.driver.isSubscriber ? "Le souscripteur" : `${form.driver.firstNames} ${form.driver.lastName}`], ...(form.driver.isSubscriber ? [] : [["Permis", `${form.driver.licenceNumber} · catégorie ${form.driver.licenceCategory}`]] as Array<[string, string]>)]} />
+              <ReviewSection title="Souscripteur et assuré" items={[["Souscripteur", `${store.client.firstName} ${store.client.lastName}`], ["Assuré", `${store.client.firstName} ${store.client.lastName}`]]} />
+              <ReviewSection title="Conducteur habituel" items={[
+                ["Conducteur", form.driver.isSubscriber ? `${store.client.firstName} ${store.client.lastName}` : `${form.driver.firstNames} ${form.driver.lastName}`],
+                ["Date de naissance", formatDate(form.driver.birthDate)],
+                ["Profession", driverOccupationLabel(form.driver.occupationCategory, form.driver.occupation)],
+                ["Permis", `${form.driver.licenceNumber} · catégorie ${form.driver.licenceCategory}`],
+                ["Permis obtenu le", formatDate(form.driver.licenceIssuedOn)],
+                ["Permis valable jusqu’au", formatDate(form.driver.licenceValidUntil)],
+              ]} />
               <ReviewSection title="Votre véhicule" items={[
                 ["Véhicule", `${form.vehicle.brand} ${form.vehicle.model}`], ["Première mise en circulation", formatDate(form.vehicle.firstRegistrationDate)],
                 ["Immatriculation", form.vehicle.registration.toUpperCase()], ["Énergie", form.vehicle.energy ? energyLabels[form.vehicle.energy] : "Non renseignée"],

@@ -12,7 +12,7 @@ export type DocumentStatus = "required" | "received" | "reviewing" | "validated"
 export type PaymentStatus = "pending" | "succeeded" | "failed";
 export type ContractStatus = "preparing" | "active" | "expired";
 export type ClaimStatus = "submitted" | "under_review" | "documents_pending" | "documents_verified" | "sent_to_insurer" | "expertise" | "decision" | "indemnification" | "indemnified" | "closed";
-export type PaymentMethod = "mobile_money" | "orange_money" | "bank_card" | "bank_transfer";
+export type PaymentMethod = "mobile_money" | "mtn_momo" | "orange_money" | "bank_card" | "bank_transfer" | "cash";
 export type AutomobileVehicleKind = "car" | "moto";
 
 export type AutoRequestType = "new_vehicle" | "renewal" | "switch_insurer" | "advice" | "other";
@@ -51,11 +51,24 @@ export interface AutomobileDriver {
   birthDate?: string;
   phone?: string;
   occupation?: string;
+  occupationCategory?: AutomobileDriverOccupationCategory;
   licenceNumber?: string;
   licenceCategory?: string;
   licenceIssuedOn?: string;
   licenceValidUntil?: string;
 }
+export type AutomobileDriverOccupationCategory =
+  | "delegue_medical"
+  | "delegue_inspecteur_commercial"
+  | "publicite"
+  | "agent_attache_delegue_commercial"
+  | "inspecteur_voyageur_commerce"
+  | "representant_inspecteur_ventes"
+  | "photographe_reporter"
+  | "gardiennage_securite"
+  | "boulangerie"
+  | "clerge"
+  | "autre";
 export type AutoGuarantee =
   | "civil_liability"
   | "defense_and_recours"
@@ -226,11 +239,19 @@ export interface InsuranceRequest {
   coverage?: string; desiredStartDate?: string; comments?: string; proposalId?: string; selectedOfferId?: string; timeline: StatusEvent[]; scope?: "core" | "scenario";
 }
 export interface Proposal { id: string; reference: string; requestId: string; offerIds: string[]; recommendedOfferId?: string; advice: string; }
-export interface OfferGuaranteePrice { code?: string | null; label: string; premium: number; annualPremium?: number | null; capital?: string | null; deductible?: string | null; }
-export interface OfferPricingBreakdown { guarantees: OfferGuaranteePrice[]; netPremium: number; accessories: number; asacFile: number; taxBase: number; taxRate: number; taxes: number; cemacCard: number; dta: number; otherFees: number; total: number; }
+export interface PersonalCoverageCapitals { death: number; disability: number; treatment: number; }
+export interface OfferGuaranteePrice { code?: string | null; label: string; premium: number; annualPremium?: number | null; capital?: string | null; deductible?: string | null; personalCoverage?: PersonalCoverageCapitals; }
+export interface OfferRcAdjustment { originalPremium: number; rate: number; adjustment: number; adjustedPremium: number; reasons: string[]; referenceDate: string; }
+export interface OfferPricingBreakdown { guarantees: OfferGuaranteePrice[]; netPremium: number; accessories: number; asacFile: number; taxBase: number; taxRate: number; taxes: number; cemacCard: number; dta: number; otherFees: number; total: number; rcAdjustment?: OfferRcAdjustment; }
 export interface Offer { id: string; reference: string; proposalId: string; product: string; premium: number; duration: string; effectiveDate: string; deductible: number; guarantees: string[]; options: string[]; exclusions: string[]; requiredDocuments: string[]; pricingBreakdown?: OfferPricingBreakdown; requestReference?: string; recommended?: boolean; selected?: boolean; advice?: string; }
 export interface ClientDocument { id: string; title: string; category: string; type: string; ownerId: string; status: DocumentStatus; slotId?: string; fileName?: string; date?: string; correctionMessage?: string; downloadUrl?: string; contentUrl?: string; }
-export interface Payment { id: string; reference: string; contractId?: string; requestId?: string; amount: number; date: string; method: PaymentMethod; status: PaymentStatus; providerStatus?: "initialisation" | "en_attente" | "reussi" | "echoue" | "a_verifier"; phone?: string; operator?: string; ussdCode?: string; }
+export interface PaymentFraction { startMonth: number; durationMonths: number; periodStart?: string; periodEnd?: string; }
+export interface PaymentSchedule {
+  offerId: string; offerReference: string; requestId: string;
+  annualStart: string; annualEnd: string; annualPremium: number; cap: number;
+  paidTotal: number; capAvailable: number; monthsPaid: number; completed: boolean; extraCost: number;
+}
+export interface Payment { id: string; reference: string; contractId?: string; requestId?: string; amount: number; date: string; method: PaymentMethod; status: PaymentStatus; providerStatus?: "initialisation" | "en_attente" | "reussi" | "echoue" | "a_verifier"; phone?: string; operator?: string; ussdCode?: string; source?: string; transactionReference?: string; confirmedAt?: string; fraction?: PaymentFraction; }
 export interface Contract { id: string; policyNumber: string; clientId: string; product: InsuranceProduct; productLabel: string; effectiveDate: string; expirationDate: string; premium: number; status: ContractStatus; guarantees: string[]; documentIds: string[]; paymentIds: string[]; claimIds: string[]; requestId?: string; offerReference?: string; policyAvailable?: boolean; policyFileName?: string; }
 export interface Renewal { id: string; reference: string; contractId: string; expirationDate: string; currentPremium: number; status: "eligible" | "requested"; choice?: "same" | "change" | "new_offers"; }
 
@@ -350,6 +371,8 @@ export interface PortalStore {
   offers: Offer[];
   documents: ClientDocument[];
   payments: Payment[];
+  paymentSchedules?: PaymentSchedule[];
+  paymentSchedulesError?: string;
   contracts: Contract[];
   renewals: Renewal[];
   claims: Claim[];

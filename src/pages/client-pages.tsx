@@ -36,18 +36,18 @@ import {
   marquerToutesNotificationsLues,
 } from "../services/notifications-api";
 import { obtenirLienPolice } from "../services/subscription-api";
+import { isOfferChoiceLocked, paymentMethodLabels as paymentLabels } from "../services/payment-history";
 import {
   formatDate, formatFcfa, markNotificationRead, removeDocument,
   signOut, updateProfile,
 } from "../services/portal-service";
 import type {
   AutoClaimPerson, AutoClaimVehicle, AutoGuarantee, AutoRequestType, AutoVehicleEnergy, AutoVehicleUsage,
-  ClientDocument, InsuranceProduct, InsuranceRequest, MotoGuarantee, MotoVehicleEnergy, MotoVehicleUsage, PaymentMethod,
+  ClientDocument, InsuranceProduct, InsuranceRequest, MotoGuarantee, MotoVehicleEnergy, MotoVehicleUsage, Payment, PaymentSchedule,
   SelfServiceAutomobileInsuranceRequestData, SelfServiceMotoInsuranceRequestData,
 } from "../types/domain";
 
 const iconForKind: Record<string, typeof Bell> = { proposal: ClipboardList, document: FileCheck2, payment: WalletCards, contract: ShieldCheck, request: FileText, renewal: RefreshCcw, claim: LifeBuoy, message: MessageCircle };
-const paymentLabels: Record<PaymentMethod, string> = { mobile_money: "Mobile Money", orange_money: "Orange Money", bank_card: "Carte bancaire", bank_transfer: "Virement" };
 
 function construireLienWhatsApp(numero: string, message: string) {
   let chiffres = numero.replace(/\D/g, "");
@@ -319,6 +319,9 @@ export function RequestDetailPage({ reference }: { reference: string }) {
   const proposalAvailable = proposalOfferCount > 0;
   const selectedOffer = store.offers.find((offer) => offer.id === request.selectedOfferId
     || (offer.requestReference === request.reference && offer.selected));
+  const confirmedPayment = store.payments.find((payment) => payment.requestId === request.reference && payment.status === "succeeded");
+  const paymentSchedule = store.paymentSchedules?.find((schedule) => schedule.requestId === request.reference && schedule.offerId === selectedOffer?.id);
+  const selectionLocked = isOfferChoiceLocked(request, store.payments);
   const discussionRequired = (request.status === "offer_selected" || request.status === "payment_pending" || request.status === "policy_issuing")
     && selectedOffer
     && !store.payments.some((payment) => payment.requestId === request.reference && payment.status === "succeeded");
@@ -347,7 +350,8 @@ export function RequestDetailPage({ reference }: { reference: string }) {
     <div className="page-stack">
       <button className="back-link" type="button" onClick={() => navigate("/espace/demandes")}><ArrowLeft size={17} /> Retour aux demandes</button>
       <PageHeader eyebrow={request.reference} title={request.productLabel} description={`Demande transmise le ${formatDate(request.date)}`} action={<div className="request-header-tags">{vehicleKind && <em className="vehicle-kind-tag">{vehicleKind === "moto" ? "Moto / 2–3 roues" : "Voiture"}</em>}<StatusBadge status={request.status} /></div>} />
-      {proposalAvailable && <section className="attention-card blue"><span><ClipboardList size={23} /></span><div><strong>{selectedOffer ? `Offre choisie : ${selectedOffer.reference}` : `${proposalOfferCount} offre${proposalOfferCount > 1 ? "s d’assurance sont disponibles" : " d’assurance est disponible"}`}</strong><p>{selectedOffer ? "Vous pouvez toujours consulter les autres offres et modifier votre choix tant que la police n’est pas finalisée." : `Votre courtier a préparé ${proposalOfferCount > 1 ? "plusieurs solutions" : "une solution"} pour votre demande d’assurance.`}</p></div><LinkButton to={`/espace/demandes/${reference}/propositions`}>{selectedOffer ? "Voir ou modifier mon choix" : `Comparer ${proposalOfferCount > 1 ? "les offres" : "l’offre"}`}</LinkButton></section>}
+      {proposalAvailable && <section className="attention-card blue"><span><ClipboardList size={23} /></span><div><strong>{selectedOffer ? `Offre choisie : ${selectedOffer.reference}` : `${proposalOfferCount} offre${proposalOfferCount > 1 ? "s d’assurance sont disponibles" : " d’assurance est disponible"}`}</strong><p>{selectionLocked ? "Votre choix est confirmé. Les autres offres restent consultables dans votre historique." : selectedOffer ? "Vous pouvez consulter les autres offres et modifier votre choix avant confirmation du paiement." : `Votre courtier a préparé ${proposalOfferCount > 1 ? "plusieurs solutions" : "une solution"} pour votre demande d’assurance.`}</p></div><LinkButton to={`/espace/demandes/${reference}/propositions`}>{selectionLocked ? "Consulter les offres" : selectedOffer ? "Voir ou modifier mon choix" : `Comparer ${proposalOfferCount > 1 ? "les offres" : "l’offre"}`}</LinkButton></section>}
+      {paymentSchedule ? <AnnualPaymentSummary schedule={paymentSchedule} /> : confirmedPayment && <section className="attention-card success"><span><CheckCircle2 size={23} /></span><div><strong>Paiement confirmé : {formatFcfa(confirmedPayment.amount)}</strong><p>{paymentLabels[confirmedPayment.method]} · {formatDate(confirmedPayment.date)}{confirmedPayment.transactionReference ? ` · Référence : ${confirmedPayment.transactionReference}` : ""}</p></div><LinkButton to="/espace/paiements">Voir le paiement</LinkButton></section>}
       {discussionRequired && <section className="attention-card blue"><span><MessageCircle size={23} /></span><div><strong>{request.status !== "offer_selected" ? "Discussion en cours avec votre courtier" : "Votre offre est sélectionnée"}</strong><p>{request.status !== "offer_selected" ? "Poursuivez vos échanges pour convenir des prochaines étapes." : "Échangez maintenant avec votre courtier pour convenir des prochaines étapes."}</p></div><LinkButton to={`/espace/demandes/${reference}/discussion`}><MessageCircle size={17} /> {request.status !== "offer_selected" ? "Continuer la discussion" : "Discuter avec mon courtier"}</LinkButton></section>}
       {request.status === "policy_issuing" && <section className="attention-card success"><span><CheckCircle2 size={23} /></span><div><strong>Votre contrat est en cours de préparation.</strong><p>Votre gestionnaire travaille à partir de l’offre actuellement choisie. Vous serez informé dès que la police sera disponible.</p></div></section>}
       <div className="detail-grid">
@@ -357,7 +361,7 @@ export function RequestDetailPage({ reference }: { reference: string }) {
       {delegatedAutomobileRequest && <section className="panel auto-request-delegated-detail"><div className="panel-heading"><div><span className="page-eyebrow">Demande déléguée</span><h2>Votre message au courtier</h2></div></div><div className="request-comments"><span>Besoin exprimé librement</span><p>{delegatedAutomobileRequest.delegatedMessage}</p></div><p className="auto-request-detail-note"><CircleHelp size={17} /> Votre courtier vous recontactera pour compléter les informations nécessaires et préparer votre dossier.</p></section>}
       {selfServiceAutomobileRequest && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre demande automobile</h2></div></div><div className="auto-request-detail-groups">
         <section><h3>Votre besoin</h3><div className="details-grid"><Detail label="Demande" value={autoRequestTypeLabels[selfServiceAutomobileRequest.requestType]} />{selfServiceAutomobileRequest.otherNeed && <Detail label="Précision" value={selfServiceAutomobileRequest.otherNeed} />}</div></section>
-        <section><h3>Personnes liées au contrat</h3><div className="details-grid"><Detail label="Souscripteur" value={selfServiceAutomobileRequest.subscriber ? `${selfServiceAutomobileRequest.subscriber.firstName} ${selfServiceAutomobileRequest.subscriber.lastName}` : `${store.client.firstName} ${store.client.lastName}`} /><Detail label="Assuré" value={selfServiceAutomobileRequest.insured ? `${selfServiceAutomobileRequest.insured.firstName} ${selfServiceAutomobileRequest.insured.lastName}` : `${store.client.firstName} ${store.client.lastName}`} /><Detail label="Conducteur" value={!selfServiceAutomobileRequest.driver || selfServiceAutomobileRequest.driver.isSubscriber ? "Le souscripteur" : `${selfServiceAutomobileRequest.driver.firstNames} ${selfServiceAutomobileRequest.driver.lastName}`} />{selfServiceAutomobileRequest.driver && !selfServiceAutomobileRequest.driver.isSubscriber && <><Detail label="Téléphone du conducteur" value={selfServiceAutomobileRequest.driver.phone || "Non renseigné"} /><Detail label="Profession du conducteur" value={selfServiceAutomobileRequest.driver.occupation || "Non renseignée"} /><Detail label="Permis" value={`${selfServiceAutomobileRequest.driver.licenceNumber || "Non renseigné"} · catégorie ${selfServiceAutomobileRequest.driver.licenceCategory || "non renseignée"}`} /></>}</div></section>
+        <section><h3>Personnes liées au contrat</h3><div className="details-grid"><Detail label="Souscripteur" value={selfServiceAutomobileRequest.subscriber ? `${selfServiceAutomobileRequest.subscriber.firstName} ${selfServiceAutomobileRequest.subscriber.lastName}` : `${store.client.firstName} ${store.client.lastName}`} /><Detail label="Assuré" value={selfServiceAutomobileRequest.insured ? `${selfServiceAutomobileRequest.insured.firstName} ${selfServiceAutomobileRequest.insured.lastName}` : `${store.client.firstName} ${store.client.lastName}`} /><Detail label="Conducteur habituel" value={!selfServiceAutomobileRequest.driver || selfServiceAutomobileRequest.driver.isSubscriber ? "Le souscripteur" : `${selfServiceAutomobileRequest.driver.firstNames} ${selfServiceAutomobileRequest.driver.lastName}`} />{selfServiceAutomobileRequest.driver && <>{!selfServiceAutomobileRequest.driver.isSubscriber && <Detail label="Téléphone du conducteur" value={selfServiceAutomobileRequest.driver.phone || "Non renseigné"} />}<Detail label="Date de naissance du conducteur" value={selfServiceAutomobileRequest.driver.birthDate ? formatDate(selfServiceAutomobileRequest.driver.birthDate) : "Non renseignée"} /><Detail label="Profession du conducteur" value={selfServiceAutomobileRequest.driver.occupation || "Non renseignée"} /><Detail label="Permis" value={`${selfServiceAutomobileRequest.driver.licenceNumber || "Non renseigné"} · catégorie ${selfServiceAutomobileRequest.driver.licenceCategory || "non renseignée"}`} /><Detail label="Permis obtenu le" value={selfServiceAutomobileRequest.driver.licenceIssuedOn ? formatDate(selfServiceAutomobileRequest.driver.licenceIssuedOn) : "Non renseigné"} /><Detail label="Permis valable jusqu’au" value={selfServiceAutomobileRequest.driver.licenceValidUntil ? formatDate(selfServiceAutomobileRequest.driver.licenceValidUntil) : "Non renseigné"} /></>}</div></section>
         <section><h3>Votre véhicule</h3><div className="details-grid"><Detail label="Véhicule" value={`${selfServiceAutomobileRequest.vehicle.brand} ${selfServiceAutomobileRequest.vehicle.model}`} /><Detail label={selfServiceAutomobileRequest.vehicle.firstRegistrationDate ? "Date de première mise en circulation" : "Année de mise en circulation"} value={selfServiceAutomobileRequest.vehicle.firstRegistrationDate ? formatDate(selfServiceAutomobileRequest.vehicle.firstRegistrationDate) : String(selfServiceAutomobileRequest.vehicle.year)} /><Detail label="Immatriculation" value={selfServiceAutomobileRequest.vehicle.registration} /><Detail label="Numéro de châssis" value={selfServiceAutomobileRequest.vehicle.chassisNumber || "Non renseigné"} /><Detail label="Nombre de places" value={selfServiceAutomobileRequest.vehicle.seatCount ? String(selfServiceAutomobileRequest.vehicle.seatCount) : "Non renseigné"} /><Detail label="Énergie" value={autoEnergyLabels[selfServiceAutomobileRequest.vehicle.energy]} /><Detail label="Puissance fiscale" value={`${selfServiceAutomobileRequest.vehicle.fiscalPower} CV`} /><Detail label="Usage" value={autoUsageLabels[selfServiceAutomobileRequest.vehicle.usage]} /><Detail label="Transport de matières inflammables" value={typeof selfServiceAutomobileRequest.vehicle.carriesFlammableMaterials === "boolean" ? (selfServiceAutomobileRequest.vehicle.carriesFlammableMaterials ? "Oui" : "Non") : "Non renseigné"} /><Detail label="Remorque" value={typeof selfServiceAutomobileRequest.vehicle.hasTrailer === "boolean" ? (selfServiceAutomobileRequest.vehicle.hasTrailer ? "Oui" : "Non") : "Non renseigné"} />{selfServiceAutomobileRequest.vehicle.estimatedValue !== null && <Detail label="Valeur estimée du véhicule" value={formatFcfa(selfServiceAutomobileRequest.vehicle.estimatedValue)} />}</div></section>
         <section><h3>Durée et prise d’effet</h3><div className="details-grid"><Detail label="Durée" value={`${selfServiceAutomobileRequest.coverage.durationMonths} mois`} /><Detail label="Prise d’effet" value={selfServiceAutomobileRequest.coverage.desiredStartDate ? formatDate(selfServiceAutomobileRequest.coverage.desiredStartDate) : "Date à confirmer"} /></div></section>
         <section><h3>Garanties choisies</h3><div className="details-grid"><Detail label="Garanties obligatoires" value={`${autoGuaranteeLabels.civil_liability} · ${autoGuaranteeLabels.defense_and_recours}`} /><Detail label="Garanties complémentaires" value={selectedGuarantees.filter((item) => item !== "civil_liability" && item !== "defense_and_recours").map((item) => autoGuaranteeLabels[item]).join(" · ") || "Aucune garantie complémentaire"} /></div></section>
@@ -390,7 +394,7 @@ export function ProposalsPage({ requestReference }: { requestReference: string }
   const primaryOffer = recommendedOffer ?? offers[0];
   if (!primaryOffer) return <NotFoundPage />;
   const alternatives = offers.filter((offer) => offer.id !== primaryOffer.id);
-  const selectionLocked = request.status === "policy_available" || request.status === "completed";
+  const selectionLocked = isOfferChoiceLocked(request, store.payments);
   return (
     <div className="grid gap-6 lg:gap-8">
       <Button variant="ghost" className="h-9 w-fit rounded-lg px-2 text-slate-600" type="button" onClick={() => navigate(`/espace/demandes/${requestReference}`)}><ArrowLeft size={17} /> Retour au dossier</Button>
@@ -498,14 +502,50 @@ export function DocumentsPage() {
   );
 }
 
+function AnnualPaymentSummary({ schedule }: { schedule: PaymentSchedule }) {
+  return <section className="panel" aria-label={`Versements annuels de l’offre ${schedule.offerReference}`}>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><span className="page-eyebrow">{schedule.requestId}</span><h2 className="mt-2">Suivi des versements</h2><p className="mt-1 text-sm text-slate-500">Offre {schedule.offerReference} · du {formatDate(schedule.annualStart)} au {formatDate(schedule.annualEnd)}</p></div>
+      <StatusBadge status={schedule.completed ? "succeeded" : "pending"}>{schedule.completed ? "Année réglée" : schedule.paidTotal > 0 ? "Règlement partiel" : "Aucun versement"}</StatusBadge>
+    </div>
+    <dl className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div><dt className="text-sm text-slate-500">Prime annuelle TTC</dt><dd className="mt-1 font-semibold tabular-nums">{formatFcfa(schedule.annualPremium)}</dd></div>
+      <div><dt className="text-sm text-slate-500">Versements confirmés</dt><dd className="mt-1 font-semibold tabular-nums">{formatFcfa(schedule.paidTotal)}</dd></div>
+      <div><dt className="text-sm text-slate-500">Plafond maximal de 105 %</dt><dd className="mt-1 font-semibold tabular-nums">{formatFcfa(schedule.cap)}</dd></div>
+      <div><dt className="text-sm text-slate-500">Marge sous le plafond</dt><dd className="mt-1 font-semibold tabular-nums">{formatFcfa(schedule.capAvailable)}</dd></div>
+    </dl>
+    {schedule.extraCost > 0 && <p className="mt-4 text-sm text-slate-600">Surcoût du fractionnement déjà perçu : <strong>{formatFcfa(schedule.extraCost)}</strong></p>}
+  </section>;
+}
+
+function PaymentPeriod({ payment }: { payment: Payment }) {
+  if (!payment.fraction) return null;
+  return <span>Fraction de {payment.fraction.durationMonths} mois{payment.fraction.periodStart && payment.fraction.periodEnd ? ` · du ${formatDate(payment.fraction.periodStart)} au ${formatDate(payment.fraction.periodEnd)}` : ""}</span>;
+}
+
 export function PaymentsPage() {
   const { store } = usePortal();
   return (
     <div className="page-stack">
-      <PageHeader eyebrow="Historique financier" title="Mes paiements" description="Consultez les règlements déjà initiés pour vos dossiers." />
-      {store.payments.length ? <section className="panel table-panel"><div className="panel-heading"><div><span className="page-eyebrow">Toutes les opérations</span><h2>Historique</h2></div></div><div className="responsive-table"><table><thead><tr><th>Référence</th><th>Contrat ou dossier</th><th>Montant</th><th>Date</th><th>Mode</th><th>Statut</th></tr></thead><tbody>{store.payments.map((payment) => <tr key={payment.id}><td><strong>{payment.reference}</strong></td><td>{payment.contractId || payment.requestId}</td><td>{formatFcfa(payment.amount)}</td><td>{formatDate(payment.date)}</td><td>{paymentLabels[payment.method]}</td><td><StatusBadge status={payment.status}>{payment.status === "succeeded" ? "Confirmé" : payment.status === "failed" ? "Échoué" : "En attente"}</StatusBadge></td></tr>)}</tbody></table></div></section> : <EmptyState title="Aucun paiement enregistré" description="Les règlements initiés depuis vos dossiers apparaîtront ici." />}
+      <PageHeader eyebrow="Historique financier" title="Mes paiements" description="Retrouvez les paiements enregistrés pour vos dossiers." />
+      {store.paymentSchedulesError && <p className="form-alert error" role="status"><CircleAlert size={17} />{store.paymentSchedulesError} Vos règlements restent consultables ci-dessous.</p>}
+      {store.paymentSchedules?.map((schedule) => <AnnualPaymentSummary key={schedule.offerId} schedule={schedule} />)}
+      {store.payments.length ? <><section className="payment-history-cards grid gap-3 md:hidden" aria-label="Paiements enregistrés">{store.payments.map((payment) => <PaymentHistoryCard key={payment.id} payment={payment} />)}</section><section className="panel table-panel hidden md:block"><div className="panel-heading"><div><span className="page-eyebrow">Toutes les opérations</span><h2>Historique</h2></div></div><div className="responsive-table"><table><thead><tr><th>Référence</th><th>Contrat ou dossier</th><th>Montant</th><th>Date</th><th>Mode</th><th>Statut</th></tr></thead><tbody>{store.payments.map((payment) => <tr key={payment.id}><td><strong>{payment.reference}</strong>{payment.transactionReference && <small className="block text-xs text-slate-500">{payment.transactionReference}</small>}</td><td>{payment.contractId || payment.requestId}{payment.fraction && <small className="mt-1 block text-xs text-slate-500"><PaymentPeriod payment={payment} /></small>}</td><td>{formatFcfa(payment.amount)}</td><td>{formatDate(payment.date)}</td><td>{paymentLabels[payment.method]}</td><td><StatusBadge status={payment.status}>{payment.status === "succeeded" ? "Confirmé" : payment.status === "failed" ? "Échoué" : "En attente"}</StatusBadge></td></tr>)}</tbody></table></div></section></> : <EmptyState title="Aucun paiement enregistré" description="Les règlements enregistrés pour vos dossiers apparaîtront ici." />}
     </div>
   );
+}
+
+function PaymentHistoryCard({ payment }: { payment: Payment }) {
+  return <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="flex flex-wrap items-start justify-between gap-3"><strong className="break-all text-sm">{payment.reference}</strong><StatusBadge status={payment.status}>{payment.status === "succeeded" ? "Confirmé" : payment.status === "failed" ? "Échoué" : "En attente"}</StatusBadge></div>
+    <strong className="mt-3 block text-2xl tabular-nums">{formatFcfa(payment.amount)}</strong>
+    <dl className="mt-4 grid gap-3 text-sm">
+      <div><dt className="text-xs text-slate-500">Contrat ou dossier</dt><dd className="break-all">{payment.contractId || payment.requestId}</dd></div>
+      {payment.fraction && <div><dt className="text-xs text-slate-500">Période réglée</dt><dd><PaymentPeriod payment={payment} /></dd></div>}
+      <div className="grid grid-cols-2 gap-3"><div><dt className="text-xs text-slate-500">Date du règlement</dt><dd>{formatDate(payment.date)}</dd></div><div><dt className="text-xs text-slate-500">Moyen de paiement</dt><dd>{paymentLabels[payment.method]}</dd></div></div>
+      {payment.transactionReference && <div><dt className="text-xs text-slate-500">Référence de transaction ou du reçu</dt><dd className="break-all">{payment.transactionReference}</dd></div>}
+    </dl>
+  </article>;
 }
 
 export function ContractsPage() {
@@ -523,6 +563,7 @@ export function ContractDetailPage({ policyNumber }: { policyNumber: string }) {
   if (!contract) return <NotFoundPage />;
   const documents = store.documents.filter((document) => contract.documentIds.includes(document.id));
   const payments = store.payments.filter((payment) => contract.paymentIds.includes(payment.id));
+  const paymentSchedule = store.paymentSchedules?.find((schedule) => schedule.requestId === contract.requestId && schedule.offerReference === contract.offerReference);
   const claims = store.claims.filter((claim) => contract.claimIds.includes(claim.id));
   const openOfficialPolicy = async () => {
     const preview = window.open("", "_blank");
@@ -543,10 +584,10 @@ export function ContractDetailPage({ policyNumber }: { policyNumber: string }) {
     <section className="policy-hero"><div><span className="policy-icon"><ShieldCheck size={28} /></span><div><small>{contract.status === "active" ? "Votre police d’assurance est disponible." : `Votre gestionnaire prépare le contrat lié à l’offre ${contract.offerReference || "sélectionnée"}.`}</small><h2>{contract.policyNumber}</h2></div></div><div className="policy-downloads">{contract.status === "active" && contract.policyAvailable && <button className="button button-primary" type="button" disabled={openingPolicy} onClick={() => void openOfficialPolicy()}><Download size={17} />{openingPolicy ? "Ouverture…" : "Voir la police officielle"}</button>}{documents.slice(0, 3).map((document) => <a className="button button-secondary" href={assetUrl(document.downloadUrl || "")} download key={document.id}><Download size={17} /> {document.type}</a>)}</div></section>
     {policyError && <div className="form-alert error" role="alert"><CircleAlert size={17} />{policyError}</div>}
     <Tabs defaultValue="resume" className="contract-tabs"><TabsList className="contract-tabs-list"><TabsTrigger value="resume">Résumé</TabsTrigger><TabsTrigger value="garanties">Garanties</TabsTrigger><TabsTrigger value="documents">Documents</TabsTrigger><TabsTrigger value="paiements">Paiements</TabsTrigger><TabsTrigger value="sinistres">Sinistres</TabsTrigger></TabsList>
-      <TabsContent value="resume"><section className="panel"><div className="details-grid"><Detail label="Numéro de police" value={contract.policyNumber} />{contract.offerReference&&<Detail label="Référence de l’offre" value={contract.offerReference}/>}<Detail label="Produit" value={contract.productLabel} /><Detail label="Date d’effet" value={formatDate(contract.effectiveDate)} /><Detail label="Expiration" value={formatDate(contract.expirationDate)} /><Detail label="Prime annuelle" value={formatFcfa(contract.premium)} /></div></section></TabsContent>
+      <TabsContent value="resume"><section className="panel"><div className="details-grid"><Detail label="Numéro de police" value={contract.policyNumber} />{contract.offerReference&&<Detail label="Référence de l’offre" value={contract.offerReference}/>}<Detail label="Produit" value={contract.productLabel} /><Detail label="Date d’effet" value={formatDate(contract.effectiveDate)} /><Detail label="Expiration" value={formatDate(contract.expirationDate)} /><Detail label="Prime du contrat" value={formatFcfa(contract.premium)} /></div></section></TabsContent>
       <TabsContent value="garanties"><section className="panel"><h2>Garanties incluses</h2><ul className="guarantee-list large">{contract.guarantees.map((item) => <li key={item}><Check size={17} /> {item}</li>)}</ul></section></TabsContent>
       <TabsContent value="documents"><section className="panel mini-list">{contract.status === "active" && contract.policyAvailable && <button type="button" onClick={() => void openOfficialPolicy()} disabled={openingPolicy}><FileText size={20} /><div><strong>Police d’assurance officielle</strong><small>{contract.policyFileName || contract.policyNumber}</small></div><Download size={18} /></button>}{documents.map((document) => <a href={assetUrl(document.downloadUrl || "")} download key={document.id}><FileText size={20} /><div><strong>{document.title}</strong><small>{document.fileName || document.type}</small></div><Download size={18} /></a>)}{!contract.policyAvailable && documents.length === 0 && <p>La police sera disponible ici après sa finalisation.</p>}</section></TabsContent>
-      <TabsContent value="paiements"><section className="panel mini-list">{payments.map((payment) => <div key={payment.id}><WalletCards size={20} /><div><strong>{payment.reference}</strong><small>{formatDate(payment.date)}</small></div><strong>{formatFcfa(payment.amount)}</strong></div>)}</section></TabsContent>
+      <TabsContent value="paiements">{paymentSchedule && <AnnualPaymentSummary schedule={paymentSchedule} />}<section className="panel mini-list">{payments.map((payment) => <div key={payment.id}><WalletCards size={20} /><div><strong>{payment.reference}</strong><small>{formatDate(payment.date)}</small>{payment.fraction && <small><PaymentPeriod payment={payment} /></small>}</div><strong>{formatFcfa(payment.amount)}</strong></div>)}</section></TabsContent>
       <TabsContent value="sinistres"><section className="panel mini-list">{claims.map((claim) => <button type="button" onClick={() => navigate(`/espace/sinistres/${claim.reference}`)} key={claim.id}><LifeBuoy size={20} /><div><strong>{claim.reference}</strong><small>{claim.type}</small></div><ChevronRight size={18} /></button>)}</section></TabsContent>
     </Tabs>
   </div>;
