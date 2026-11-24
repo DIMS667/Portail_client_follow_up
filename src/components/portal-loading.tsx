@@ -1,4 +1,18 @@
+import { useEffect, useState, type ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { portalShellStyles } from "./portal-shell-styles";
+
+/** Le contenu s’affiche dès qu’il est prêt ; seuls les chargements perceptibles montrent un skeleton. */
+export function DelayedLoading({ children }: { children: ReactNode }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVisible(true), 180);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  return visible ? children : null;
+}
 
 export function PortalPageSkeleton() {
   return (
@@ -16,10 +30,10 @@ export function PortalPageSkeleton() {
 
 export function PortalSessionSkeleton() {
   return (
-    <div className="min-h-screen bg-slate-50" role="status" aria-live="polite" aria-label="Vérification de la session">
+    <div className={portalShellStyles.frame} role="status" aria-live="polite" aria-label="Vérification de la session">
       <span className="sr-only">Vérification de la session</span>
-      <aside className="fixed inset-y-0 left-0 hidden w-[250px] bg-[#0a315f] p-6 md:block"><Skeleton className="h-10 w-36 bg-white/15" /><div className="mt-10 grid gap-4">{Array.from({ length: 7 }).map((_, index) => <Skeleton className="h-10 w-full bg-white/10" key={index} />)}</div></aside>
-      <main className="min-h-screen md:ml-[250px]"><header className="h-[75px] border-b border-slate-200 bg-white px-6 py-4"><Skeleton className="h-10 w-44" /></header><div className="mx-auto w-full max-w-[1280px] px-5 py-8 sm:px-8 lg:px-12"><PortalPageSkeleton /></div></main>
+      <aside className={portalShellStyles.sidebar}><Skeleton className="mb-8 h-[58px] w-full rounded-xl bg-white/15" /><div className="grid gap-4">{Array.from({ length: 7 }).map((_, index) => <Skeleton className="h-10 w-full bg-white/10" key={index} />)}</div></aside>
+      <div className={portalShellStyles.body}><header className={portalShellStyles.header}><Skeleton className="h-10 w-44" /></header><main className={portalShellStyles.content}><PortalPageSkeleton /></main></div>
     </div>
   );
 }

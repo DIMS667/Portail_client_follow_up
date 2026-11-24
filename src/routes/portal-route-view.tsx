@@ -1,72 +1,49 @@
 import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { isPortalDeployment } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
-import { PortalPageSkeleton, PortalSessionSkeleton } from "../components/portal-loading";
+import { DelayedLoading, PortalPageSkeleton, PortalSessionSkeleton } from "../components/portal-loading";
 
 const ClientShell = lazy(() => import("../components/client-shell").then((module) => ({ default: module.ClientShell })));
-const ClaimDetailPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.ClaimDetailPage })));
-const ClaimsPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.ClaimsPage })));
-const ContractDetailPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.ContractDetailPage })));
-const ContractsPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.ContractsPage })));
 const ConversationPage = lazy(() => import("../pages/conversation-page").then((module) => ({ default: module.ConversationPage })));
-const DashboardPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.DashboardPage })));
-const DocumentsPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.DocumentsPage })));
-const NotFoundPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.NotFoundPage })));
-const NotificationsPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.NotificationsPage })));
-const PaymentsPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.PaymentsPage })));
-const ProfilePage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.ProfilePage })));
-const ProposalsPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.ProposalsPage })));
-const RequestDetailPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.RequestDetailPage })));
-const RequestsPage = lazy(() => import("../pages/client-pages").then((module) => ({ default: module.RequestsPage })));
-const NewRequestPage = lazy(() => import("../pages/flow-pages").then((module) => ({ default: module.NewRequestPage })));
-const OfferDetailPage = lazy(() => import("../pages/flow-pages").then((module) => ({ default: module.OfferDetailPage })));
 const NewClaimPage = lazy(() => import("../pages/new-claim-page").then((module) => ({ default: module.NewClaimPage })));
-const LoginPage = lazy(() => import("../pages/public-pages").then((module) => ({ default: module.LoginPage })));
+
+const ClientPageRoute = lazy(() => import("./client-page-route"));
+const RequestPageRoute = lazy(() => import("./request-page-route"));
+const AuthPageRoute = lazy(() => import("./auth-page-route"));
 
 export function PortalRouteView() {
   const { authenticationReady, pathname, store } = usePortal();
   const isPortalArea = pathname.startsWith("/espace") || (isPortalDeployment && pathname === "/");
 
-  if (!isPortalArea) return isPortalDeployment ? <NotFoundPage /> : null;
+  if (!isPortalArea) return isPortalDeployment ? <ClientPageRoute pathname={pathname} /> : null;
   if (!authenticationReady) return <PortalSessionLoadingFallback />;
   if (!store.session.authenticated) {
-    return isPortalDeployment ? <PortalLoginRedirect /> : <LoginPage />;
+    return isPortalDeployment ? <PortalLoginRedirect /> : <AuthPageRoute pathname={pathname} />;
   }
 
   let page: ReactNode;
-  if (pathname === "/" || pathname === "/espace") page = <DashboardPage />;
-  else if (pathname === "/espace/demandes") page = <RequestsPage />;
-  else if (pathname === "/espace/demandes/nouvelle") page = <NewRequestPage />;
+  if (pathname === "/espace/demandes/nouvelle" || /^\/espace\/offres\/[^/]+$/.test(pathname)) page = <RequestPageRoute pathname={pathname} />;
   else if (/^\/espace\/demandes\/[^/]+\/discussion$/.test(pathname)) page = <ConversationPage requestReference={decodeURIComponent(pathname.split("/")[3])} />;
-  else if (/^\/espace\/demandes\/[^/]+\/propositions$/.test(pathname)) page = <ProposalsPage requestReference={decodeURIComponent(pathname.split("/")[3])} />;
-  else if (/^\/espace\/demandes\/[^/]+$/.test(pathname)) page = <RequestDetailPage reference={decodeURIComponent(pathname.split("/")[3])} />;
-  else if (/^\/espace\/offres\/[^/]+$/.test(pathname)) page = <OfferDetailPage offerId={decodeURIComponent(pathname.split("/")[3])} />;
-  else if (pathname === "/espace/documents") page = <DocumentsPage />;
-  else if (pathname === "/espace/paiements") page = <PaymentsPage />;
-  else if (pathname === "/espace/contrats") page = <ContractsPage />;
-  else if (/^\/espace\/contrats\/[^/]+$/.test(pathname)) page = <ContractDetailPage policyNumber={decodeURIComponent(pathname.split("/")[3])} />;
-  else if (pathname === "/espace/sinistres") page = <ClaimsPage />;
   else if (pathname === "/espace/sinistres/nouveau") page = <NewClaimPage />;
-  else if (/^\/espace\/sinistres\/[^/]+$/.test(pathname)) page = <ClaimDetailPage reference={decodeURIComponent(pathname.split("/")[3])} />;
-  else if (pathname === "/espace/notifications") page = <NotificationsPage />;
-  else if (pathname === "/espace/profil") page = <ProfilePage />;
-  else page = <NotFoundPage />;
+  else page = <ClientPageRoute pathname={pathname} />;
 
   return (
-    <ClientShell>
-      <Suspense fallback={<PortalPageLoadingFallback />}>
-        {page}
-      </Suspense>
-    </ClientShell>
+    <Suspense fallback={<PortalSessionLoadingFallback />}>
+      <ClientShell>
+        <Suspense fallback={<PortalPageLoadingFallback />}>
+          {page}
+        </Suspense>
+      </ClientShell>
+    </Suspense>
   );
 }
 
 function PortalSessionLoadingFallback() {
-  return <PortalSessionSkeleton />;
+  return <DelayedLoading><PortalSessionSkeleton /></DelayedLoading>;
 }
 
 function PortalPageLoadingFallback() {
-  return <PortalPageSkeleton />;
+  return <DelayedLoading><PortalPageSkeleton /></DelayedLoading>;
 }
 
 function PortalLoginRedirect() {

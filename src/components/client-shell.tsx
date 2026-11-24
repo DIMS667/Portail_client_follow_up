@@ -6,6 +6,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "./brand-logo";
+import { portalShellStyles } from "./portal-shell-styles";
 import { usePortal } from "../app/portal-context";
 import { marquerNotificationLue } from "../services/notifications-api";
 import { markNotificationRead, signOut } from "../services/portal-service";
@@ -105,8 +106,8 @@ export function ClientShell({ children }: { children: ReactNode }) {
     }
   };
   return (
-    <div className="min-h-screen bg-[#fbf8f7] text-slate-950">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col overflow-hidden bg-[linear-gradient(180deg,#4a0710_0%,#710d17_58%,#98131d_100%)] px-4 py-5 text-red-50 shadow-[18px_0_45px_rgba(94,10,19,.12)] lg:flex">
+    <div className={portalShellStyles.frame}>
+      <aside className={portalShellStyles.sidebar}>
         <button className="mb-8 flex min-h-[58px] items-center rounded-xl bg-white px-3 py-2 text-left shadow-[0_12px_35px_rgba(40,0,5,.18)]" type="button" onClick={() => navigate("/espace")} aria-label="FOLLOW-UP INSURANCE, accueil de l’espace client"><BrandLogo className="w-[180px]" /></button>
         <nav className="grid gap-1" aria-label="Navigation de l’espace client">
           <span className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[.18em] text-orange-200/70">Mon espace</span>
@@ -122,8 +123,8 @@ export function ClientShell({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      <div className="min-h-screen pb-20 lg:ml-[248px] lg:pb-0">
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl lg:h-[72px] lg:px-10">
+      <div className={portalShellStyles.body}>
+        <header className={portalShellStyles.header}>
           <button type="button" className="flex min-w-0 items-center lg:hidden" onClick={() => navigate("/espace")} aria-label="FOLLOW-UP INSURANCE, accueil"><BrandLogo className="w-[150px]" /></button>
           <div className="hidden gap-0.5 lg:grid"><span className="text-[11px] font-semibold uppercase tracking-[.14em] text-slate-400">Espace personnel</span><strong className="text-[15px] text-slate-900">Bonjour {store.client.firstName}</strong></div>
           <div className="flex items-center gap-1.5">
@@ -195,7 +196,7 @@ export function ClientShell({ children }: { children: ReactNode }) {
             <Button type="button" variant="ghost" size="icon" className="hidden rounded-xl text-slate-500 hover:bg-slate-100 lg:inline-flex" onClick={logout} aria-label="Se déconnecter"><LogOut size={18} /></Button>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-10 lg:py-8">{children}</main>
+        <main className={portalShellStyles.content}>{children}</main>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 grid h-[calc(68px+env(safe-area-inset-bottom))] grid-cols-5 border-t border-slate-200 bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_35px_rgba(8,24,45,.08)] backdrop-blur-xl lg:hidden" aria-label="Navigation mobile">
