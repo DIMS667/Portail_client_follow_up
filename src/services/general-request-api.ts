@@ -52,7 +52,7 @@ const chaine: Array<{ statut: StatutApi; libelle: string }> = [
   { statut: "propositions_disponibles", libelle: "Propositions disponibles" },
   { statut: "offre_selectionnee", libelle: "Offre sélectionnée" },
   { statut: "documents_requis", libelle: "Documents" },
-  { statut: "paiement_en_attente", libelle: "Échange avec le courtier" },
+  { statut: "paiement_en_attente", libelle: "Échange avec le gestionnaire" },
   { statut: "contrat_en_preparation", libelle: "Création du contrat" },
   { statut: "police_disponible", libelle: "Contrat disponible" },
   { statut: "finalisee", libelle: "Dossier finalisé" },
@@ -130,7 +130,9 @@ export async function creerDemandeGenerale(data: Partial<InsuranceRequest>) {
   if (!product || product === "automobile" || product === "moto") {
     throw new Error("Le produit d’assurance n’est pas valide.");
   }
-  const delegated = data.details?.["Mode de préparation"] === "Délégué au courtier";
+  const delegated = ["Délégué au gestionnaire", "Délégué au courtier"].includes(
+    data.details?.["Mode de préparation"] ?? "",
+  );
   const api = await request<DemandeGeneraleApi>({
     method: "POST",
     body: JSON.stringify({

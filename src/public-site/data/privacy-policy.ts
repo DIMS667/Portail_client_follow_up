@@ -12,7 +12,7 @@ export const privacyPolicy = {
     {
       title: "1. Responsable du traitement",
       paragraphs: [
-        "FOLLOW-UP INSURANCE est responsable des traitements de données réalisés au moyen du site followupassurance.com et de l’espace client associé. Cette politique concerne notamment la création de compte, l’authentification, les demandes d’assurance, le suivi des contrats et des sinistres, ainsi que les échanges avec le courtier.",
+        "FOLLOW-UP INSURANCE est responsable des traitements de données réalisés au moyen du site followupassurance.com et de l’espace client associé. Cette politique concerne notamment la création de compte, l’authentification, les demandes d’assurance, le suivi des contrats et des sinistres, ainsi que les échanges avec le gestionnaire.",
         "Pour toute question relative à vos données personnelles ou pour exercer vos droits, vous pouvez contacter FOLLOW-UP INSURANCE depuis la page Contact du site.",
       ],
     },

@@ -56,6 +56,11 @@ for (const route of PUBLIC_INDEXABLE_ROUTES) {
   assert(!html.includes('<div id="root"></div>'), `${route}: contenu pré-rendu absent`);
   assert((html.match(/<h1(?:\s|>)/g) ?? []).length === 1, `${route}: la page pré-rendue doit contenir exactement un H1`);
   assert(!/Lorem ipsum|contenu éditorial à remplacer|témoignage à remplacer|cas client à remplacer/i.test(html), `${route}: contenu factice détecté`);
+  const quoteLinks = html.match(/<a\b[^>]*href="\/contact\/\?objet=devis"[^>]*>/g) ?? [];
+  assert(quoteLinks.length === 1, `${route}: un seul accès au devis attendu`);
+  assert(/<header>[\s\S]*href="\/contact\/\?objet=devis"[\s\S]*<\/header>/.test(html), `${route}: accès au devis absent de la navigation`);
+  assert(!/<a\b[^>]*href="\/contact\/\?(?:motif=(?:automobile[^"&]*|sante|vie-capitalisation|habitation|voyage|entreprise|caution|orientation)|profil=)/.test(html), `${route}: accès au devis supplémentaire hors navigation`);
+  assert(/aria-label="Follow-Up Insurance sur LinkedIn \(nouvel onglet\)"><img src="\/images\/linkedin.svg"/.test(html), `${route}: logo LinkedIn accessible absent`);
 
   for (const [map, value, label] of [
     [seenTitles, seo.title, "title"],

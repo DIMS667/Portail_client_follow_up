@@ -1,17 +1,10 @@
-import { ArrowUpRight } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
 import { BrandLogo } from "../../components/brand-logo";
 import { publicPageLinks, solutionSummaries } from "../data/public-pages";
 import { siteConfig } from "../data/site-config";
 import { PublicLink } from "./public-link";
+import { LinkedInLink } from "./linkedin-link";
 
-interface PublicFooterProps {
-  onClientSpace: () => void;
-  onQuote: () => void;
-}
-
-export function PublicFooter({ onClientSpace }: PublicFooterProps) {
+export function PublicFooter() {
   const contactItems = [
     ...siteConfig.phones,
     siteConfig.email && { label: siteConfig.email, href: `mailto:${siteConfig.email}` },
@@ -28,7 +21,7 @@ export function PublicFooter({ onClientSpace }: PublicFooterProps) {
           </PublicLink>
           <p>{siteConfig.signature}</p>
           <span>Conseil, choix et accompagnement pour avancer avec plus de sérénité.</span>
-          {siteConfig.linkedin && <a className="public-footer__social-link" href={siteConfig.linkedin} target="_blank" rel="noopener noreferrer" aria-label="Follow-Up Insurance sur LinkedIn (nouvel onglet)">Suivez-nous sur LinkedIn <ArrowUpRight size={16} aria-hidden="true" /></a>}
+          <LinkedInLink />
         </div>
 
         <div className="public-footer__column">
@@ -44,13 +37,7 @@ export function PublicFooter({ onClientSpace }: PublicFooterProps) {
         </div>
 
         <div className="public-footer__column public-footer__access">
-          <h2>Votre espace</h2>
-          <button type="button" onClick={onClientSpace} className="public-footer__client-link">
-            Espace client
-          </button>
-          <Button asChild className="public-button public-button--primary">
-            <PublicLink href="/contact?objet=devis">Demander un devis <ArrowUpRight size={16} /></PublicLink>
-          </Button>
+          <h2><PublicLink href="/contact">Contact</PublicLink></h2>
           {contactItems.length > 0 && (
             <div className="public-footer__contact">
               {contactItems.map((item) => item.href

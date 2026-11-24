@@ -194,22 +194,23 @@
 
 .public-footer { color: var(--public-ink); background: #fff; }
 .public-footer__grid { padding-block: 42px 32px; display: grid; grid-template-columns: 1.25fr .72fr .8fr 1fr; gap: 56px; }
-.public-footer__brand > a { display: inline-block; }
+.public-footer__brand > a:not(.public-social-link) { display: inline-block; }
 .public-footer__brand > p { margin-top: 12px; color: var(--public-muted); font-size: 16px; font-style: italic; letter-spacing: .05em; }
 .public-footer__brand > span { max-width: 350px; margin-top: 18px; display: block; color: var(--public-muted); font-size: 14px; line-height: 1.5; }
 .public-footer__column { display: grid; align-content: start; justify-items: start; gap: 10px; }
 .public-footer__column h2 { margin-bottom: 5px; font-size: 13px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .public-footer__column > a { color: var(--public-muted); font-size: 14px; }
 .public-footer__column > a:hover { color: var(--public-red); }
-.public-footer__client-link { padding: 0; border: 0; color: var(--public-muted); background: transparent; font: inherit; font-size: 14px; cursor: pointer; }
-.public-footer__client-link:hover, .public-footer__client-link:focus-visible { color: var(--public-red); }
 .public-footer__access .public-button { width: 100%; }
 .public-footer__access .public-button--primary,
 .public-footer__access .public-button--primary:hover,
 .public-footer__access .public-button--primary:focus-visible { color: #fff; }
 .public-footer__contact { margin-top: 8px; display: grid; gap: 7px; color: var(--public-muted); font-size: 13px; }
-.public-footer__social-link { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px; width: fit-content; max-width: 100%; padding-block: 8px; color: var(--public-red); font-size: 14px; font-weight: 600; }
-.public-footer__social-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+.public-social-link { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 6px; transition: background-color .15s; }
+.public-social-link img { display: block; width: 28px; height: 28px; }
+.public-social-link:hover { background: #e8f1fa; }
+.public-social-link:focus-visible { outline: 2px solid #0a66c2; outline-offset: 3px; }
+.public-footer__brand > .public-social-link { margin-top: 8px; }
 .public-footer__legal { min-height: 58px; padding-block: 14px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-top: 1px solid var(--public-line); color: #777773; font-size: 12px; }
 .public-footer__legal > div { display: flex; flex-wrap: wrap; gap: 20px; }
 .public-footer__legal a:hover, .public-footer__legal a:focus-visible { color: var(--public-red); }

@@ -70,7 +70,7 @@ export function PaymentDialog({ offer, trigger }: { offer: Offer; trigger?: Reac
         disabled={!offer.requestReference}
         onClick={() => navigate(`/espace/demandes/${offer.requestReference}/discussion`)}
       >
-        <MessageCircle size={17} /> Discuter avec mon courtier
+        <MessageCircle size={17} /> Discuter avec mon gestionnaire
       </button>
     );
   }

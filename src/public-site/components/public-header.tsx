@@ -13,9 +13,7 @@ function isActiveRoute(pathname: string, href: string) {
 }
 
 interface PublicHeaderProps {
-  onHome: () => void;
   onClientSpace: () => void;
-  onQuote: () => void;
 }
 
 export function PublicHeader({ onClientSpace }: PublicHeaderProps) {

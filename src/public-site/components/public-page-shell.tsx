@@ -18,14 +18,13 @@ export function PublicPageShell({ children, className = "" }: PublicPageShellPro
     }
     window.location.assign(store.session.authenticated ? "/portail-client/" : "/login/");
   };
-  const goToQuote = () => navigate("/contact?objet=devis");
 
   return (
     <div className={`public-site public-page-site ${className}`.trim()}>
       <a className="public-skip-link" href="#contenu">Aller au contenu</a>
-      <PublicHeader onHome={() => navigate("/")} onClientSpace={goToClientSpace} onQuote={goToQuote} />
+      <PublicHeader onClientSpace={goToClientSpace} />
       <main id="contenu">{children}</main>
-      <PublicFooter onClientSpace={goToClientSpace} onQuote={goToQuote} />
+      <PublicFooter />
     </div>
   );
 }

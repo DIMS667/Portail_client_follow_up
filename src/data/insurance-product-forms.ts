@@ -234,7 +234,7 @@ export const insuranceProductForms: Record<
   vie_capitalisation: {
     title: "Votre projet de vie et d’épargne",
     intro:
-      "Précisez votre objectif, l’horizon envisagé et l’effort d’épargne souhaité pour permettre à votre courtier de préparer une solution adaptée.",
+      "Précisez votre objectif, l’horizon envisagé et l’effort d’épargne souhaité pour permettre à votre gestionnaire de préparer une solution adaptée.",
     sections: [
       {
         title: "Votre projet",
@@ -282,7 +282,7 @@ export const insuranceProductForms: Record<
       },
       {
         title: "Capital, versements et durée",
-        description: "Indiquez des montants estimatifs. Ils pourront être ajustés avec votre courtier.",
+        description: "Indiquez des montants estimatifs. Ils pourront être ajustés avec votre gestionnaire.",
         fields: [
           {
             key: "targetCapital",
@@ -316,7 +316,7 @@ export const insuranceProductForms: Record<
             label: "Horizon souhaité",
             type: "select",
             defaultValue: "",
-            options: ["5 ans", "10 ans", "15 ans", "20 ans", "Durée à définir avec le courtier"],
+            options: ["5 ans", "10 ans", "15 ans", "20 ans", "Durée à définir avec le gestionnaire"],
             required: true,
           },
           {

@@ -47,7 +47,7 @@ export const adviceArticles = [
     title: "Comment choisir son assurance automobile ?",
     excerpt:
       "Usage, responsabilité civile, dommages, franchises et exclusions : découvrez les critères à comparer avant de choisir votre assurance automobile.",
-    body: "Commencez par votre usage réel du véhicule, les conducteurs concernés et votre capacité à faire face à un imprévu. Votre courtier vous aide ensuite à lire les différences entre les solutions proposées.",
+    body: "Commencez par votre usage réel du véhicule, les conducteurs concernés et votre capacité à faire face à un imprévu. Votre gestionnaire vous aide ensuite à lire les différences entre les solutions proposées.",
     image: "/images/insurance-auto.webp",
     imageAlt: "Voiture rouge moderne vue depuis le dessus",
   },

@@ -82,9 +82,6 @@ export function HomePage() {
               <h1 id="public-hero-title">Follow-Up Insurance.<span>Allez en toute quiétude.</span></h1>
               <p>Votre courtier en assurances à Yaoundé, au Cameroun, comprend vos besoins, recherche des solutions adaptées et vous accompagne dans vos choix comme dans leur suivi.</p>
               <div className="public-hero__actions">
-                <Button asChild className="public-button public-button--primary public-button--large">
-                  <PublicLink href="/contact?objet=devis">Étudier mon besoin <ArrowRight size={17} /></PublicLink>
-                </Button>
                 <Button asChild type="button" variant="outline" className="public-button public-button--outline public-button--large">
                   <PublicLink href="/a-propos">Découvrir Follow-Up</PublicLink>
                 </Button>
@@ -129,7 +126,7 @@ export function HomePage() {
                 </Button>
               </div>
               <figure className="public-role__image">
-                <ResponsivePublicImage src="/images/public-role-advisor.png" alt="Une courtière écoute un client et analyse sa situation" sizes="(max-width: 760px) 100vw, 42vw" loading="lazy" />
+                <ResponsivePublicImage src="/images/public-role-advisor.png" alt="Une gestionnaire écoute un client et analyse sa situation" sizes="(max-width: 760px) 100vw, 42vw" loading="lazy" />
               </figure>
               <div className="public-role__statement">
                 <span aria-hidden="true" />
@@ -196,9 +193,6 @@ export function HomePage() {
                   </li>
                 ))}
               </ol>
-              <Button asChild className="public-button public-button--primary public-journey__cta">
-                <PublicLink href="/contact?objet=devis">Commencer ma demande <ArrowRight size={17} /></PublicLink>
-              </Button>
             </div>
           </section>
         </Reveal>
@@ -209,7 +203,7 @@ export function HomePage() {
               <div className="public-portal__copy">
                 <SectionLabel>Espace client</SectionLabel>
                 <h2 id="portal-title">Tout suivre, simplement.</h2>
-                <p>Depuis votre espace sécurisé, suivez vos démarches, consultez les propositions de votre courtier, transmettez vos documents et accédez à vos contrats.</p>
+                <p>Depuis votre espace sécurisé, suivez vos démarches, consultez les propositions de votre gestionnaire, transmettez vos documents et accédez à vos contrats.</p>
                 <PublicLink className="public-text-link" href="/a-propos">Découvrir notre accompagnement <ArrowRight size={16} /></PublicLink>
               </div>
               <figure className="public-portal__preview">
@@ -231,7 +225,7 @@ export function HomePage() {
                 <div>
                   <SectionLabel>En cas de sinistre</SectionLabel>
                   <h2>À vos côtés quand cela compte.</h2>
-                  <p>Déclarez votre sinistre, transmettez les éléments utiles et suivez les échanges avec l’appui de votre courtier.</p>
+                  <p>Déclarez votre sinistre, transmettez les éléments utiles et suivez les échanges avec l’appui de votre gestionnaire.</p>
                   <Button asChild variant="outline" className="public-button public-button--outline">
                     <PublicLink href="/sinistres">Que faire en cas de sinistre ? <ArrowRight size={16} /></PublicLink>
                   </Button>
@@ -275,21 +269,6 @@ export function HomePage() {
           </section>
         </Reveal>
 
-        <section className="public-final-cta" id="contact" aria-labelledby="contact-title">
-          <div className="public-container public-final-cta__inner">
-            <div>
-              <SectionLabel>Un projet ?</SectionLabel>
-              <h2 id="contact-title">Parlons de votre besoin.</h2>
-              <p>Un conseiller Follow-Up Insurance peut vous accompagner dans la recherche d’une solution adaptée.</p>
-            </div>
-            <div>
-              <Button asChild className="public-button public-button--light public-button--large">
-                <PublicLink href="/contact?objet=devis">Demander un devis <ArrowRight size={17} /></PublicLink>
-              </Button>
-              <PublicLink href="/a-propos">Découvrir notre approche</PublicLink>
-            </div>
-          </div>
-        </section>
     </PublicPageShell>
   );
 }

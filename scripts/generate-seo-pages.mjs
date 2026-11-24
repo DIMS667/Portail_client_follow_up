@@ -13,6 +13,7 @@ import {
 import { privacyPolicy } from "../src/public-site/data/privacy-policy.ts";
 import { termsOfUse } from "../src/public-site/data/terms-of-use.ts";
 import { siteConfig } from "../src/public-site/data/site-config.ts";
+import { isQuoteCta } from "../src/public-site/data/quote-cta.ts";
 import {
   PUBLIC_INDEXABLE_ROUTES,
   PUBLIC_ORIGIN,
@@ -56,9 +57,18 @@ function renderList(items) {
   return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
+function renderCtaLink(href, label) {
+  return isQuoteCta(href) ? "" : renderLink(href, label);
+}
+
+function renderFinalCta(content) {
+  if (!content || isQuoteCta(content.action.href)) return "";
+  return `<section><h2>${escapeHtml(content.title)}</h2><p>${escapeHtml(content.description)}</p>${renderCtaLink(content.action.href, content.action.label)}</section>`;
+}
+
 function renderCards(cards) {
   if (!cards?.length) return "";
-  return `<div>${cards.map((card) => `<article><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.description)}</p>${card.href ? renderLink(card.href, card.label ?? "En savoir plus") : ""}</article>`).join("")}</div>`;
+  return `<div>${cards.map((card) => `<article><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.description)}</p>${card.href ? renderCtaLink(card.href, card.label ?? "En savoir plus") : ""}</article>`).join("")}</div>`;
 }
 
 function renderSteps(steps) {
@@ -75,21 +85,21 @@ function renderSection(section) {
     ${renderList(section.bullets)}
     ${renderCards(section.cards)}
     ${renderSteps(section.steps)}
-    ${section.cta ? renderLink(section.cta.href, section.cta.label) : ""}
+    ${section.cta ? renderCtaLink(section.cta.href, section.cta.label) : ""}
   </section>`;
 }
 
 function renderHeader() {
-  return `<header><a href="/" aria-label="${PUBLIC_SITE_NAME}">${PUBLIC_SITE_NAME}</a><nav aria-label="Navigation principale">${publicPageLinks.map((item) => renderLink(item.href, item.label)).join(" ")}</nav></header>`;
+  return `<header><a href="/" aria-label="${PUBLIC_SITE_NAME}">${PUBLIC_SITE_NAME}</a><nav aria-label="Navigation principale">${publicPageLinks.map((item) => renderLink(item.href, item.label)).join(" ")} ${renderLink("/contact?objet=devis", "Demander un devis")}</nav></header>`;
 }
 
 function renderFooter() {
-  const linkedin = siteConfig.linkedin ? `<p><a href="${escapeHtml(siteConfig.linkedin)}" target="_blank" rel="noopener noreferrer">Suivez-nous sur LinkedIn</a></p>` : "";
+  const linkedin = siteConfig.linkedin ? `<a class="public-social-link" href="${escapeHtml(siteConfig.linkedin)}" target="_blank" rel="noopener noreferrer" aria-label="Follow-Up Insurance sur LinkedIn (nouvel onglet)"><img src="/images/linkedin.svg" width="28" height="28" alt="" /></a>` : "";
   return `<footer><p>${PUBLIC_SITE_NAME} — Courtier en assurances.</p>${linkedin}<nav aria-label="Informations">${renderLink("/mentions-legales", "Mentions légales")} ${renderLink("/confidentialite", "Confidentialité")} ${renderLink("/conditions-utilisation", "Conditions d’utilisation")}</nav></footer>`;
 }
 
 function renderHero(hero) {
-  return `<section><p>${escapeHtml(hero.eyebrow)}</p><h1>${escapeHtml(hero.title)}</h1><p>${escapeHtml(hero.intro)}</p>${hero.primaryCta ? renderLink(hero.primaryCta.href, hero.primaryCta.label) : ""}${hero.secondaryCta ? ` ${renderLink(hero.secondaryCta.href, hero.secondaryCta.label)}` : ""}</section>`;
+  return `<section><p>${escapeHtml(hero.eyebrow)}</p><h1>${escapeHtml(hero.title)}</h1><p>${escapeHtml(hero.intro)}</p>${hero.primaryCta ? renderCtaLink(hero.primaryCta.href, hero.primaryCta.label) : ""}${hero.secondaryCta ? ` ${renderCtaLink(hero.secondaryCta.href, hero.secondaryCta.label)}` : ""}</section>`;
 }
 
 function renderLandingPage(page) {
@@ -98,7 +108,7 @@ function renderLandingPage(page) {
     additionalContent = faqPage.categories.map((category) => `<section id="${escapeHtml(category.id)}"><h2>${escapeHtml(category.title)}</h2>${category.items.map((item) => `<details><summary>${escapeHtml(item.question)}</summary><p>${escapeHtml(item.answer)}</p></details>`).join("")}</section>`).join("");
   }
 
-  return `${renderHeader()}<main>${renderHero(page.hero)}${page.sections.map(renderSection).join("")}${additionalContent}${page.finalCta ? `<section><h2>${escapeHtml(page.finalCta.title)}</h2><p>${escapeHtml(page.finalCta.description)}</p>${renderLink(page.finalCta.action.href, page.finalCta.action.label)}</section>` : ""}</main>${renderFooter()}`;
+  return `${renderHeader()}<main>${renderHero(page.hero)}${page.sections.map(renderSection).join("")}${additionalContent}${renderFinalCta(page.finalCta)}</main>${renderFooter()}`;
 }
 
 function renderSolutionPage(page) {
@@ -110,16 +120,16 @@ function renderSolutionPage(page) {
     <section><h2>Documents utiles</h2>${renderList(page.documents)}</section>
     <section><h2>${escapeHtml(page.brokerSupport.title)}</h2><p>${escapeHtml(page.brokerSupport.description)}</p>${renderSteps(page.brokerSupport.steps)}</section>
     <section><h2>Questions fréquentes</h2>${page.faq.map((item) => `<details><summary>${escapeHtml(item.question)}</summary><p>${escapeHtml(item.answer)}</p></details>`).join("")}</section>
-    <section><h2>${escapeHtml(page.finalCta.title)}</h2><p>${escapeHtml(page.finalCta.description)}</p>${renderLink(page.finalCta.action.href, page.finalCta.action.label)}</section>
+    ${renderFinalCta(page.finalCta)}
   </main>${renderFooter()}`;
 }
 
 function renderArticle(article) {
-  return `${renderHeader()}<main><article><p>${escapeHtml(article.category)} · ${escapeHtml(article.readingTime)}</p><h1>${escapeHtml(article.title)}</h1><p>${escapeHtml(article.introduction)}</p>${article.sections.map(renderSection).join("")}<aside><h2>${escapeHtml(article.takeaway.title)}</h2>${renderList(article.takeaway.points)}${renderLink(article.cta.href, article.cta.label)}</aside></article></main>${renderFooter()}`;
+  return `${renderHeader()}<main><article><p>${escapeHtml(article.category)} · ${escapeHtml(article.readingTime)}</p><h1>${escapeHtml(article.title)}</h1><p>${escapeHtml(article.introduction)}</p>${article.sections.map(renderSection).join("")}<aside><h2>${escapeHtml(article.takeaway.title)}</h2>${renderList(article.takeaway.points)}${renderCtaLink(article.cta.href, article.cta.label)}</aside></article></main>${renderFooter()}`;
 }
 
 function renderHome() {
-  return `${renderHeader()}<main><section><p>Courtier en assurances</p><h1>Follow-Up Insurance. Allez en toute quiétude.</h1><p>Votre courtier en assurances à Yaoundé, au Cameroun, comprend vos besoins, recherche des solutions adaptées et vous accompagne dans vos choix comme dans leur suivi.</p>${renderLink("/contact?objet=devis", "Étudier mon besoin")} ${renderLink("/a-propos", "Découvrir Follow-Up")}</section><section><h2>Nos solutions d’assurance</h2>${solutionSummaries.map((solution) => `<article><h3>${escapeHtml(solution.title)}</h3><p>${escapeHtml(solution.description)}</p>${renderLink(solution.path, solution.ctaLabel)}</article>`).join("")}</section><section><h2>Conseils pratiques</h2>${adviceArticles.map((article) => `<article><h3>${escapeHtml(article.title)}</h3><p>${escapeHtml(article.excerpt)}</p>${renderLink(article.path, "Lire le guide")}</article>`).join("")}</section></main>${renderFooter()}`;
+  return `${renderHeader()}<main><section><p>Courtier en assurances</p><h1>Follow-Up Insurance. Allez en toute quiétude.</h1><p>Votre courtier en assurances à Yaoundé, au Cameroun, comprend vos besoins, recherche des solutions adaptées et vous accompagne dans vos choix comme dans leur suivi.</p>${renderLink("/a-propos", "Découvrir Follow-Up")}</section><section><h2>Nos solutions d’assurance</h2>${solutionSummaries.map((solution) => `<article><h3>${escapeHtml(solution.title)}</h3><p>${escapeHtml(solution.description)}</p>${renderLink(solution.path, solution.ctaLabel)}</article>`).join("")}</section><section><h2>Conseils pratiques</h2>${adviceArticles.map((article) => `<article><h3>${escapeHtml(article.title)}</h3><p>${escapeHtml(article.excerpt)}</p>${renderLink(article.path, "Lire le guide")}</article>`).join("")}</section></main>${renderFooter()}`;
 }
 
 const legalContent = {
@@ -216,7 +226,7 @@ function injectHead(html, seo) {
     <meta name="twitter:image:alt" content="${escapeHtml(seo.imageAlt)}" />
     ${imagePreload}
     ${structuredData}
-    <style id="follow-up-prerender-style">.seo-prerender{max-width:1180px;margin:0 auto;padding:2rem;font-family:Arial,sans-serif;line-height:1.6;color:#242424}.seo-prerender header,.seo-prerender footer{display:flex;gap:1rem;justify-content:space-between;flex-wrap:wrap;padding:1rem 0}.seo-prerender nav{display:flex;gap:.8rem;flex-wrap:wrap}.seo-prerender main>section,.seo-prerender article>section{padding:1.5rem 0}.seo-prerender a{color:#b5121b}.seo-prerender h1{font-size:clamp(2rem,5vw,4.5rem);line-height:1.05}</style>`;
+    <style id="follow-up-prerender-style">.seo-prerender{max-width:1180px;margin:0 auto;padding:2rem;font-family:Arial,sans-serif;line-height:1.6;color:#242424}.seo-prerender header,.seo-prerender footer{display:flex;gap:1rem;justify-content:space-between;flex-wrap:wrap;padding:1rem 0}.seo-prerender nav{display:flex;gap:.8rem;flex-wrap:wrap}.seo-prerender main>section,.seo-prerender article>section{padding:1.5rem 0}.seo-prerender a{color:#b5121b}.seo-prerender .public-social-link{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:6px}.seo-prerender .public-social-link:focus-visible{outline:2px solid #0a66c2;outline-offset:3px}.seo-prerender h1{font-size:clamp(2rem,5vw,4.5rem);line-height:1.05}</style>`;
   return result.replace("</head>", `    ${head}\n  </head>`);
 }
 

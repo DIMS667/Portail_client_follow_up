@@ -116,7 +116,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
               ...current,
               notifications: [{
                 id: donnees.message_id!,
-                title: "Nouveau message de votre courtier",
+                title: "Nouveau message de votre gestionnaire",
                 body: `Un nouveau message est disponible pour le dossier ${donnees.demande_reference}.`,
                 date: new Date().toISOString(),
                 route: `/espace/demandes/${donnees.demande_reference}/discussion`,

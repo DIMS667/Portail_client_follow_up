@@ -816,7 +816,7 @@ export const solutionPages: Record<SolutionSlug, SolutionPageContent> = {
       eyebrow: "Assurance caution",
       title: "La garantie adaptée à chaque étape de votre marché.",
       intro:
-        "Sélectionnez la nature de la caution, rassemblez les pièces correspondantes et confiez l’étude de votre dossier à votre courtier.",
+        "Sélectionnez la nature de la caution, rassemblez les pièces correspondantes et confiez l’étude de votre dossier à votre gestionnaire.",
       image: solutionBySlug.caution.image,
       primaryCta: { label: "Préparer ma caution", href: "/contact?motif=caution", tone: "primary" },
       secondaryCta: { label: "Voir l’offre entreprises", href: "/entreprises", tone: "text" },
@@ -870,7 +870,7 @@ export const solutionPages: Record<SolutionSlug, SolutionPageContent> = {
       steps: [
         { number: "01", title: "Choisir", description: "La nature de la caution et les exigences du marché sont identifiées." },
         { number: "02", title: "Constituer", description: "Le portail affiche uniquement les informations et pièces correspondantes." },
-        { number: "03", title: "Étudier", description: "Le courtier vérifie la cohérence du dossier avant sa présentation." },
+        { number: "03", title: "Étudier", description: "Le gestionnaire vérifie la cohérence du dossier avant sa présentation." },
       ],
     },
     faq: [
@@ -907,7 +907,7 @@ export const aboutPage: PublicLandingPage = {
       src: "/images/public-role-advisor.png",
       alt: "Conseillère Follow-Up Insurance échangeant avec un client",
     },
-    primaryCta: { label: "Parler à un conseiller", href: "/contact", tone: "primary" },
+    primaryCta: { label: "Parler à un gestionnaire", href: "/contact", tone: "primary" },
     secondaryCta: { label: "Découvrir nos solutions", href: "/solutions", tone: "secondary" },
   },
   sections: [
@@ -1062,7 +1062,7 @@ export const individualsPage: PublicLandingPage = {
   finalCta: {
     title: "Faisons le point sur votre situation.",
     description: "Un premier échange permet de déterminer les protections à examiner en priorité.",
-    action: { label: "Parler à un conseiller", href: "/contact?profil=particulier", tone: "primary" },
+    action: { label: "Parler à un gestionnaire", href: "/contact?profil=particulier", tone: "primary" },
   },
 };
 
@@ -1178,7 +1178,7 @@ export const claimsPage: PublicLandingPage & { faq: readonly PublicFaqItem[] } =
       eyebrow: "Point de vigilance",
       title: "Les délais dépendent du contrat et de l’événement.",
       paragraphs: [
-        "Consultez vos conditions contractuelles dès que possible : elles précisent le délai de déclaration, le canal à utiliser et les justificatifs attendus. En cas de doute, contactez votre conseiller sans attendre.",
+        "Consultez vos conditions contractuelles dès que possible : elles précisent le délai de déclaration, le canal à utiliser et les justificatifs attendus. En cas de doute, contactez votre gestionnaire sans attendre.",
       ],
     },
   ],
@@ -1419,7 +1419,7 @@ export const advicePage: PublicLandingPage & { articles: readonly AdviceArticle[
   articles: adviceArticles,
   finalCta: {
     title: "Une question reste sans réponse ?",
-    description: "Présentez votre situation à un conseiller pour obtenir une orientation personnalisée.",
+    description: "Présentez votre situation à un gestionnaire pour obtenir une orientation personnalisée.",
     action: { label: "Poser ma question", href: "/contact?motif=conseil", tone: "primary" },
   },
 };
@@ -1436,7 +1436,7 @@ export const contactPage: PublicLandingPage & {
     eyebrow: "Contact",
     title: "Parlons de votre besoin.",
     intro:
-      "Expliquez-nous votre situation en quelques lignes. Un conseiller pourra vous orienter vers la prochaine étape.",
+      "Expliquez-nous votre situation en quelques lignes. Un gestionnaire pourra vous orienter vers la prochaine étape.",
     image: {
       src: "/images/public-role-advisor.webp",
       alt: "Conseillère Follow-Up Insurance disponible pour un échange",

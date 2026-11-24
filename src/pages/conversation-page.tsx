@@ -103,7 +103,7 @@ export function ConversationPage({ requestReference }: { requestReference: strin
       </button>
       <PageHeader
         eyebrow={request.reference}
-        title="Discussion avec votre courtier"
+        title="Discussion avec votre gestionnaire"
         description={`Échangez en temps réel au sujet de votre ${request.productLabel.toLocaleLowerCase("fr")}.`}
       />
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,35,65,.06)]">
@@ -135,7 +135,7 @@ export function ConversationPage({ requestReference }: { requestReference: strin
             </div>
           ) : (
             <div className="grid h-full place-items-center text-center">
-              <div className="max-w-sm"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-white text-brand-red shadow-sm"><MessageCircle size={25} /></span><h2 className="mt-4 text-lg font-semibold text-slate-900">Commencez la discussion</h2><p className="mt-2 text-sm leading-6 text-slate-500">Posez vos questions sur les propositions reçues. Votre courtier vous répondra directement ici.</p></div>
+              <div className="max-w-sm"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-white text-brand-red shadow-sm"><MessageCircle size={25} /></span><h2 className="mt-4 text-lg font-semibold text-slate-900">Commencez la discussion</h2><p className="mt-2 text-sm leading-6 text-slate-500">Posez vos questions sur les propositions reçues. Votre gestionnaire vous répondra directement ici.</p></div>
             </div>
           )}
         </div>

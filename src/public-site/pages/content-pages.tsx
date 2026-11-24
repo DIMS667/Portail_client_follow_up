@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { usePortal } from "../../app/portal-context";
 import { envoyerDemandeContact } from "../../services/contact-api";
 import { PublicLink } from "../components/public-link";
+import { LinkedInLink } from "../components/linkedin-link";
+import { isQuoteCta } from "../data/quote-cta";
 import { PublicPageShell } from "../components/public-page-shell";
 import { ResponsivePublicImage } from "../components/responsive-public-image";
 import {
@@ -55,6 +57,7 @@ function cleanEditorialText(value: string) {
 }
 
 function CtaLink({ cta, light = false }: { cta: PublicCta; light?: boolean }) {
+  if (isQuoteCta(cta.href)) return null;
   if (cta.tone === "text") {
     return <PublicLink className="public-text-link" href={cta.href}>{cta.label}<ArrowRight size={16} aria-hidden="true" /></PublicLink>;
   }
@@ -99,7 +102,7 @@ function PublicHeroBlock({ hero, breadcrumbs }: {
           <SectionLabel>{hero.eyebrow}</SectionLabel>
           <h1 id="public-page-title">{hero.title}</h1>
           <p>{hero.intro}</p>
-          {(hero.primaryCta || hero.secondaryCta) && (
+          {[hero.primaryCta, hero.secondaryCta].some((cta) => cta && !isQuoteCta(cta.href)) && (
             <div className="public-subhero__actions">
               {hero.primaryCta && <CtaLink cta={hero.primaryCta} />}
               {hero.secondaryCta && <CtaLink cta={hero.secondaryCta} />}
@@ -173,7 +176,7 @@ function EditorialSection({ section, index }: { section: PublicEditorialSection;
                 <span aria-hidden="true">{String(cardIndex + 1).padStart(2, "0")}</span>
                 <h3>{card.title}</h3>
                 <p>{card.description}</p>
-                {card.href && <PublicLink className="public-text-link" href={card.href}>{card.label ?? "Découvrir"}<ArrowRight size={15} /></PublicLink>}
+                {card.href && !isQuoteCta(card.href) && <PublicLink className="public-text-link" href={card.href}>{card.label ?? "Découvrir"}<ArrowRight size={15} /></PublicLink>}
               </article>
             ))}
           </div>
@@ -187,6 +190,7 @@ function EditorialSection({ section, index }: { section: PublicEditorialSection;
 }
 
 function FinalCta({ content }: { content: NonNullable<PublicLandingPage["finalCta"]> }) {
+  if (isQuoteCta(content.action.href)) return null;
   return (
     <section className="public-quote-band" aria-label="Nous contacter">
       <div className="public-container public-quote-band__inner">
@@ -487,11 +491,6 @@ export function ContactPublicPage() {
   };
 
   const channels = [
-    ...(siteConfig.linkedin ? [{
-      icon: ExternalLink,
-      title: "LinkedIn",
-      content: <a className="mt-2 inline-flex items-center gap-2 text-slate-600 transition hover:text-brand-red" href={siteConfig.linkedin} target="_blank" rel="noopener noreferrer">Suivre Follow-Up Insurance <ExternalLink size={14} aria-hidden="true" /><span className="sr-only"> (nouvel onglet)</span></a>,
-    }] : []),
     {
       icon: Phone,
       title: "Téléphone",
@@ -537,6 +536,7 @@ export function ContactPublicPage() {
           <div className="public-contact-details">
             <div className="public-page-heading"><SectionLabel>À votre écoute</SectionLabel><h2>Choisissez le canal qui vous convient.</h2><p>Ne transmettez pas de données médicales ou bancaires dans ce premier message.</p></div>
             {channels.map(({ icon: Icon, title, content }) => <article key={title}><span><Icon size={21} aria-hidden="true" /></span><h2>{title}</h2>{content}</article>)}
+            <LinkedInLink />
           </div>
           <form className="public-contact-form" onSubmit={submit}>
             <h2>Décrivez votre besoin</h2><p>Les champs marqués d’un astérisque sont obligatoires.</p>
@@ -554,7 +554,7 @@ export function ContactPublicPage() {
               </label>
               <div className="full"><Button type="submit" className="public-button public-button--primary" disabled={!consentAccepted || submission === "sending"}>{submission === "sending" ? <><LoaderCircle className="public-contact-spinner" size={16} />Envoi en cours…</> : <>Envoyer ma demande<ArrowRight size={16} /></>}</Button></div>
             </div>
-            {submission === "success" && <div className="public-contact-form__success" role="status"><CheckCircle2 size={21} /><div><strong>Votre message a bien été envoyé.</strong><p>Un conseiller Follow-Up Insurance vous recontactera dans les meilleurs délais.</p></div></div>}
+            {submission === "success" && <div className="public-contact-form__success" role="status"><CheckCircle2 size={21} /><div><strong>Votre message a bien été envoyé.</strong><p>Un gestionnaire Follow-Up Insurance vous recontactera dans les meilleurs délais.</p></div></div>}
             {submission === "error" && <div className="public-contact-form__error" role="alert"><CircleAlert size={21} /><div><strong>Impossible d’envoyer votre message.</strong><p>{submissionError}</p></div></div>}
           </form>
         </div>

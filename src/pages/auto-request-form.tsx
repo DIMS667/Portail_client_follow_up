@@ -584,14 +584,14 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
   if (mode === null) {
     return <div className="page-stack request-flow-page auto-request-page">
       <button className="back-link" type="button" onClick={onBack}><ArrowLeft size={17} /> {backLabel}</button>
-      <PageHeader eyebrow="Assurance automobile" title="Comment souhaitez-vous préparer votre demande ?" description="Choisissez le parcours qui vous convient. Vous pourrez remplir les informations vous-même ou confier cette étape à votre courtier." />
+      <PageHeader eyebrow="Assurance automobile" title="Comment souhaitez-vous préparer votre demande ?" description="Choisissez le parcours qui vous convient. Vous pourrez remplir les informations vous-même ou confier cette étape à votre gestionnaire." />
       <section className="flow-card auto-request-card auto-request-mode-card">
         <div className="auto-request-mode-grid">
           <button type="button" onClick={() => chooseMode("self")}>
             <span><FileText size={25} /></span><div><strong>Remplir moi-même</strong><p>Je renseigne mon véhicule, la durée et les garanties souhaitées.</p></div><ChevronRight size={20} />
           </button>
           <button type="button" onClick={() => chooseMode("broker")}>
-            <span><CircleHelp size={25} /></span><div><strong>Déléguer à mon courtier</strong><p>J’explique librement mon besoin et mon courtier me recontacte pour compléter le dossier.</p></div><ChevronRight size={20} />
+            <span><CircleHelp size={25} /></span><div><strong>Déléguer à mon gestionnaire</strong><p>J’explique librement mon besoin et mon gestionnaire me recontacte pour compléter le dossier.</p></div><ChevronRight size={20} />
           </button>
         </div>
       </section>
@@ -601,17 +601,17 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
   if (mode === "broker") {
     return <div className="page-stack request-flow-page auto-request-page">
       <button className="back-link" type="button" onClick={returnToModeSelection}><ArrowLeft size={17} /> Choisir un autre parcours</button>
-      <PageHeader eyebrow="Assurance automobile" title="Déléguez votre demande à votre courtier" description="Expliquez votre besoin avec vos propres mots. Votre courtier vous recontactera pour recueillir les informations nécessaires." />
+      <PageHeader eyebrow="Assurance automobile" title="Déléguez votre demande à votre gestionnaire" description="Expliquez votre besoin avec vos propres mots. Votre gestionnaire vous recontactera pour recueillir les informations nécessaires." />
       <form className="flow-card auto-request-card auto-request-delegated-card" onSubmit={submitDelegatedRequest} noValidate>
-        <header><span><CircleHelp size={25} /></span><div><h2>Que souhaitez-vous confier à votre courtier ?</h2><p>Vous pouvez écrire ou utiliser le microphone pour dicter votre demande.</p></div></header>
+        <header><span><CircleHelp size={25} /></span><div><h2>Que souhaitez-vous confier à votre gestionnaire ?</h2><p>Vous pouvez écrire ou utiliser le microphone pour dicter votre demande.</p></div></header>
         <VoiceTextarea id="delegated-message" label="Décrivez librement votre besoin" value={form.delegatedMessage} onChange={(value) => {
           updateForm((current) => ({ ...current, delegatedMessage: value }));
           clearError("delegated-message");
         }} error={errors["delegated-message"]} placeholder="Exemple : je souhaite assurer mon véhicule et être accompagné pour choisir les garanties adaptées…" required rows={8} />
-        <div className="auto-request-helper"><CircleHelp size={17} /> Votre courtier pourra vous demander des précisions ou des documents avant de préparer ses propositions.</div>
+        <div className="auto-request-helper"><CircleHelp size={17} /> Votre gestionnaire pourra vous demander des précisions ou des documents avant de préparer ses propositions.</div>
         {submissionError && <div className="form-alert error" role="alert"><CircleAlert size={18} /> {submissionError}</div>}
         <div className="auto-request-save"><Save size={15} /><span>Brouillon enregistré automatiquement pendant cette session</span></div>
-        <div className="flow-actions auto-request-actions"><button className="button button-secondary" type="button" onClick={returnToModeSelection}>Retour</button><button className="button button-primary" type="submit" disabled={submitting}>{submitting ? "Transmission…" : "Transmettre au courtier"} {!submitting && <ChevronRight size={18} />}</button></div>
+        <div className="flow-actions auto-request-actions"><button className="button button-secondary" type="button" onClick={returnToModeSelection}>Retour</button><button className="button button-primary" type="submit" disabled={submitting}>{submitting ? "Transmission…" : "Transmettre au gestionnaire"} {!submitting && <ChevronRight size={18} />}</button></div>
       </form>
     </div>;
   }
@@ -619,7 +619,7 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
   return (
     <div className="page-stack request-flow-page auto-request-page">
       <button className="back-link" type="button" onClick={handleTopBack}><ArrowLeft size={17} /> {step === 0 ? "Choisir un autre parcours" : "Étape précédente"}</button>
-      <PageHeader eyebrow="Assurance automobile" title="Votre demande en quelques étapes" description="Transmettez les informations utiles à votre courtier. Il analysera ensuite votre besoin et préparera les propositions adaptées." />
+      <PageHeader eyebrow="Assurance automobile" title="Votre demande en quelques étapes" description="Transmettez les informations utiles à votre gestionnaire. Il analysera ensuite votre besoin et préparera les propositions adaptées." />
 
       <div className="auto-request-progress">
         <ol className="stepper auto-request-stepper" aria-label="Progression de la demande">
@@ -661,7 +661,7 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
                 updateForm((current) => ({ ...current, otherNeed: value }));
                 clearError("other-need");
               }} error={errors["other-need"]} required inputProps={{ placeholder: "Décrivez votre besoin en quelques mots" }} />}
-            <p className="auto-request-helper"><CircleHelp size={17} /> Ces informations permettront à votre courtier de mieux comprendre votre demande.</p>
+            <p className="auto-request-helper"><CircleHelp size={17} /> Ces informations permettront à votre gestionnaire de mieux comprendre votre demande.</p>
           </section>
         )}
 
@@ -700,7 +700,7 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
 
         {step === 2 && (
           <section aria-labelledby="auto-request-step-title">
-            <AutoStepHeading number="3" title="Informations sur votre véhicule" description="Les caractéristiques essentielles permettent à votre courtier d’analyser correctement votre demande." />
+            <AutoStepHeading number="3" title="Informations sur votre véhicule" description="Les caractéristiques essentielles permettent à votre gestionnaire d’analyser correctement votre demande." />
             <div className="auto-request-form-grid">
               <VoiceTextField id="vehicle-brand" label="Marque" value={form.vehicle.brand} onChange={(value) => updateVehicle("brand", value)} error={errors["vehicle-brand"]} required inputProps={{ autoComplete: "organization" }} />
               <VoiceTextField id="vehicle-model" label="Modèle" value={form.vehicle.model} onChange={(value) => updateVehicle("model", value)} error={errors["vehicle-model"]} required />
@@ -750,7 +750,7 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
                   <option value="B">Zone B</option>
                   <option value="C">Zone C</option>
                 </select>
-                <small className="auto-request-field-help" id="vehicle-circulation-area-help">Choisissez la zone tarifaire indiquée par votre courtier.</small>
+                <small className="auto-request-field-help" id="vehicle-circulation-area-help">Choisissez la zone tarifaire indiquée par votre gestionnaire.</small>
                 <FieldError id="vehicle-circulation-area-error" message={errors["vehicle-circulation-area"]} />
               </label>
               <label htmlFor="vehicle-estimated-value">Valeur estimée du véhicule <span className="field-optional">Facultatif</span>
@@ -821,7 +821,7 @@ export function AutoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
 
         {step === 5 && (
           <section aria-labelledby="auto-request-step-title">
-            <AutoStepHeading number="6" title="Vérifiez votre demande" description="Relisez les informations avant de les transmettre à votre courtier." />
+            <AutoStepHeading number="6" title="Vérifiez votre demande" description="Relisez les informations avant de les transmettre à votre gestionnaire." />
             <div className="auto-request-review">
               <ReviewSection title="Votre besoin" items={[["Demande", form.requestType ? requestLabels[form.requestType] : "Non renseigné"], ...(form.requestType === "other" ? [["Précision", form.otherNeed]] as Array<[string, string]> : [])]} />
               <ReviewSection title="Souscripteur et assuré" items={[["Souscripteur", `${store.client.firstName} ${store.client.lastName}`], ["Assuré", `${store.client.firstName} ${store.client.lastName}`]]} />
