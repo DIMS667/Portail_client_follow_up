@@ -12,6 +12,7 @@ import {
 } from "../src/public-site/data/public-pages.ts";
 import { privacyPolicy } from "../src/public-site/data/privacy-policy.ts";
 import { termsOfUse } from "../src/public-site/data/terms-of-use.ts";
+import { siteConfig } from "../src/public-site/data/site-config.ts";
 import {
   PUBLIC_INDEXABLE_ROUTES,
   PUBLIC_ORIGIN,
@@ -83,7 +84,8 @@ function renderHeader() {
 }
 
 function renderFooter() {
-  return `<footer><p>${PUBLIC_SITE_NAME} — Courtier en assurances.</p><nav aria-label="Informations">${renderLink("/mentions-legales", "Mentions légales")} ${renderLink("/confidentialite", "Confidentialité")} ${renderLink("/conditions-utilisation", "Conditions d’utilisation")}</nav></footer>`;
+  const linkedin = siteConfig.linkedin ? `<p><a href="${escapeHtml(siteConfig.linkedin)}" target="_blank" rel="noopener noreferrer">Suivez-nous sur LinkedIn</a></p>` : "";
+  return `<footer><p>${PUBLIC_SITE_NAME} — Courtier en assurances.</p>${linkedin}<nav aria-label="Informations">${renderLink("/mentions-legales", "Mentions légales")} ${renderLink("/confidentialite", "Confidentialité")} ${renderLink("/conditions-utilisation", "Conditions d’utilisation")}</nav></footer>`;
 }
 
 function renderHero(hero) {

@@ -487,6 +487,11 @@ export function ContactPublicPage() {
   };
 
   const channels = [
+    ...(siteConfig.linkedin ? [{
+      icon: ExternalLink,
+      title: "LinkedIn",
+      content: <a className="mt-2 inline-flex items-center gap-2 text-slate-600 transition hover:text-brand-red" href={siteConfig.linkedin} target="_blank" rel="noopener noreferrer">Suivre Follow-Up Insurance <ExternalLink size={14} aria-hidden="true" /><span className="sr-only"> (nouvel onglet)</span></a>,
+    }] : []),
     {
       icon: Phone,
       title: "Téléphone",

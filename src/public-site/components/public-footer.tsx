@@ -28,6 +28,7 @@ export function PublicFooter({ onClientSpace }: PublicFooterProps) {
           </PublicLink>
           <p>{siteConfig.signature}</p>
           <span>Conseil, choix et accompagnement pour avancer avec plus de sérénité.</span>
+          {siteConfig.linkedin && <a className="public-footer__social-link" href={siteConfig.linkedin} target="_blank" rel="noopener noreferrer" aria-label="Follow-Up Insurance sur LinkedIn (nouvel onglet)">Suivez-nous sur LinkedIn <ArrowUpRight size={16} aria-hidden="true" /></a>}
         </div>
 
         <div className="public-footer__column">

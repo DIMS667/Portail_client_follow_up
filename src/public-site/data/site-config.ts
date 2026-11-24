@@ -27,6 +27,6 @@ export const siteConfig: SiteConfig = {
   openingHours: "",
   whatsapp: "",
   facebook: "",
-  linkedin: "",
+  linkedin: "https://www.linkedin.com/company/follow-up-insurance-sarl/",
   instagram: "",
 };

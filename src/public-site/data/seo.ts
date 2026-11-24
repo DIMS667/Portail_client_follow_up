@@ -226,6 +226,7 @@ function buildStructuredData(definition: SeoRouteDefinition, canonical: string, 
       name: PUBLIC_SITE_NAME,
       alternateName: ["Follow Up Insurance", "Followup Insurance", "Follow-Up Assurance"],
       url: `${PUBLIC_ORIGIN}/`,
+      sameAs: [siteConfig.linkedin, siteConfig.facebook, siteConfig.instagram].filter(Boolean),
       logo: {
         "@type": "ImageObject",
         url: `${PUBLIC_ORIGIN}/follow-up-insurance-logo.png`,

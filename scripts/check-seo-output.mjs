@@ -76,6 +76,8 @@ for (const route of PUBLIC_INDEXABLE_ROUTES) {
       assert(organization?.["@type"]?.includes("InsuranceAgency"), "/: type InsuranceAgency absent");
       assert(organization?.alternateName?.includes("Follow Up Insurance"), "/: variante de marque absente");
       assert(organization?.address?.addressLocality === "Yaoundé", "/: localisation de l’organisation absente");
+      assert(organization?.sameAs?.includes("https://www.linkedin.com/company/follow-up-insurance-sarl/"), "/: profil LinkedIn officiel absent des données structurées");
+      assert(/<a\b[^>]*href="https:\/\/www\.linkedin\.com\/company\/follow-up-insurance-sarl\/"/.test(html), "/: lien LinkedIn visible absent du site");
     }
   } catch {
     failures.push(`${route}: JSON-LD absent ou invalide`);
