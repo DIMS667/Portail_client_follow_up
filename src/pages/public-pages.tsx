@@ -58,9 +58,7 @@ function BoutonEnvoi({ loading, disabled = false, children }: { loading: boolean
   return <button className="button button-primary full" type="submit" disabled={loading || disabled}>{loading && <LoaderCircle className="button-spinner" size={18} />}{children}</button>;
 }
 
-function TelephoneGoogle({ jeton, verificationRequise = false, onSuccess, onCancel }: { jeton: string; verificationRequise?: boolean; onSuccess: (compte: CompteClientAuthentifie) => void; onCancel: () => void }) {
-  const [verification, setVerification] = useState(verificationRequise);
-  const [phone, setPhone] = useState("");
+function VerificationGoogle({ jeton, onSuccess, onCancel }: { jeton: string; onSuccess: (compte: CompteClientAuthentifie) => void; onCancel: () => void }) {
   const [code, setCode] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -68,12 +66,11 @@ function TelephoneGoogle({ jeton, verificationRequise = false, onSuccess, onCanc
   const connect = async (resend = false) => {
     setError(""); setNotice(""); setLoading(true);
     try {
-      const resultat = await connecterParGoogle(jeton, verification ? undefined : phone, verification && !resend ? code : undefined);
+      const resultat = await connecterParGoogle(jeton, resend ? undefined : code);
       if (resultat.statut === "connecte") onSuccess(resultat.compte);
       else if (resultat.statut === "verification_requise") {
-        setVerification(true);
         if (resend) setNotice("Consultez votre boîte e-mail. Les renvois sont espacés d’au moins une minute.");
-      } else setVerification(false);
+      }
     } catch (caught) {
       setError(messageErreur(caught));
     } finally {
@@ -83,14 +80,12 @@ function TelephoneGoogle({ jeton, verificationRequise = false, onSuccess, onCanc
   const submit = (event: FormEvent) => { event.preventDefault(); void connect(); };
   return (
     <form className="form-stack" onSubmit={submit}>
-      <div className="form-alert info">{verification ? "Pour retrouver votre compte avec Google, saisissez le code envoyé à votre adresse e-mail." : "Votre compte Google est reconnu. Ajoutez votre numéro de téléphone pour terminer la création du compte."}</div>
+      <div className="form-alert info">Pour retrouver votre compte avec Google, saisissez le code envoyé à votre adresse e-mail.</div>
       {error && <div className="form-alert error" role="alert">{error}</div>}
       {notice && <div className="form-alert info" role="status">{notice}</div>}
-      {verification
-        ? <label>Code de vérification<input value={code} onChange={event => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /></label>
-        : <label>Numéro de téléphone<input value={phone} onChange={(event) => setPhone(event.target.value)} type="tel" autoComplete="tel" placeholder="+237 6 90 00 00 00" required /></label>}
-      <BoutonEnvoi loading={loading}>{verification ? "Confirmer ma connexion" : "Terminer la création"}</BoutonEnvoi>
-      {verification && <button className="link-inline" type="button" disabled={loading} onClick={() => { void connect(true); }}>Renvoyer le code</button>}
+      <label>Code de vérification<input value={code} onChange={event => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /></label>
+      <BoutonEnvoi loading={loading}>Confirmer ma connexion</BoutonEnvoi>
+      <button className="link-inline" type="button" disabled={loading} onClick={() => { void connect(true); }}>Renvoyer le code</button>
       <button className="link-inline" type="button" disabled={loading} onClick={onCancel}>Utiliser une autre méthode</button>
     </form>
   );
@@ -105,7 +100,6 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleToken, setGoogleToken] = useState("");
-  const [googleVerification, setGoogleVerification] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setError(""); setLoading(true);
@@ -124,7 +118,6 @@ export function LoginPage() {
     try {
       const resultat = await connecterParGoogle(credential);
       if (resultat.statut !== "connecte") {
-        setGoogleVerification(resultat.statut === "verification_requise");
         setGoogleToken(credential);
       }
       else terminer(resultat.compte);
@@ -137,7 +130,7 @@ export function LoginPage() {
 
   return (
     <AuthFrame title="Heureux de vous revoir" intro="Connectez-vous pour suivre vos assurances.">
-      {googleToken ? <TelephoneGoogle jeton={googleToken} verificationRequise={googleVerification} onSuccess={terminer} onCancel={() => setGoogleToken("")} /> : <>
+      {googleToken ? <VerificationGoogle jeton={googleToken} onSuccess={terminer} onCancel={() => setGoogleToken("")} /> : <>
         <GoogleSignInButton onCredential={handleGoogle} disabled={loading} />
         <SeparateurGoogle />
         <form className="form-stack" onSubmit={submit}>
@@ -162,7 +155,6 @@ export function RegisterPage() {
   const [pendingEmail, setPendingEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [googleToken, setGoogleToken] = useState("");
-  const [googleVerification, setGoogleVerification] = useState(false);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -200,7 +192,6 @@ export function RegisterPage() {
     try {
       const resultat = await connecterParGoogle(credential);
       if (resultat.statut !== "connecte") {
-        setGoogleVerification(resultat.statut === "verification_requise");
         setGoogleToken(credential);
       }
       else terminer(resultat.compte);
@@ -219,7 +210,7 @@ export function RegisterPage() {
         <p className="field-hint">Le code expire après 10 minutes et ne peut être utilisé qu’une fois.</p>
         <BoutonEnvoi loading={loading}>Valider mon compte</BoutonEnvoi>
         <button className="link-inline" type="button" onClick={() => { setPendingEmail(""); setOtp(""); setError(""); }}>Modifier mes informations</button>
-      </form> : googleToken ? <TelephoneGoogle jeton={googleToken} verificationRequise={googleVerification} onSuccess={terminer} onCancel={() => setGoogleToken("")} /> : <>
+      </form> : googleToken ? <VerificationGoogle jeton={googleToken} onSuccess={terminer} onCancel={() => setGoogleToken("")} /> : <>
         <GoogleSignInButton onCredential={handleGoogle} disabled={loading} />
         <SeparateurGoogle />
         <form className="form-stack" onSubmit={submit}>

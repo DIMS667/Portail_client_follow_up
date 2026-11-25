@@ -7,6 +7,7 @@ import type { LucideIcon } from "lucide-react";
 import { assetUrl } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
 import { PageHeader, StatusBadge, Timeline } from "../components/portal-ui";
+import { RequestContactDetails } from "../components/request-contact-details";
 import { OfferRcAdjustmentDetails } from "../components/offer-rc-adjustment";
 import { GuaranteePersonalCapitals } from "../components/guarantee-personal-capitals";
 import { isOfferChoiceLocked } from "../services/payment-history";
@@ -39,6 +40,11 @@ const productChoices: ProductChoice[] = [
 ];
 
 export function NewRequestPage() {
+  const { store } = usePortal();
+  return store.client.phone.trim() ? <NewRequestContent /> : <RequestContactDetails />;
+}
+
+function NewRequestContent() {
   const { store, updateStore, navigate } = usePortal();
   const [product, setProduct] = useState<InsuranceProduct | null>(null);
   const [vehicleKind, setVehicleKind] = useState<AutomobileVehicleKind | null>(null);
