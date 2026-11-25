@@ -33,7 +33,7 @@ interface AuthentificationReussie {
 }
 
 export type ConnexionGoogleResultat = AuthentificationReussie | {
-  statut: "telephone_requis";
+  statut: "telephone_requis" | "verification_requise";
   message: string;
 };
 
@@ -117,11 +117,12 @@ export function connecterParEmail(adresseEmail: string, motDePasse: string) {
   });
 }
 
-export function connecterParGoogle(jetonIdentite: string, numeroTelephone?: string) {
+export function connecterParGoogle(jetonIdentite: string, numeroTelephone?: string, codeVerification?: string) {
   return envoyer<ConnexionGoogleResultat>("/connexions/google", {
     method: "POST",
     body: JSON.stringify({
       jeton_identite: jetonIdentite,
+      ...(codeVerification ? { code_verification: codeVerification } : {}),
       ...(numeroTelephone ? { numero_telephone: numeroTelephone } : {}),
     }),
   });
