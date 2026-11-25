@@ -131,7 +131,7 @@ const initialForm: MotoRequestFormState = {
   requestType: "new_vehicle",
   renewalContractId: "",
   otherNeed: "",
-  driver: { isSubscriber: null, firstNames: "", lastName: "", birthDate: "", phone: "", occupation: "", licenceNumber: "", licenceCategory: "", licenceIssuedOn: "", licenceValidUntil: "" },
+  driver: { isSubscriber: null, firstNames: "", lastName: "", birthDate: "", phone: "", occupation: "", licenceNumber: "", licenceCategory: "A", licenceIssuedOn: "", licenceValidUntil: "" },
   vehicle: {
     brand: "",
     model: "",
@@ -161,7 +161,7 @@ function loadDraft(): MotoDraft {
       form: {
         ...initialForm,
         ...savedForm,
-        driver: { ...initialForm.driver, ...savedForm?.driver },
+        driver: { ...initialForm.driver, ...savedForm?.driver, licenceCategory: "A" },
         vehicle: { ...initialForm.vehicle, ...savedForm?.vehicle },
         coverage: {
           ...initialForm.coverage,
@@ -359,7 +359,7 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
       ...(form.requestType === "other" ? { otherNeed: form.otherNeed.trim() } : {}),
       subscriber: clientSnapshot,
       insured: clientSnapshot,
-      driver: form.driver.isSubscriber ? { isSubscriber: true } : {
+      driver: form.driver.isSubscriber ? { isSubscriber: true, licenceCategory: "A" } : {
         isSubscriber: false,
         firstNames: form.driver.firstNames.trim(),
         lastName: form.driver.lastName.trim(),
@@ -367,7 +367,7 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
         phone: form.driver.phone.trim(),
         occupation: form.driver.occupation.trim(),
         licenceNumber: form.driver.licenceNumber.trim().toUpperCase(),
-        licenceCategory: form.driver.licenceCategory.trim().toUpperCase(),
+        licenceCategory: "A",
         licenceIssuedOn: form.driver.licenceIssuedOn,
         licenceValidUntil: form.driver.licenceValidUntil,
       },
@@ -555,7 +555,7 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
                 <VoiceTextField id="driver-phone" label="Téléphone" value={form.driver.phone} onChange={(value) => updateDriver("phone", value)} error={errors["driver-phone"]} required inputProps={{ type: "tel" }} />
                 <VoiceTextField id="driver-occupation" label="Profession" value={form.driver.occupation} onChange={(value) => updateDriver("occupation", value)} error={errors["driver-occupation"]} required />
                 <VoiceTextField id="driver-licence-number" label="Numéro du permis" value={form.driver.licenceNumber} onChange={(value) => updateDriver("licenceNumber", value.toUpperCase())} error={errors["driver-licence-number"]} required />
-                <VoiceTextField id="driver-licence-category" label="Catégorie du permis" value={form.driver.licenceCategory} onChange={(value) => updateDriver("licenceCategory", value.toUpperCase())} error={errors["driver-licence-category"]} required />
+                <label htmlFor="driver-licence-category"><span className="auto-request-label-text">Catégorie du permis</span><input id="driver-licence-category" value="Catégorie A" readOnly aria-describedby="driver-licence-category-help" /><small id="driver-licence-category-help">Catégorie réservée à la moto, renseignée automatiquement.</small></label>
                 <label htmlFor="driver-licence-issued-on"><span className="auto-request-label-text">Date de délivrance du permis <RequiredMark /></span><input id="driver-licence-issued-on" type="date" value={form.driver.licenceIssuedOn} onChange={(event) => updateDriver("licenceIssuedOn", event.target.value)} aria-invalid={Boolean(errors["driver-licence-issued-on"])} /><FieldError id="driver-licence-issued-on-error" message={errors["driver-licence-issued-on"]} /></label>
                 <label htmlFor="driver-licence-valid-until"><span className="auto-request-label-text">Permis valable jusqu’au <RequiredMark /></span><input id="driver-licence-valid-until" type="date" value={form.driver.licenceValidUntil} onChange={(event) => updateDriver("licenceValidUntil", event.target.value)} aria-invalid={Boolean(errors["driver-licence-valid-until"])} /><FieldError id="driver-licence-valid-until-error" message={errors["driver-licence-valid-until"]} /></label>
               </div></div>}

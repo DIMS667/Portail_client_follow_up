@@ -1,5 +1,7 @@
 import type { AutomobileDriver, AutomobileDriverOccupationCategory } from "../types/domain";
 
+export const carLicenceCategories = ["B", "C", "D", "E", "F", "G"] as const;
+
 export const driverOccupationOptions: ReadonlyArray<{ value: AutomobileDriverOccupationCategory; label: string }> = [
   { value: "delegue_medical", label: "Délégué médical" },
   { value: "delegue_inspecteur_commercial", label: "Délégué ou inspecteur commercial" },
@@ -54,7 +56,7 @@ export function validateAutomobileDriver(
     else if (driver.occupation.trim().length > 120) errors["driver-occupation"] = "Le métier doit contenir au maximum 120 caractères.";
   }
   if (!driver.licenceNumber?.trim()) errors["driver-licence-number"] = "Renseignez le numéro du permis.";
-  if (!driver.licenceCategory?.trim()) errors["driver-licence-category"] = "Renseignez la catégorie du permis.";
+  if (!carLicenceCategories.some(category => category === driver.licenceCategory)) errors["driver-licence-category"] = "Choisissez une catégorie de permis de B à G.";
   if (!isCalendarDate(issued) || issued > today) {
     errors["driver-licence-issued-on"] = "Indiquez une date d’obtention du permis valide, au plus tard aujourd’hui.";
   } else if (isCalendarDate(birth) && issued <= birth) {
