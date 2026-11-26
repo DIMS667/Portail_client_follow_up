@@ -115,7 +115,8 @@ export function documentsForProduct(
   ]);
   return documents
     .filter((document) => Boolean(
-      document.fileName
+      !document.requestReference
+      && document.fileName
       && document.slotId
       && allowedSlotIds.has(document.slotId),
     ))

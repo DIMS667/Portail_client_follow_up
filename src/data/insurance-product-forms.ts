@@ -1,4 +1,6 @@
+import { BetweenVerticalStart } from "lucide-react";
 import type { InsuranceProduct } from "../types/domain";
+import { VISUALLY_HIDDEN_STYLES } from "radix-ui/visually-hidden";
 
 export type ConfiguredInsuranceProduct = Exclude<InsuranceProduct, "automobile" | "caution">;
 

@@ -1,3 +1,4 @@
+import { beneficiaryToApi, beneficiaryFromApi, type BeneficiaryApi } from "./request-beneficiary";
 import type { InsuranceProduct, InsuranceRequest, RequestStatus, StatusEvent } from "../types/domain";
 
 type StatutApi =
@@ -18,7 +19,7 @@ type DemandeGeneraleApi = {
   libelle_produit: string;
   mode_preparation: "saisie_directe" | "delegation_courtier";
   statut: StatutApi;
-  donnees: Partial<InsuranceRequest>;
+  donnees: Partial<InsuranceRequest> & { beneficiaire?: BeneficiaryApi };
   cree_le: string;
   modifie_le: string;
   historique_statuts: Array<{ statut: StatutApi; cree_le: string }>;
@@ -31,8 +32,11 @@ type DemandeGeneraleApi = {
   };
 };
 
-const API_URL = (import.meta.env.VITE_API_BASE_URL ?? "https://api.followupassurance.com/api/v1").replace(/\/$/, "");
-const BASE_URL = `${API_URL}/frontoffice/demandes`;
+const API_URL = (import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://api.followupassurance.com"))
+  .replace(/\/+$/, "")
+  .replace(/\/api\/v1$/, "");
+const BASE_URL = `${API_URL}/api/v1/frontoffice/demandes`;
 
 const statuts: Record<StatutApi, RequestStatus> = {
   nouvelle: "new",
@@ -111,6 +115,7 @@ function toPortalRequest(api: DemandeGeneraleApi): InsuranceRequest {
   } : null;
   return {
     ...api.donnees,
+    beneficiary: beneficiaryFromApi(api.donnees.beneficiaire) ?? api.donnees.beneficiary,
     id: api.id,
     reference: api.reference,
     clientId: "",
@@ -136,6 +141,7 @@ export async function creerDemandeGenerale(data: Partial<InsuranceRequest>) {
   const api = await request<DemandeGeneraleApi>({
     method: "POST",
     body: JSON.stringify({
+      ...(data.beneficiary ? { beneficiaire: beneficiaryToApi(data.beneficiary) } : {}),
       produit: product,
       libelle_produit: data.productLabel ?? "Demande d’assurance",
       mode_preparation: delegated ? "delegation_courtier" : "saisie_directe",

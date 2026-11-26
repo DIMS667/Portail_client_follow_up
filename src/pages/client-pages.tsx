@@ -358,6 +358,7 @@ export function RequestDetailPage({ reference }: { reference: string }) {
         <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Progression</span><h2>Suivi du dossier</h2></div></div><Timeline items={request.timeline} /></section>
         <aside className="panel advisor-card"><span className="page-eyebrow">Gestionnaire du dossier</span>{requestAdvisor?<><span className="large-avatar">{requestAdvisor.initials}</span><h2>{requestAdvisor.name}</h2><p>{advisorRole}. Cette personne suit personnellement l’avancement de cette demande.</p>{requestAdvisor.phone&&<a href={`tel:${requestAdvisor.phone}`}><Phone size={17} /> {requestAdvisor.phone}</a>}{requestAdvisor.email&&<a href={`mailto:${requestAdvisor.email}`}><Mail size={17} /> {requestAdvisor.email}</a>}{whatsappHref&&<a className="button advisor-whatsapp-button" href={whatsappHref} target="_blank" rel="noopener noreferrer" aria-label={`Écrire à ${requestAdvisor.name} sur WhatsApp`}><WhatsAppIcon /> Envoyer un message WhatsApp</a>}</>:<><span className="large-avatar"><Clock3 size={20}/></span><h2>Aucun gestionnaire affecté</h2><p>Votre demande est encore dans la file commune. Les coordonnées du responsable apparaîtront ici dès sa prise en charge.</p></>}</aside>
       </div>
+      {request.beneficiary && <section className="panel"><h2>Personnes concernées</h2><p>Assuré : <strong>{request.beneficiary.insured.firstName} {request.beneficiary.insured.lastName}</strong></p><p>{request.beneficiary.kind === "other" ? "Vous avez souscrit pour une autre personne." : "Vous êtes la personne assurée."}</p><button className="button button-secondary mt-3" type="button" onClick={() => navigate(`/espace/documents?demande=${encodeURIComponent(request.reference)}`)}>Documents de cette demande</button></section>}
       {delegatedAutomobileRequest && <section className="panel auto-request-delegated-detail"><div className="panel-heading"><div><span className="page-eyebrow">Demande déléguée</span><h2>Votre message au gestionnaire</h2></div></div><div className="request-comments"><span>Besoin exprimé librement</span><p>{delegatedAutomobileRequest.delegatedMessage}</p></div><p className="auto-request-detail-note"><CircleHelp size={17} /> Votre gestionnaire vous recontactera pour compléter les informations nécessaires et préparer votre dossier.</p></section>}
       {selfServiceAutomobileRequest && <section className="panel"><div className="panel-heading"><div><span className="page-eyebrow">Informations fournies</span><h2>Détails de votre demande automobile</h2></div></div><div className="auto-request-detail-groups">
         <section><h3>Votre besoin</h3><div className="details-grid"><Detail label="Demande" value={autoRequestTypeLabels[selfServiceAutomobileRequest.requestType]} />{selfServiceAutomobileRequest.otherNeed && <Detail label="Précision" value={selfServiceAutomobileRequest.otherNeed} />}</div></section>
@@ -416,7 +417,7 @@ export function ProposalsPage({ requestReference }: { requestReference: string }
 }
 
 export function DocumentsPage() {
-  const { store, updateStore, query } = usePortal();
+  const { store, updateStore, query, navigate } = usePortal();
   const dossierDemande = query.get("dossier") as DocumentFolderId | null;
   const dossierInitial = documentFolders.some((item) => item.id === dossierDemande) ? dossierDemande : null;
   const [folderId, setFolderId] = useState<DocumentFolderId | null>(dossierInitial);
@@ -424,18 +425,23 @@ export function DocumentsPage() {
   const [operationEnCours, setOperationEnCours] = useState<string | null>(null);
   const [documentError, setDocumentError] = useState("");
   const folder = documentFolders.find((item) => item.id === folderId);
-  const libraryDocuments = store.documents.filter((document) => !document.downloadUrl);
+  const requestReference = query.get("demande") ?? "";
+  const selectedRequest = store.requests.find(request => request.reference === requestReference);
+  const invalidScope = Boolean(requestReference && !selectedRequest);
+  const scopeControl = <section className="panel form-stack"><label>Documents pour<select value={requestReference} onChange={event => { setFolderId(null); setPreviewDocument(null); navigate(event.target.value ? `/espace/documents?demande=${encodeURIComponent(event.target.value)}` : "/espace/documents"); }}><option value="">Mon profil personnel</option>{store.requests.filter(request => request.beneficiary).map(request => <option value={request.reference} key={request.id}>{request.reference} · {request.beneficiary!.insured.firstName} {request.beneficiary!.insured.lastName}</option>)}{invalidScope && <option value={requestReference}>Dossier indisponible</option>}</select></label>{selectedRequest?.beneficiary && <p>Personne assurée : <strong>{selectedRequest.beneficiary.insured.firstName} {selectedRequest.beneficiary.insured.lastName}</strong>. Ces pièces seront rattachées uniquement au dossier {selectedRequest.reference}.</p>}{invalidScope && <div role="alert" className="form-alert error">Ce dossier n’est pas disponible dans votre espace. Sélectionnez votre profil ou une de vos demandes.</div>}</section>;
+  const libraryDocuments = store.documents.filter((document) => !document.downloadUrl && (document.requestReference ?? "") === requestReference);
+  const availableFolders = documentFolders.filter(item => !selectedRequest || item.id === "informations_personnelles" || item.id === (selectedRequest.product === "moto" ? "automobile" : selectedRequest.product));
   const slots = folderId ? documentSlotsByFolder[folderId] : [];
   const documentForSlot = (slotId: string) => libraryDocuments.find((document) => document.slotId === slotId);
   const handleFile = async (slot: DocumentSlotDefinition, file?: File) => {
-    if (!file || !folderId) return;
+    if (!file || !folderId || invalidScope) return;
     setOperationEnCours(slot.id);
     setDocumentError("");
     try {
-      const document = await televerserDocument(slot.id, file, store.client.id);
+      const document = await televerserDocument(slot.id, file, store.client.id, requestReference || undefined);
       updateStore((current) => ({
         ...current,
-        documents: [document, ...current.documents.filter((item) => item.slotId !== slot.id)],
+        documents: [document, ...current.documents.filter((item) => item.id !== document.id)],
       }));
     } catch (caught) {
       setDocumentError(caught instanceof Error ? caught.message : "Le document n’a pas pu être envoyé.");
@@ -469,8 +475,9 @@ export function DocumentsPage() {
   if (!folder) return (
     <div className="page-stack">
       <PageHeader eyebrow="Pièces justificatives" title="Mes documents" description="Classez chaque pièce dans la rubrique prévue afin qu’elle soit utilisée dans les bonnes démarches." />
+      {scopeControl}
       <div className="document-folders-grid">
-        {documentFolders.map((item) => {
+        {availableFolders.map((item) => {
           const itemSlots = documentSlotsByFolder[item.id];
           const count = itemSlots.filter((slot) => Boolean(documentForSlot(slot.id)?.fileName)).length;
           return <button className="document-folder-card" type="button" onClick={() => setFolderId(item.id)} key={item.id}><span className="document-folder-icon"><item.icon size={25} /></span><div><h2>{item.label}</h2><p>{item.description}</p><small>{count} sur {itemSlots.length} pièce{itemSlots.length > 1 ? "s" : ""} ajoutée{count > 1 ? "s" : ""}</small></div><ChevronRight size={20} /></button>;
@@ -483,12 +490,13 @@ export function DocumentsPage() {
     <div className="page-stack">
       <button className="back-link" type="button" onClick={() => setFolderId(null)}><ArrowLeft size={17} /> Retour aux dossiers</button>
       <PageHeader eyebrow="Dossier documentaire" title={folder.label} description={folder.description} />
+      {scopeControl}
       {documentError && <div className="form-alert error" role="alert"><CircleAlert size={17} /> {documentError}</div>}
       <div className="document-guidance"><ShieldCheck size={20} /><div><strong>Ajoutez uniquement les pièces indiquées ci-dessous.</strong><span>Chaque fichier sera automatiquement classé et proposé dans les démarches concernées.</span></div></div>
       <div className="documents-grid">{slots.map((slot) => {
         const document = documentForSlot(slot.id);
         const hasFile = Boolean(document?.fileName);
-        const disabled = operationEnCours === slot.id || operationEnCours === document?.id;
+        const disabled = invalidScope || operationEnCours === slot.id || operationEnCours === document?.id;
         return <article className={`document-card ${document?.status ?? "required"}`} key={slot.id}><div className="document-top"><span className="document-icon"><FileText size={22} /></span><StatusBadge status={document?.status ?? "required"}>{document ? documentLabels[document.status] : "À fournir"}</StatusBadge></div><h3>{slot.title}</h3><p>{document?.fileName || "Aucun fichier transmis"}</p>{document?.correctionMessage && <div className="correction-message"><CircleAlert size={17} /><span>{document.correctionMessage}</span></div>}<div className="document-footer">{hasFile && document ? <button className="button button-secondary" type="button" disabled={disabled} onClick={() => { void preview(document); }}><Eye size={17} /> Voir</button> : null}<label className={`button ${hasFile ? "button-secondary" : "button-primary"} upload-label ${disabled ? "is-disabled" : ""}`}><Upload size={17} /> {disabled ? "Traitement…" : hasFile ? "Remplacer" : "Ajouter le document"}<input type="file" disabled={disabled} accept=".pdf,.jpg,.jpeg,.png" onChange={(event) => { void handleFile(slot, event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>{hasFile && document && <AlertDialog><AlertDialogTrigger asChild><Button type="button" variant="ghost" disabled={disabled} className="document-delete-button"><Trash2 size={16} /> Supprimer</Button></AlertDialogTrigger><AlertDialogContent className="portal-dialog"><AlertDialogHeader><AlertDialogTitle>Supprimer ce fichier ?</AlertDialogTitle><AlertDialogDescription>« {document.fileName} » sera retiré. La rubrique « {slot.title} » restera disponible pour un nouvel envoi.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={() => { void deleteDocument(document.id); }}>Supprimer le fichier</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>}</div></article>;
       })}</div>
       <p className="simulation-note"><CircleAlert size={16} /> Formats acceptés : PDF, JPG et PNG. Les fichiers restent classés dans la rubrique choisie.</p>
@@ -553,12 +561,12 @@ export function ContractsPage() {
   return <div className="page-stack contracts-page">
     <PageHeader eyebrow="Vos protections" title="Mes assurances" description="Retrouvez vos contrats et suivez leur préparation." />
     {store.contracts.length ? <section className="insurance-contracts" aria-label="Vos contrats d’assurance">
-      {store.contracts.map((contract) => <article className="insurance-contract" key={contract.id}>
+      {store.contracts.map((contract) => { const insured = store.requests.find(request => request.reference === contract.requestId || request.id === contract.requestId)?.beneficiary?.insured; return <article className="insurance-contract" key={contract.id}>
         <header className="insurance-contract-heading">
           <span className="insurance-contract-icon" aria-hidden="true">{contract.product === "automobile" ? <Car size={23} /> : <ShieldCheck size={23} />}</span>
           <div className="insurance-contract-title">
             <span className="reference">{contract.policyNumber}</span>
-            <h2>{contract.productLabel}</h2>
+            <h2>{contract.productLabel}</h2>{insured && <p className="mt-1 text-sm text-slate-600">Assuré : {insured.firstName} {insured.lastName}</p>}
             <StatusBadge status={contract.status}>{contract.status === "active" ? "Actif" : contract.status === "expired" ? "Expiré" : "En préparation"}</StatusBadge>
           </div>
         </header>
@@ -573,7 +581,7 @@ export function ContractsPage() {
           </button>
           {contract.offerReference && <small>Offre {contract.offerReference}</small>}
         </div>
-      </article>)}
+      </article>; })}
     </section> : <EmptyState title="Aucun contrat pour le moment" description="Vos contrats apparaîtront ici dès que votre gestionnaire commencera leur préparation." />}
   </div>;
 }

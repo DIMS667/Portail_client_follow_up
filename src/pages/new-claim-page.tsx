@@ -213,10 +213,18 @@ export function NewClaimPage() {
     if (contract?.product === "automobile") {
       const demande = store.requests.find((request) => request.reference === contract.requestId || request.id === contract.requestId);
       const vehicle = demande?.vehicle;
+      const insured = demande?.beneficiary?.insured;
       const details = demande?.automobileRequest;
       const vehiculeRenseigne = details?.completionMode === "self_service" ? details.vehicle : undefined;
+      const driver = details?.completionMode === "self_service" ? details.driver : undefined;
+      const subscriber = details?.completionMode === "self_service" ? details.subscriber : undefined;
+      const driverFirstName = driver?.isSubscriber ? subscriber?.firstName : driver?.firstNames;
+      const driverLastName = driver?.isSubscriber ? subscriber?.lastName : driver?.lastName;
+      const samePerson = insured ? driverFirstName === insured.firstName && driverLastName === insured.lastName : !driver || driver.isSubscriber;
       setAuto((current) => ({
         ...current, policyEffectiveDate: contract.effectiveDate, policyExpiryDate: contract.expirationDate,
+        insured: insured ? { ...emptyPerson(), lastName: insured.lastName, firstNames: insured.firstName, phone: insured.phone, email: insured.email, address: [insured.address, insured.city].filter(Boolean).join(", ") } : { ...emptyPerson(), lastName: store.client.lastName, firstNames: store.client.firstName, phone: store.client.phone, email: store.client.email, address: [store.client.address, store.client.city].filter(Boolean).join(", ") },
+        insuredDriver: { ...emptyDriver(), firstNames: driverFirstName ?? (samePerson ? store.client.firstName : ""), lastName: driverLastName ?? (samePerson ? store.client.lastName : ""), phone: driver?.isSubscriber ? subscriber?.phone ?? "" : driver?.phone ?? "", licenceNumber: driver?.licenceNumber ?? "", licenceCategory: driver?.licenceCategory ?? "", licenceIssuedOn: driver?.licenceIssuedOn ?? "", licenceValidUntil: driver?.licenceValidUntil ?? "" }, driverIsInsured: samePerson,
         insuredVehicle: {
           ...emptyVehicle(),
           brand: vehicle ? `${vehicle.brand} ${vehicle.model}`.trim() : "",

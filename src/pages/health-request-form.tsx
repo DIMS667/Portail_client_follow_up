@@ -1,3 +1,4 @@
+import { profileParty } from "../services/request-beneficiary";
 import { useMemo, useState, type FormEvent } from "react";
 import { ArrowLeft, Check, ChevronRight, CircleAlert, HeartPulse, Plus, ShieldCheck, Trash2, UsersRound } from "lucide-react";
 import { usePortal } from "../app/portal-context";
@@ -52,16 +53,17 @@ function emptyPerson(id: string, relationship: HealthRelationship): HealthInsure
   return { id, relationship, lastName: "", firstNames: "", sex: "", birthDate: "", city: "", occupation: "", desiredStartDate: "" };
 }
 
-export function HealthRequestForm({ onBack, onSubmit, backLabel = "Changer d’assurance" }: { onBack: () => void; onSubmit: (data: Partial<InsuranceRequest>) => void; backLabel?: string }) {
+export function HealthRequestForm({ onBack, onSubmit, insuredPerson, backLabel = "Changer d’assurance" }: { onBack: () => void; onSubmit: (data: Partial<InsuranceRequest>) => void; insuredPerson?: import("../types/domain").AutomobilePartySnapshot; backLabel?: string }) {
   const { store } = usePortal();
+  const insured = insuredPerson ?? profileParty(store.client);
   const [step, setStep] = useState(0);
   const subscriberName = `${store.client.firstName} ${store.client.lastName}`;
   const [adhesionFor, setAdhesionFor] = useState<HealthInsuranceRequestData["adhesionFor"] | "">("");
   const [people, setPeople] = useState<HealthInsuredPerson[]>(() => [{
     ...emptyPerson("principal", "principal"),
-    lastName: store.client.lastName,
-    firstNames: store.client.firstName,
-    city: store.client.city,
+    lastName: insured.lastName,
+    firstNames: insured.firstName,
+    city: insured.city,
   }]);
   const [activePersonId, setActivePersonId] = useState("principal");
   const [medicalAnswers, setMedicalAnswers] = useState<MedicalAnswers>({});
@@ -149,7 +151,7 @@ export function HealthRequestForm({ onBack, onSubmit, backLabel = "Changer d’a
     }
     if (!adhesionFor) return;
     const healthRequest: HealthInsuranceRequestData = {
-      subscriberName, insuredName: subscriberName, adhesionFor, insuredPeople: people,
+      subscriberName, insuredName: `${insured.firstName} ${insured.lastName}`, adhesionFor, insuredPeople: people,
       medicalAnswers, ...(familyHistory.trim() ? { familyHistory: familyHistory.trim() } : {}),
       ...(previousInsurance.trim() ? { previousInsurance: previousInsurance.trim() } : {}),
       ...(socialCoverage.trim() ? { socialCoverage: socialCoverage.trim() } : {}),
@@ -180,8 +182,8 @@ export function HealthRequestForm({ onBack, onSubmit, backLabel = "Changer d’a
     <div className="health-privacy-note"><ShieldCheck size={19} /><div><strong>Données médicales confidentielles</strong><p>Ces réponses sont transmises au serveur avec votre demande et réservées aux utilisateurs autorisés chargés de son traitement.</p></div></div>
     <div className="auto-request-progress health-request-progress"><ol className="stepper auto-request-stepper" aria-label="Progression du questionnaire santé">{STEP_LABELS.map((label, index) => <li className={index < step ? "done" : index === step ? "active" : ""} aria-current={index === step ? "step" : undefined} key={label}><span>{index < step ? <Check size={15} /> : index + 1}</span><small>{label}</small></li>)}</ol><p className="auto-request-progress-copy">Étape {step + 1} sur {STEP_LABELS.length} <span>·</span> <strong>{STEP_LABELS[step]}</strong></p></div>
     <form className="flow-card health-request-card" onSubmit={handleSubmit} noValidate>
-      {step === 0 && <section><HealthHeading number="1" title="Informations sur le dossier" description="Le client connecté est à la fois le souscripteur et l’assuré principal." />
-        <div className="auto-request-parties-grid health-parties-grid"><HealthPartySummary title="Souscripteur" badge="Paie la cotisation" name={subscriberName} phone={store.client.phone} email={store.client.email} /><HealthPartySummary title="Assuré principal" badge="Personne couverte" name={subscriberName} phone={store.client.phone} email={store.client.email} /></div>
+      {step === 0 && <section><HealthHeading number="1" title="Informations sur le dossier" description="Le souscripteur gère le dossier. L’assuré principal est la personne choisie au début de la demande." />
+        <div className="auto-request-parties-grid health-parties-grid"><HealthPartySummary title="Souscripteur" badge="Paie la cotisation" name={subscriberName} phone={store.client.phone} email={store.client.email} /><HealthPartySummary title="Assuré principal" badge="Personne couverte" name={`${insured.firstName} ${insured.lastName}`} phone={insured.phone} email={insured.email} /></div>
         <div className="health-form-grid">
           <HealthField label="L’adhésion est demandée pour" required><select value={adhesionFor} onChange={(event) => setAdhesionFor(event.target.value as HealthInsuranceRequestData["adhesionFor"])}><option value="" disabled>Choisir…</option><option value="employee">Le salarié</option><option value="family">Le salarié et sa famille</option><option value="other">Autre composition</option></select></HealthField>
         </div>
@@ -224,9 +226,9 @@ function HealthField({ label, required, full, children }: { label: string; requi
 }
 
 function HealthPartySummary({ title, badge, name, phone, email }: { title: string; badge: string; name: string; phone: string; email: string }) {
-  return <article className="auto-request-party-card"><header><strong>{title}</strong><span>{badge}</span></header><h3>{name}</h3><p>{phone}</p><p>{email}</p><small>Informations issues du profil client</small></article>;
+  return <article className="auto-request-party-card"><header><strong>{title}</strong><span>{badge}</span></header><h3>{name}</h3><p>{phone}</p><p>{email}</p><small>{title === "Souscripteur" ? "Informations vérifiées dans votre profil" : "Informations de la personne assurée"}</small></article>;
 }
 
 function PersonFields({ person, update, lockIdentity = false }: { person: HealthInsuredPerson; update: (id: string, key: keyof HealthInsuredPerson, value: string) => void; lockIdentity?: boolean }) {
-  return <div className="health-form-grid"><HealthField label="Nom" required><input value={person.lastName} readOnly={lockIdentity} onChange={(event) => update(person.id, "lastName", event.target.value)} />{lockIdentity && <small className="health-locked-note">Repris du profil client</small>}</HealthField><HealthField label="Prénoms" required><input value={person.firstNames} readOnly={lockIdentity} onChange={(event) => update(person.id, "firstNames", event.target.value)} />{lockIdentity && <small className="health-locked-note">Repris du profil client</small>}</HealthField><HealthField label="Sexe" required><select value={person.sex} onChange={(event) => update(person.id, "sex", event.target.value)}><option value="">Sélectionner</option><option value="female">Femme</option><option value="male">Homme</option></select></HealthField><HealthField label="Nom de jeune fille"><input value={person.maidenName ?? ""} onChange={(event) => update(person.id, "maidenName", event.target.value)} /></HealthField><HealthField label="Date de naissance" required><input type="date" value={person.birthDate} onChange={(event) => update(person.id, "birthDate", event.target.value)} /></HealthField><HealthField label="Résidence / ville" required><input value={person.city} onChange={(event) => update(person.id, "city", event.target.value)} /></HealthField><HealthField label="Profession" required><input value={person.occupation} onChange={(event) => update(person.id, "occupation", event.target.value)} /></HealthField><HealthField label="Date d’adhésion souhaitée" required><input type="date" value={person.desiredStartDate} onChange={(event) => update(person.id, "desiredStartDate", event.target.value)} /></HealthField></div>;
+  return <div className="health-form-grid"><HealthField label="Nom" required><input value={person.lastName} readOnly={lockIdentity} onChange={(event) => update(person.id, "lastName", event.target.value)} />{lockIdentity && <small className="health-locked-note">Identité de la personne assurée</small>}</HealthField><HealthField label="Prénoms" required><input value={person.firstNames} readOnly={lockIdentity} onChange={(event) => update(person.id, "firstNames", event.target.value)} />{lockIdentity && <small className="health-locked-note">Identité de la personne assurée</small>}</HealthField><HealthField label="Sexe" required><select value={person.sex} onChange={(event) => update(person.id, "sex", event.target.value)}><option value="">Sélectionner</option><option value="female">Femme</option><option value="male">Homme</option></select></HealthField><HealthField label="Nom de jeune fille"><input value={person.maidenName ?? ""} onChange={(event) => update(person.id, "maidenName", event.target.value)} /></HealthField><HealthField label="Date de naissance" required><input type="date" value={person.birthDate} onChange={(event) => update(person.id, "birthDate", event.target.value)} /></HealthField><HealthField label="Résidence / ville" required><input value={person.city} onChange={(event) => update(person.id, "city", event.target.value)} /></HealthField><HealthField label="Profession" required><input value={person.occupation} onChange={(event) => update(person.id, "occupation", event.target.value)} /></HealthField><HealthField label="Date d’adhésion souhaitée" required><input type="date" value={person.desiredStartDate} onChange={(event) => update(person.id, "desiredStartDate", event.target.value)} /></HealthField></div>;
 }

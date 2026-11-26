@@ -1,3 +1,4 @@
+import { beneficiaryFromApi, beneficiaryToApi, type BeneficiaryApi } from "./request-beneficiary";
 import type {
   AutoGuarantee,
   AutoRequestType,
@@ -100,7 +101,7 @@ interface PersonneApi {
   prenom: string;
   nom: string;
   telephone: string;
-  adresse_email: string;
+  adresse_email: string | null;
   adresse: string;
   ville: string;
 }
@@ -127,6 +128,7 @@ const statutsDocumentsDepuisApi = Object.fromEntries(
 ) as Record<DocumentDemandeApi["statut"], "required" | "received" | "reviewing" | "validated" | "correction_required">;
 
 interface DemandeAutomobileApi {
+  beneficiaire?: BeneficiaryApi | null;
   id: string;
   reference: string;
   sous_type_automobile: "voiture" | "moto_deux_trois_roues";
@@ -201,7 +203,7 @@ function personneDepuisApi(personne: PersonneApi) {
     firstName: personne.prenom,
     lastName: personne.nom,
     phone: personne.telephone,
-    email: personne.adresse_email,
+    email: personne.adresse_email ?? "",
     address: personne.adresse,
     city: personne.ville,
   };
@@ -270,7 +272,7 @@ function construireEntree(data: Partial<InsuranceRequest>) {
     ...(demande.requestType === "renewal" ? { contrat_a_renouveler_id: demande.renewalContractId } : {}),
     precision_autre_besoin: demande.otherNeed,
     souscripteur: personneVersApi(demande.subscriber),
-    assure: personneVersApi(demande.insured),
+    assure: { ...personneVersApi(demande.insured), adresse_email: demande.insured.email || null },
     conducteur: conducteurVersApi(demande.driver),
     couverture: {
       duree_mois: demande.coverage.durationMonths,
@@ -423,6 +425,7 @@ function versDemandePortail(api: DemandeAutomobileApi): InsuranceRequest {
     status: statutsDepuisApi[api.statut] ?? "new",
     advisorId: courtier?.id ?? "",
     advisor: courtier,
+    beneficiary: beneficiaryFromApi(api.beneficiaire),
     vehicleKind: estMoto ? "moto" : "car",
     automobileRequest,
     motoRequest,
@@ -495,7 +498,7 @@ export async function creerDemandeAutomobile(data: Partial<InsuranceRequest>) {
   const resultat = await envoyer<DemandeAutomobileApi>("", {
     method: "POST",
     headers: enteteCsrf(),
-    body: JSON.stringify(construireEntree(data)),
+    body: JSON.stringify({ ...construireEntree(data), ...(data.beneficiary ? { beneficiaire: beneficiaryToApi(data.beneficiary) } : {}) }),
   });
   return versDemandePortail(resultat);
 }

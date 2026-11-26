@@ -7,7 +7,7 @@ import type { LucideIcon } from "lucide-react";
 import { assetUrl } from "../app/base-path";
 import { usePortal } from "../app/portal-context";
 import { PageHeader, StatusBadge, Timeline } from "../components/portal-ui";
-import { RequestContactDetails } from "../components/request-contact-details";
+import { RequestPartiesStep } from "../components/request-parties-step";
 import { OfferRcAdjustmentDetails } from "../components/offer-rc-adjustment";
 import { GuaranteePersonalCapitals } from "../components/guarantee-personal-capitals";
 import { isOfferChoiceLocked } from "../services/payment-history";
@@ -21,7 +21,7 @@ import { formatDate, formatFcfa } from "../services/portal-service";
 import { creerDemandeAutomobile } from "../services/automobile-request-api";
 import { creerDemandeGenerale } from "../services/general-request-api";
 import { selectionnerOffre } from "../services/subscription-api";
-import type { AutomobileVehicleKind, InsuranceProduct, InsuranceRequest } from "../types/domain";
+import type { AutomobileVehicleKind, InsuranceProduct, InsuranceRequest, RequestBeneficiary } from "../types/domain";
 import { AutoRequestForm, VoiceTextarea } from "./auto-request-form";
 import { CautionRequestForm } from "./caution-request-form";
 import { HealthRequestForm } from "./health-request-form";
@@ -40,11 +40,12 @@ const productChoices: ProductChoice[] = [
 ];
 
 export function NewRequestPage() {
-  const { store } = usePortal();
-  return store.client.phone.trim() ? <NewRequestContent /> : <RequestContactDetails />;
+  const [beneficiary, setBeneficiary] = useState<RequestBeneficiary | null>(null);
+  if (!beneficiary) return <RequestPartiesStep onConfirm={setBeneficiary} />;
+  return <><section className="panel mb-5"><span className="page-eyebrow">Personne assurée</span><p>{beneficiary.insured.firstName} {beneficiary.insured.lastName}</p></section><NewRequestContent beneficiary={beneficiary} /></>;
 }
 
-function NewRequestContent() {
+function NewRequestContent({ beneficiary }: { beneficiary: RequestBeneficiary }) {
   const { store, updateStore, navigate } = usePortal();
   const [product, setProduct] = useState<InsuranceProduct | null>(null);
   const [vehicleKind, setVehicleKind] = useState<AutomobileVehicleKind | null>(null);
@@ -57,7 +58,8 @@ function NewRequestContent() {
     const dataWithDocuments: Partial<InsuranceRequest> = {
       ...data,
       product: requestProduct,
-      documents: documentsForProduct(store.documents, requestProduct),
+      beneficiary,
+      documents: beneficiary.kind === "other" ? [] : documentsForProduct(store.documents, requestProduct),
     };
     const request = dataWithDocuments.product === "automobile"
       ? await creerDemandeAutomobile(dataWithDocuments)
@@ -79,17 +81,17 @@ function NewRequestContent() {
     setCreatedVehicleKind(request.vehicleKind);
     setCreatedReference(request.reference);
   };
-  if (createdReference) return <RequestConfirmation reference={createdReference} productLabel={createdProductLabel} vehicleKind={createdVehicleKind} onOpen={() => navigate(`/espace/demandes/${createdReference}`)} />;
+  if (createdReference) return <><RequestConfirmation reference={createdReference} productLabel={createdProductLabel} vehicleKind={createdVehicleKind} onOpen={() => navigate(`/espace/demandes/${createdReference}`)} /><section className="panel mt-6"><h2>Justificatifs de {beneficiary.insured.firstName} {beneficiary.insured.lastName}</h2><p>Déposez les documents de la personne assurée dans son dossier dans « Mes documents ».</p><button className="button button-primary mt-3" type="button" onClick={() => navigate(`/espace/documents?demande=${encodeURIComponent(createdReference)}`)}>Déposer les justificatifs</button></section></>;
   if (!product) return (
     <div className="page-stack"><button className="back-link" type="button" onClick={() => navigate("/espace")}><ArrowLeft size={17} /> Retour à l’accueil</button><PageHeader eyebrow="Nouvelle demande" title={"Quelle assurance recherchez\u2011vous\u00a0?"} description="Chaque assurance ouvre un formulaire adapté aux informations nécessaires à l’étude de votre dossier." /><div className="product-choice-grid">{productChoices.map(({ id, label, help, image, imageWidth, imageHeight, icon: Icon }) => <button type="button" key={id} onClick={() => { setProduct(id); setPreparationMode(null); setVehicleKind(null); }}><span className="product-choice-visual"><img src={image} alt="" width={imageWidth} height={imageHeight} loading="lazy" decoding="async" /><i><Icon size={22} /></i></span><span className="product-choice-copy"><span><strong>Assurance {label.toLowerCase()}</strong><small>{help}</small></span><ChevronRight size={19} /></span></button>)}</div></div>
   );
   if (product === "automobile" && !vehicleKind) return <VehicleKindChoice onBack={() => setProduct(null)} onSelect={setVehicleKind} />;
-  if (product === "automobile" && vehicleKind === "car") return <AutoRequestForm backLabel="Changer de véhicule" onBack={() => setVehicleKind(null)} onSubmit={submitRequest} />;
-  if (product === "automobile" && vehicleKind === "moto") return <MotoRequestForm backLabel="Changer de véhicule" onBack={() => setVehicleKind(null)} onSubmit={submitRequest} />;
+  if (product === "automobile" && vehicleKind === "car") return <AutoRequestForm insuredPerson={beneficiary.insured} backLabel="Changer de véhicule" onBack={() => setVehicleKind(null)} onSubmit={submitRequest} />;
+  if (product === "automobile" && vehicleKind === "moto") return <MotoRequestForm insuredPerson={beneficiary.insured} backLabel="Changer de véhicule" onBack={() => setVehicleKind(null)} onSubmit={submitRequest} />;
   const selectedProduct = productChoices.find((item) => item.id === product)!;
   if (!preparationMode) return <RequestPreparationChoice product={selectedProduct} onBack={() => setProduct(null)} onSelect={setPreparationMode} />;
   if (preparationMode === "broker") return <BrokerDelegationForm product={selectedProduct} onBack={() => setPreparationMode(null)} onSubmit={submitRequest} />;
-  if (product === "sante") return <HealthRequestForm backLabel="Choisir un autre parcours" onBack={() => setPreparationMode(null)} onSubmit={submitRequest} />;
+  if (product === "sante") return <HealthRequestForm insuredPerson={beneficiary.insured} backLabel="Choisir un autre parcours" onBack={() => setPreparationMode(null)} onSubmit={submitRequest} />;
   if (product === "caution") return <CautionRequestForm backLabel="Choisir un autre parcours" onBack={() => setPreparationMode(null)} onSubmit={submitRequest} />;
   return <ProductRequestForm product={selectedProduct} backLabel="Choisir un autre parcours" onBack={() => setPreparationMode(null)} onSubmit={submitRequest} />;
 }

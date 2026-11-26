@@ -7,6 +7,8 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL
 const DOCUMENTS_BASE_URL = `${API_BASE_URL}/api/v1/frontoffice/documents`;
 
 type DocumentApi = {
+  demande_reference?: string | null;
+  nom_assure?: string | null;
   id: string;
   rubrique_id: string;
   dossier: string;
@@ -91,6 +93,8 @@ function versDocumentClient(documentApi: DocumentApi, ownerId: string): ClientDo
     ownerId,
     status: statutsDepuisApi[documentApi.statut] ?? "received",
     slotId: documentApi.rubrique_id,
+    requestReference: documentApi.demande_reference ?? undefined,
+    insuredName: documentApi.nom_assure ?? undefined,
     fileName: documentApi.nom_fichier,
     date: documentApi.modifie_le.slice(0, 10),
     correctionMessage: correctionMessage || undefined,
@@ -102,10 +106,12 @@ export async function obtenirDocuments(ownerId: string) {
   return documents.map((document) => versDocumentClient(document, ownerId));
 }
 
-export async function televerserDocument(rubriqueId: string, fichier: File, ownerId: string) {
+export async function televerserDocument(rubriqueId: string, fichier: File, ownerId: string, requestReference?: string) {
   const corps = new FormData();
   corps.append("fichier", fichier);
-  const document = await appeler<DocumentApi>(`/${encodeURIComponent(rubriqueId)}`, {
+  if (requestReference) corps.append("demande_reference", requestReference);
+  const chemin = requestReference ? `/demandes/${encodeURIComponent(requestReference)}/${encodeURIComponent(rubriqueId)}` : `/${encodeURIComponent(rubriqueId)}`;
+  const document = await appeler<DocumentApi>(chemin, {
     method: "PUT",
     body: corps,
   });

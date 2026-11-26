@@ -1,3 +1,4 @@
+import { profileParty } from "../services/request-beneficiary";
 import { useEffect, useRef, useState, type FormEvent, type InputHTMLAttributes } from "react";
 import {
   ArrowLeft,
@@ -227,8 +228,9 @@ const focusTargets: Record<string, string> = {
   "has-vignette": "has-vignette-yes",
 };
 
-export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’assurance" }: { onBack: () => void; onSubmit: (data: Partial<InsuranceRequest>) => Promise<void> | void; backLabel?: string }) {
+export function MotoRequestForm({ onBack, onSubmit, insuredPerson, backLabel = "Changer d’assurance" }: { onBack: () => void; onSubmit: (data: Partial<InsuranceRequest>) => Promise<void> | void; insuredPerson?: import("../types/domain").AutomobilePartySnapshot; backLabel?: string }) {
   const { store } = usePortal();
+  const insured = insuredPerson ?? profileParty(store.client);
   const [draft, setDraft] = useState<MotoDraft>(loadDraft);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submissionError, setSubmissionError] = useState("");
@@ -358,7 +360,7 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
       ...(form.requestType === "renewal" ? { renewalContractId: form.renewalContractId } : {}),
       ...(form.requestType === "other" ? { otherNeed: form.otherNeed.trim() } : {}),
       subscriber: clientSnapshot,
-      insured: clientSnapshot,
+      insured,
       driver: form.driver.isSubscriber ? { isSubscriber: true, licenceCategory: "A" } : {
         isSubscriber: false,
         firstNames: form.driver.firstNames.trim(),
@@ -538,10 +540,10 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
 
         {step === 1 && (
           <section aria-labelledby="auto-request-step-title">
-            <MotoStepHeading number="2" title="Souscripteur, assuré et conducteur" description="Le souscripteur et l’assuré correspondent au client connecté. Indiquez ensuite qui conduira la moto." />
+            <MotoStepHeading number="2" title="Souscripteur, assuré et conducteur" description="Le souscripteur est le client connecté. La personne assurée est celle choisie au début de la demande. Indiquez ensuite qui conduira la moto." />
             <div className="auto-request-parties-grid">
               <PartySummary title="Souscripteur" badge="Paie la cotisation" name={`${store.client.firstName} ${store.client.lastName}`} phone={store.client.phone} email={store.client.email} />
-              <PartySummary title="Assuré" badge="Personne couverte" name={`${store.client.firstName} ${store.client.lastName}`} phone={store.client.phone} email={store.client.email} />
+              <PartySummary title="Assuré" badge="Personne couverte" name={`${insured.firstName} ${insured.lastName}`} phone={insured.phone} email={insured.email} />
             </div>
             <div className="auto-request-driver-block">
               <BinaryChoice id="driver-is-subscriber" legend="Le souscripteur est-il également le conducteur ?" value={form.driver.isSubscriber} error={errors["driver-is-subscriber"]} onChange={(value) => {
@@ -667,7 +669,7 @@ export function MotoRequestForm({ onBack, onSubmit, backLabel = "Changer d’ass
             <MotoStepHeading number="6" title="Vérifiez votre demande" description="Relisez les informations avant de les transmettre à votre gestionnaire." />
             <div className="auto-request-review">
               <ReviewSection title="Votre besoin" items={[["Demande", form.requestType ? requestLabels[form.requestType] : "Non renseigné"], ...(form.requestType === "other" ? [["Précision", form.otherNeed]] as Array<[string, string]> : [])]} />
-              <ReviewSection title="Souscripteur et assuré" items={[["Souscripteur", `${store.client.firstName} ${store.client.lastName}`], ["Assuré", `${store.client.firstName} ${store.client.lastName}`], ["Conducteur", form.driver.isSubscriber ? "Le souscripteur" : `${form.driver.firstNames} ${form.driver.lastName}`], ...(form.driver.isSubscriber ? [] : [["Permis", `${form.driver.licenceNumber} · catégorie ${form.driver.licenceCategory}`]] as Array<[string, string]>)]} />
+              <ReviewSection title="Souscripteur et assuré" items={[["Souscripteur", `${store.client.firstName} ${store.client.lastName}`], ["Assuré", `${insured.firstName} ${insured.lastName}`], ["Conducteur", form.driver.isSubscriber ? "Le souscripteur" : `${form.driver.firstNames} ${form.driver.lastName}`], ...(form.driver.isSubscriber ? [] : [["Permis", `${form.driver.licenceNumber} · catégorie ${form.driver.licenceCategory}`]] as Array<[string, string]>)]} />
               <ReviewSection title="Votre moto" items={[
                 ["Moto", `${form.vehicle.brand} ${form.vehicle.model}`], ["Première mise en circulation", formatDate(form.vehicle.firstRegistrationDate)],
                 ["Immatriculation", form.vehicle.registration.toUpperCase()], ["Énergie", form.vehicle.energy ? energyLabels[form.vehicle.energy] : "Non renseignée"],
@@ -850,7 +852,7 @@ function BinaryChoice({ id, legend, value, error, onChange, required = false }: 
 }
 
 function PartySummary({ title, badge, name, phone, email }: { title: string; badge: string; name: string; phone: string; email: string }) {
-  return <article className="auto-request-party-card"><header><strong>{title}</strong><span>{badge}</span></header><h3>{name}</h3><p>{phone}</p><p>{email}</p><small>Informations issues du profil client</small></article>;
+  return <article className="auto-request-party-card"><header><strong>{title}</strong><span>{badge}</span></header><h3>{name}</h3><p>{phone}</p><p>{email}</p><small>{title === "Souscripteur" ? "Informations vérifiées dans votre profil" : "Informations de la personne assurée"}</small></article>;
 }
 
 function ReviewSection({ title, items }: { title: string; items: Array<[string, string]> }) {

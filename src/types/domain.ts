@@ -229,6 +229,7 @@ export interface Client { id: string; firstName: string; lastName: string; phone
 export interface Advisor { id: string; name: string; phone: string; email: string; initials: string; role?: "gestionnaire" | "admin" | "super_admin"; }
 export interface RequestDocumentReference { id: string; title: string; fileName?: string; type: string; folder: string; status: DocumentStatus; date?: string; }
 export interface InsuranceRequest {
+  beneficiary?: RequestBeneficiary;
   id: string; reference: string; clientId: string; product: InsuranceProduct; productLabel: string; date: string; status: RequestStatus; advisorId: string;
   advisor?: Advisor | null;
   vehicleKind?: AutomobileVehicleKind;
@@ -240,13 +241,14 @@ export interface InsuranceRequest {
   details?: Record<string, string>;
   coverage?: string; desiredStartDate?: string; comments?: string; proposalId?: string; selectedOfferId?: string; timeline: StatusEvent[]; scope?: "core" | "scenario";
 }
+export interface RequestBeneficiary { kind: "self" | "other"; insured: AutomobilePartySnapshot; profileConfirmed: true; }
 export interface Proposal { id: string; reference: string; requestId: string; offerIds: string[]; recommendedOfferId?: string; advice: string; }
 export interface PersonalCoverageCapitals { death: number; disability: number; treatment: number; }
 export interface OfferGuaranteePrice { code?: string | null; label: string; premium: number; annualPremium?: number | null; capital?: string | null; deductible?: string | null; personalCoverage?: PersonalCoverageCapitals; }
 export interface OfferRcAdjustment { originalPremium: number; rate: number; adjustment: number; adjustedPremium: number; reasons: string[]; referenceDate: string; }
 export interface OfferPricingBreakdown { guarantees: OfferGuaranteePrice[]; netPremium: number; accessories: number; asacFile: number; taxBase: number; taxRate: number; taxes: number; cemacCard: number; dta: number; otherFees: number; total: number; rcAdjustment?: OfferRcAdjustment; }
 export interface Offer { id: string; reference: string; proposalId: string; product: string; premium: number; duration: string; effectiveDate: string; deductible: number; guarantees: string[]; options: string[]; exclusions: string[]; requiredDocuments: string[]; pricingBreakdown?: OfferPricingBreakdown; requestReference?: string; recommended?: boolean; selected?: boolean; advice?: string; }
-export interface ClientDocument { id: string; title: string; category: string; type: string; ownerId: string; status: DocumentStatus; slotId?: string; fileName?: string; date?: string; correctionMessage?: string; downloadUrl?: string; contentUrl?: string; }
+export interface ClientDocument { requestReference?: string; insuredName?: string; id: string; title: string; category: string; type: string; ownerId: string; status: DocumentStatus; slotId?: string; fileName?: string; date?: string; correctionMessage?: string; downloadUrl?: string; contentUrl?: string; }
 export interface PaymentFraction { startMonth: number; durationMonths: number; periodStart?: string; periodEnd?: string; }
 export interface PaymentSchedule {
   offerId: string; offerReference: string; requestId: string;
