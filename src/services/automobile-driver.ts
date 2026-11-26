@@ -1,24 +1,10 @@
+import { metierDuProfil, trouverMetier } from "./metiers";
 import type { AutomobileDriver, AutomobileDriverOccupationCategory } from "../types/domain";
 
 export const carLicenceCategories = ["B", "C", "D", "E", "F", "G"] as const;
 
-export const driverOccupationOptions: ReadonlyArray<{ value: AutomobileDriverOccupationCategory; label: string }> = [
-  { value: "delegue_medical", label: "Délégué médical" },
-  { value: "delegue_inspecteur_commercial", label: "Délégué ou inspecteur commercial" },
-  { value: "publicite", label: "Publiciste, agence ou agent de publicité" },
-  { value: "agent_attache_delegue_commercial", label: "Agent, attaché ou délégué commercial" },
-  { value: "inspecteur_voyageur_commerce", label: "Inspecteur commercial ou voyageur de commerce" },
-  { value: "representant_inspecteur_ventes", label: "Représentant commercial ou inspecteur des ventes" },
-  { value: "photographe_reporter", label: "Photographe reporter" },
-  { value: "gardiennage_securite", label: "Société de gardiennage ou de sécurité" },
-  { value: "boulangerie", label: "Boulangerie" },
-  { value: "clerge", label: "Membre du clergé" },
-  { value: "autre", label: "Autre profession" },
-];
-
 export function driverOccupationLabel(category: AutomobileDriverOccupationCategory | "", occupation: string) {
-  if (!category || category === "autre") return occupation.trim();
-  return driverOccupationOptions.find((option) => option.value === category)?.label ?? "";
+  return metierDuProfil(occupation, category)?.libelle ?? occupation.trim();
 }
 
 function isCalendarDate(value: string) {
@@ -49,11 +35,9 @@ export function validateAutomobileDriver(
   if (!isCalendarDate(birth) || birth >= today) {
     errors["driver-birth-date"] = "Indiquez une date de naissance valide, antérieure à aujourd’hui.";
   }
-  if (!driverOccupationOptions.some((option) => option.value === driver.occupationCategory)) {
-    errors["driver-occupation-category"] = "Choisissez la profession du conducteur habituel.";
-  } else if (driver.occupationCategory === "autre") {
-    if (!driver.occupation?.trim()) errors["driver-occupation"] = "Précisez le métier réellement exercé.";
-    else if (driver.occupation.trim().length > 120) errors["driver-occupation"] = "Le métier doit contenir au maximum 120 caractères.";
+  const metier = trouverMetier(driver.occupation);
+  if (!metier || metier.categorie !== driver.occupationCategory) {
+    errors["driver-occupation-category"] = "Choisissez le métier du conducteur habituel dans la liste.";
   }
   if (!driver.licenceNumber?.trim()) errors["driver-licence-number"] = "Renseignez le numéro du permis.";
   if (!carLicenceCategories.some(category => category === driver.licenceCategory)) errors["driver-licence-category"] = "Choisissez une catégorie de permis de B à G.";

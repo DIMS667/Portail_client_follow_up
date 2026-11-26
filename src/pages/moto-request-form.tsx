@@ -1,3 +1,5 @@
+import { MetierSelect } from "../components/metier-select";
+import { trouverMetier } from "../services/metiers";
 import { profileParty } from "../services/request-beneficiary";
 import { useEffect, useRef, useState, type FormEvent, type InputHTMLAttributes } from "react";
 import {
@@ -115,7 +117,6 @@ interface MotoRequestFormState {
   coverage: {
     durationMonths: AutoCoverageDurationMonths | null;
     desiredStartDate: string;
-    startDateUnknown: boolean;
     guarantees: MotoGuarantee[];
   };
   hasVignette: boolean | null;
@@ -147,7 +148,7 @@ const initialForm: MotoRequestFormState = {
     carriesFlammableMaterials: null,
     hasTrailer: null,
   },
-  coverage: { durationMonths: null, desiredStartDate: "", startDateUnknown: false, guarantees: ["civil_liability", "defense_and_recours"] },
+  coverage: { durationMonths: null, desiredStartDate: "", guarantees: ["civil_liability", "defense_and_recours"] },
   hasVignette: null,
 };
 
@@ -190,7 +191,7 @@ function validateStep(step: number, form: MotoRequestFormState, renewableContrac
       if (!form.driver.firstNames.trim()) errors["driver-first-names"] = "Renseignez les prénoms du conducteur.";
       if (!form.driver.birthDate) errors["driver-birth-date"] = "Renseignez la date de naissance du conducteur.";
       if (!form.driver.phone.trim()) errors["driver-phone"] = "Renseignez le téléphone du conducteur.";
-      if (!form.driver.occupation.trim()) errors["driver-occupation"] = "Renseignez la profession du conducteur.";
+      if (!trouverMetier(form.driver.occupation)) errors["driver-occupation"] = "Choisissez le métier du conducteur dans la liste.";
       if (!form.driver.licenceNumber.trim()) errors["driver-licence-number"] = "Renseignez le numéro du permis.";
       if (!form.driver.licenceCategory.trim()) errors["driver-licence-category"] = "Renseignez la catégorie du permis.";
       if (!form.driver.licenceIssuedOn) errors["driver-licence-issued-on"] = "Renseignez la date de délivrance du permis.";
@@ -216,7 +217,7 @@ function validateStep(step: number, form: MotoRequestFormState, renewableContrac
   }
   if (step === 3) {
     if (!form.coverage.durationMonths || !DURATION_OPTIONS.includes(form.coverage.durationMonths)) errors.duration = "Choisissez une durée d’assurance.";
-    if (!form.coverage.startDateUnknown && !form.coverage.desiredStartDate) errors["desired-start-date"] = "Choisissez une date de prise d’effet ou indiquez que vous ne la connaissez pas encore.";
+    if (!form.coverage.desiredStartDate) errors["desired-start-date"] = "Choisissez la date de prise d’effet de votre assurance.";
     if (form.hasVignette === null) errors["has-vignette"] = "Indiquez si vous avez une vignette.";
   }
   return errors;
@@ -368,6 +369,7 @@ export function MotoRequestForm({ onBack, onSubmit, insuredPerson, backLabel = "
         birthDate: form.driver.birthDate,
         phone: form.driver.phone.trim(),
         occupation: form.driver.occupation.trim(),
+        occupationCategory: trouverMetier(form.driver.occupation)?.categorie,
         licenceNumber: form.driver.licenceNumber.trim().toUpperCase(),
         licenceCategory: "A",
         licenceIssuedOn: form.driver.licenceIssuedOn,
@@ -390,8 +392,7 @@ export function MotoRequestForm({ onBack, onSubmit, insuredPerson, backLabel = "
       },
       coverage: {
         durationMonths: form.coverage.durationMonths as AutoCoverageDurationMonths,
-        desiredStartDate: form.coverage.startDateUnknown ? null : form.coverage.desiredStartDate,
-        ...(form.coverage.startDateUnknown ? { startDateUnknown: true } : {}),
+        desiredStartDate: form.coverage.desiredStartDate,
         guarantees: Array.from(new Set(["civil_liability", "defense_and_recours", ...form.coverage.guarantees])) as MotoGuarantee[],
       },
       hasVignette: Boolean(form.hasVignette),
@@ -527,7 +528,7 @@ export function MotoRequestForm({ onBack, onSubmit, insuredPerson, backLabel = "
             {loadingRenewals ? <p className="auto-request-helper">Vérification des contrats à renouveler…</p> : renewalError ? <p className="auto-request-helper" role="status">{renewalError} <button type="button" className="text-link" onClick={() => setRenewalRefresh(value => value + 1)}>Réessayer</button></p> : eligibleRenewals.length === 0 && <p className="auto-request-helper">Le renouvellement sera proposé lorsqu’un de vos contrats actifs arrivera à échéance dans les 30 prochains jours.</p>}
             {form.requestType === "renewal" && <label htmlFor="renewal-contract" className="auto-request-other"><span className="auto-request-label-text">Contrat à renouveler <RequiredMark /></span><select id="renewal-contract" value={form.renewalContractId} disabled={loadingRenewals} aria-invalid={Boolean(errors["renewal-contract"])} onChange={(event) => {
               const contract = eligibleRenewals.find(item => item.id === event.target.value);
-              updateForm(current => ({ ...current, renewalContractId: contract?.id ?? "", ...(contract ? { vehicle: motoRenewalVehicle(contract), coverage: { ...current.coverage, desiredStartDate: contract.expirationDate, startDateUnknown: false } } : {}) }));
+              updateForm(current => ({ ...current, renewalContractId: contract?.id ?? "", ...(contract ? { vehicle: motoRenewalVehicle(contract), coverage: { ...current.coverage, desiredStartDate: contract.expirationDate } } : {}) }));
               clearError("renewal-contract");
             }}><option value="">Choisir un contrat</option>{eligibleRenewals.map(contract => <option value={contract.id} key={contract.id}>{contract.policyNumber || contract.reference} · {String(contract.vehicle.immatriculation || "Moto")} · échéance le {formatDate(contract.expirationDate)}</option>)}</select>{eligibleRenewals.filter(contract => contract.id === form.renewalContractId).map(contract => <small className="auto-request-field-help" key={contract.id}>Contrat {contract.policyNumber || contract.reference} · {String(contract.vehicle.immatriculation || "Moto")} · Échéance : {formatDate(contract.expirationDate)}</small>)}<FieldError id="renewal-contract-error" message={errors["renewal-contract"]} /></label>}
             {form.requestType === "other" && <VoiceTextField className="auto-request-other" id="other-need" label="Précisez votre besoin" value={form.otherNeed} onChange={(value) => {
@@ -555,7 +556,7 @@ export function MotoRequestForm({ onBack, onSubmit, insuredPerson, backLabel = "
                 <VoiceTextField id="driver-first-names" label="Prénoms" value={form.driver.firstNames} onChange={(value) => updateDriver("firstNames", value)} error={errors["driver-first-names"]} required />
                 <label htmlFor="driver-birth-date"><span className="auto-request-label-text">Date de naissance <RequiredMark /></span><input id="driver-birth-date" type="date" value={form.driver.birthDate} onChange={(event) => updateDriver("birthDate", event.target.value)} aria-invalid={Boolean(errors["driver-birth-date"])} /><FieldError id="driver-birth-date-error" message={errors["driver-birth-date"]} /></label>
                 <VoiceTextField id="driver-phone" label="Téléphone" value={form.driver.phone} onChange={(value) => updateDriver("phone", value)} error={errors["driver-phone"]} required inputProps={{ type: "tel" }} />
-                <VoiceTextField id="driver-occupation" label="Profession" value={form.driver.occupation} onChange={(value) => updateDriver("occupation", value)} error={errors["driver-occupation"]} required />
+                <div className="grid gap-2"><label htmlFor="driver-occupation"><span className="auto-request-label-text">Métier du conducteur <RequiredMark /></span></label><MetierSelect id="driver-occupation" value={form.driver.occupation} onChange={metier => updateDriver("occupation", metier.libelle)} required invalid={Boolean(errors["driver-occupation"])} describedBy={errors["driver-occupation"] ? "driver-occupation-error" : undefined}/><FieldError id="driver-occupation-error" message={errors["driver-occupation"]}/></div>
                 <VoiceTextField id="driver-licence-number" label="Numéro du permis" value={form.driver.licenceNumber} onChange={(value) => updateDriver("licenceNumber", value.toUpperCase())} error={errors["driver-licence-number"]} required />
                 <label htmlFor="driver-licence-category"><span className="auto-request-label-text">Catégorie du permis</span><input id="driver-licence-category" value="Catégorie A" readOnly aria-describedby="driver-licence-category-help" /><small id="driver-licence-category-help">Catégorie réservée à la moto, renseignée automatiquement.</small></label>
                 <label htmlFor="driver-licence-issued-on"><span className="auto-request-label-text">Date de délivrance du permis <RequiredMark /></span><input id="driver-licence-issued-on" type="date" value={form.driver.licenceIssuedOn} onChange={(event) => updateDriver("licenceIssuedOn", event.target.value)} aria-invalid={Boolean(errors["driver-licence-issued-on"])} /><FieldError id="driver-licence-issued-on-error" message={errors["driver-licence-issued-on"]} /></label>
@@ -626,16 +627,13 @@ export function MotoRequestForm({ onBack, onSubmit, insuredPerson, backLabel = "
             <FieldError id="duration-error" message={errors.duration} />
             <div className="auto-request-date-block">
               <label htmlFor="desired-start-date"><span className="auto-request-label-text">Date souhaitée de prise d’effet <RequiredMark /></span>
-                <input id="desired-start-date" type="date" value={form.coverage.desiredStartDate} disabled={form.coverage.startDateUnknown} onChange={(event) => {
+                <input id="desired-start-date" type="date" value={form.coverage.desiredStartDate} required aria-required="true" onChange={(event) => {
                   updateCoverage("desiredStartDate", event.target.value);
                   clearError("desired-start-date");
                 }} aria-invalid={Boolean(errors["desired-start-date"])} aria-describedby={errors["desired-start-date"] ? "desired-start-date-error" : undefined} />
                 <FieldError id="desired-start-date-error" message={errors["desired-start-date"]} />
               </label>
-              <label className="auto-request-inline-check" htmlFor="start-date-unknown"><input id="start-date-unknown" type="checkbox" checked={form.coverage.startDateUnknown} onChange={(event) => {
-                updateCoverage("startDateUnknown", event.target.checked);
-                clearError("desired-start-date");
-              }} /> Je ne connais pas encore la date exacte</label>
+
             </div>
             <div className="auto-request-duration-vignette">
               <BinaryChoice id="has-vignette" legend="Avez-vous une vignette ?" value={form.hasVignette} error={errors["has-vignette"]} onChange={(value) => {
@@ -677,7 +675,7 @@ export function MotoRequestForm({ onBack, onSubmit, insuredPerson, backLabel = "
                 ["Matières inflammables", form.vehicle.carriesFlammableMaterials ? "Oui" : "Non"], ["Remorque", form.vehicle.hasTrailer ? "Oui" : "Non"],
                 ["Valeur estimée", form.vehicle.estimatedValue ? formatFcfa(Number(form.vehicle.estimatedValue)) : "Non renseignée"],
               ]} />
-              <ReviewSection title="Durée et prise d’effet" items={[["Durée", `${form.coverage.durationMonths} mois`], ["Prise d’effet", form.coverage.startDateUnknown ? "Date à confirmer" : formatDate(form.coverage.desiredStartDate)]]} />
+              <ReviewSection title="Durée et prise d’effet" items={[["Durée", `${form.coverage.durationMonths} mois`], ["Prise d’effet", formatDate(form.coverage.desiredStartDate)]]} />
               <ReviewSection title="Garanties choisies" items={[["Obligatoires", `${guaranteeLabels.civil_liability} · ${guaranteeLabels.defense_and_recours}`], ["Complémentaires", form.coverage.guarantees.filter((item) => item !== "civil_liability" && item !== "defense_and_recours").map((item) => guaranteeLabels[item]).join(" · ") || "Aucune garantie complémentaire"]]} />
               <ReviewSection title="Vignette" items={[["Le client possède une vignette", form.hasVignette ? "Oui" : "Non"]]} />
             </div>
