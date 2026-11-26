@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Bike, Building2, CalendarDays, Car, Check, CheckCircle2, ChevronRight,
   CircleAlert, CircleHelp, ClipboardList, Clock3, Download, Eye, FileCheck2, FileText, Filter, FolderOpen,
@@ -35,7 +35,8 @@ import {
   marquerNotificationLue,
   marquerToutesNotificationsLues,
 } from "../services/notifications-api";
-import { obtenirLienPolice } from "../services/subscription-api";
+import { obtenirLienPolice, obtenirPaiements } from "../services/subscription-api";
+import "./payments-page.css";
 import { isOfferChoiceLocked, paymentMethodLabels as paymentLabels } from "../services/payment-history";
 import {
   formatDate, formatFcfa, markNotificationRead, removeDocument,
@@ -532,27 +533,70 @@ function PaymentPeriod({ payment }: { payment: Payment }) {
 }
 
 export function PaymentsPage() {
-  const { store } = usePortal();
+  const { store, updateStore, navigate } = usePortal();
+  const updateStoreRef = useRef(updateStore);
+  const [attempt, setAttempt] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  useEffect(() => { updateStoreRef.current = updateStore; }, [updateStore]);
+  useEffect(() => {
+    if (!store.client.id) return;
+    let active = true;
+    setLoading(true);
+    setError("");
+    obtenirPaiements().then(payments => {
+      if (active) updateStoreRef.current(current => ({ ...current, payments }));
+    }).catch(cause => {
+      if (active) setError(cause instanceof Error ? cause.message : "Vos paiements n’ont pas pu être chargés.");
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [attempt, store.client.id]);
+
+  const payments = [...store.payments].filter(payment => payment.status === "succeeded")
+    .sort((a, b) => b.date.localeCompare(a.date) || (b.confirmedAt ?? "").localeCompare(a.confirmedAt ?? ""));
+  const total = payments.reduce((sum, payment) => sum + payment.amount, 0);
+  const openRequest = (reference: string) => navigate(`/espace/demandes/${encodeURIComponent(reference)}`);
   return (
-    <div className="page-stack">
-      <PageHeader eyebrow="Historique financier" title="Mes paiements" description="Retrouvez les paiements enregistrés pour vos dossiers." />
-      {store.paymentSchedulesError && <p className="form-alert error" role="status"><CircleAlert size={17} />{store.paymentSchedulesError} Vos règlements restent consultables ci-dessous.</p>}
-      {store.paymentSchedules?.map((schedule) => <AnnualPaymentSummary key={schedule.offerId} schedule={schedule} />)}
-      {store.payments.length ? <><section className="payment-history-cards grid gap-3 md:hidden" aria-label="Paiements enregistrés">{store.payments.map((payment) => <PaymentHistoryCard key={payment.id} payment={payment} />)}</section><section className="panel table-panel hidden md:block"><div className="panel-heading"><div><span className="page-eyebrow">Toutes les opérations</span><h2>Historique</h2></div></div><div className="responsive-table"><table><thead><tr><th>Référence</th><th>Contrat ou dossier</th><th>Montant</th><th>Date</th><th>Mode</th><th>Statut</th></tr></thead><tbody>{store.payments.map((payment) => <tr key={payment.id}><td><strong>{payment.reference}</strong>{payment.transactionReference && <small className="block text-xs text-slate-500">{payment.transactionReference}</small>}</td><td>{payment.contractId || payment.requestId}{payment.fraction && <small className="mt-1 block text-xs text-slate-500"><PaymentPeriod payment={payment} /></small>}</td><td>{formatFcfa(payment.amount)}</td><td>{formatDate(payment.date)}</td><td>{paymentLabels[payment.method]}</td><td><StatusBadge status={payment.status}>{payment.status === "succeeded" ? "Confirmé" : payment.status === "failed" ? "Échoué" : "En attente"}</StatusBadge></td></tr>)}</tbody></table></div></section></> : <EmptyState title="Aucun paiement enregistré" description="Les règlements enregistrés pour vos dossiers apparaîtront ici." />}
+    <div className="page-stack payments-page">
+      <PageHeader eyebrow="Vos règlements" title="Mes paiements" description="Consultez les paiements confirmés et enregistrés pour vos dossiers par votre gestionnaire." action={<Button variant="outline" disabled={loading} onClick={() => setAttempt(value => value + 1)}><RefreshCcw size={16} className={loading ? "animate-spin" : undefined} aria-hidden="true" />Actualiser</Button>} />
+      {error && <div className="payments-error" role="alert"><CircleAlert size={19} aria-hidden="true" /><div><strong>Impossible d’actualiser vos paiements</strong><p>{error}</p></div><button type="button" className="link-inline" disabled={loading} onClick={() => setAttempt(value => value + 1)}>Réessayer</button></div>}
+      {loading && !payments.length ? <div className="payments-loading" role="status"><RefreshCcw className="animate-spin" size={20} aria-hidden="true" />Chargement de vos paiements…</div>
+        : payments.length ? <>
+          <section className="payments-summary" aria-label="Résumé de vos paiements">
+            <span className="payments-summary-icon"><WalletCards size={27} strokeWidth={1.7} aria-hidden="true" /></span>
+            <div><span>Total réglé</span><strong>{formatFcfa(total)}</strong></div>
+            <div className="payments-summary-count"><strong>{payments.length}</strong><span>paiement{payments.length > 1 ? "s" : ""} confirmé{payments.length > 1 ? "s" : ""}</span></div>
+          </section>
+          <section className="payments-history" aria-labelledby="payments-history-title">
+            <div className="payments-history-heading"><div><h2 id="payments-history-title">Historique des paiements</h2><p>Les règlements les plus récents apparaissent en premier.</p></div><span><CheckCircle2 size={15} aria-hidden="true" />Confirmés</span></div>
+            <div className="payments-table-scroll"><table><thead><tr><th>Date du règlement</th><th>Référence</th><th>Dossier concerné</th><th>Moyen de paiement</th><th className="payments-amount">Montant</th></tr></thead>
+              <tbody>{payments.map(payment => <tr key={payment.id}>
+                <td>{formatDate(payment.date)}</td>
+                <td><strong>{payment.reference}</strong><small>{payment.transactionReference ? `Transaction / reçu : ${payment.transactionReference}` : "Référence de transaction non renseignée"}</small></td>
+                <td>{payment.requestId ? <button type="button" className="payments-request-link" onClick={() => openRequest(payment.requestId!)}>{payment.requestId}<ChevronRight size={14} aria-hidden="true" /></button> : <span>—</span>}{payment.contractId && <small>Contrat {payment.contractId}</small>}{payment.fraction && <small><PaymentPeriod payment={payment} /></small>}</td>
+                <td><span className="payments-method">{paymentLabels[payment.method]}</span></td>
+                <td className="payments-amount"><strong>{formatFcfa(payment.amount)}</strong></td>
+              </tr>)}</tbody></table></div>
+            <div className="payments-mobile-list">{payments.map(payment => <PaymentHistoryCard key={payment.id} payment={payment} />)}</div>
+          </section>
+          {store.paymentSchedulesError && <p className="form-alert error" role="status"><CircleAlert size={17} />{store.paymentSchedulesError} Vos règlements restent consultables ci-dessus.</p>}
+          {store.paymentSchedules?.filter(schedule => schedule.paidTotal > 0).map(schedule => <AnnualPaymentSummary key={schedule.offerId} schedule={schedule} />)}
+        </> : !error && <section className="payments-empty"><span><WalletCards size={30} strokeWidth={1.5} aria-hidden="true" /></span><h2>Aucun paiement enregistré</h2><p>Dès que votre gestionnaire confirme un règlement, vous le retrouvez ici avec sa date, son montant et sa référence.</p><button className="button button-outline" type="button" onClick={() => navigate("/espace/demandes")}>Voir mes demandes <ChevronRight size={16} aria-hidden="true" /></button></section>}
     </div>
   );
 }
 
 function PaymentHistoryCard({ payment }: { payment: Payment }) {
-  return <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-    <div className="flex flex-wrap items-start justify-between gap-3"><strong className="break-all text-sm">{payment.reference}</strong><StatusBadge status={payment.status}>{payment.status === "succeeded" ? "Confirmé" : payment.status === "failed" ? "Échoué" : "En attente"}</StatusBadge></div>
-    <strong className="mt-3 block text-2xl tabular-nums">{formatFcfa(payment.amount)}</strong>
-    <dl className="mt-4 grid gap-3 text-sm">
-      <div><dt className="text-xs text-slate-500">Contrat ou dossier</dt><dd className="break-all">{payment.contractId || payment.requestId}</dd></div>
-      {payment.fraction && <div><dt className="text-xs text-slate-500">Période réglée</dt><dd><PaymentPeriod payment={payment} /></dd></div>}
-      <div className="grid grid-cols-2 gap-3"><div><dt className="text-xs text-slate-500">Date du règlement</dt><dd>{formatDate(payment.date)}</dd></div><div><dt className="text-xs text-slate-500">Moyen de paiement</dt><dd>{paymentLabels[payment.method]}</dd></div></div>
-      {payment.transactionReference && <div><dt className="text-xs text-slate-500">Référence de transaction ou du reçu</dt><dd className="break-all">{payment.transactionReference}</dd></div>}
+  const { navigate } = usePortal();
+  return <article className="payments-mobile-card">
+    <div className="payments-mobile-header"><div><small>{formatDate(payment.date)}</small><strong>{payment.reference}</strong></div><span><CheckCircle2 size={14} aria-hidden="true" />Confirmé</span></div>
+    <strong className="payments-mobile-amount">{formatFcfa(payment.amount)}</strong>
+    <dl><div><dt>Moyen de paiement</dt><dd>{paymentLabels[payment.method]}</dd></div>
+      {payment.transactionReference && <div><dt>Référence de transaction ou du reçu</dt><dd>{payment.transactionReference}</dd></div>}
+      {payment.contractId && <div><dt>Contrat</dt><dd>{payment.contractId}</dd></div>}
+      {payment.fraction && <div><dt>Période réglée</dt><dd><PaymentPeriod payment={payment} /></dd></div>}
     </dl>
+    {payment.requestId && <button className="payments-mobile-dossier" type="button" onClick={() => navigate(`/espace/demandes/${encodeURIComponent(payment.requestId!)}`)}><span><small>Dossier concerné</small><strong>{payment.requestId}</strong></span><ChevronRight size={18} aria-hidden="true" /></button>}
   </article>;
 }
 

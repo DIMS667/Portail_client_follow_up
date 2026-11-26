@@ -163,6 +163,10 @@ function mapContract(item: ContratApi): Contract {
 
 type SubscriptionData = Pick<PortalStore, "offers" | "proposals" | "payments" | "contracts" | "paymentSchedules" | "paymentSchedulesError">;
 
+export async function obtenirPaiements() {
+  return (await request<PaiementApi[]>("/paiements")).map(mapPayment);
+}
+
 export async function obtenirSouscriptions(): Promise<SubscriptionData> {
   const [offresApi, paiementsApi, contratsApi, echeanciers] = await Promise.all([
     request<OffreApi[]>("/offres"),

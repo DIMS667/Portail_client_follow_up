@@ -17,6 +17,7 @@ const primaryNav = [
   { label: "Accueil", route: "/espace", icon: Home },
   { label: "Mes demandes", route: "/espace/demandes", icon: ClipboardList },
   { label: "Mes contrats", route: "/espace/contrats", icon: ShieldCheck },
+  { label: "Mes paiements", route: "/espace/paiements", icon: WalletCards },
   { label: "Mes documents", route: "/espace/documents", icon: FolderOpen },
   { label: "Mes sinistres", route: "/espace/sinistres", icon: LifeBuoy },
 ];
@@ -204,7 +205,7 @@ export function ClientShell({ children }: { children: ReactNode }) {
           { label: "Accueil", route: "/espace", icon: Home },
           { label: "Demandes", route: "/espace/demandes", icon: ClipboardList },
           { label: "Contrats", route: "/espace/contrats", icon: FileText },
-          { label: "Notifications", route: "/espace/notifications", icon: Bell },
+          { label: "Paiements", route: "/espace/paiements", icon: WalletCards },
           { label: "Profil", route: "/espace/profil", icon: UserRound },
         ].map(({ label, route, icon: Icon }) => { const active = isActive(pathname, route); return <button type="button" key={route} onClick={() => navigate(route)} className={cn("relative grid min-w-0 place-items-center content-center gap-1 rounded-xl text-[11px] font-semibold transition-colors", active ? "text-brand-red" : "text-slate-400")} aria-current={active ? "page" : undefined}><span className={cn("relative grid size-8 place-items-center rounded-xl", active && "bg-brand-soft")}><Icon size={20} />{route.includes("notifications") && unread > 0 && <em className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-brand-orange text-[8px] not-italic text-white">{unread}</em>}</span><small className="text-[11px] leading-none">{label}</small></button>; })}
       </nav>
